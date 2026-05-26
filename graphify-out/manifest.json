@@ -1,0 +1,692 @@
+{
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\package.json": {
+    "mtime": 1779032362.3290393,
+    "ast_hash": "dcc0234760ffd72e32c065633fbea84e",
+    "semantic_hash": "dcc0234760ffd72e32c065633fbea84e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\tsconfig.json": {
+    "mtime": 1778956643.5918546,
+    "ast_hash": "5614d67ece87b0399a391878f34c745a",
+    "semantic_hash": "5614d67ece87b0399a391878f34c745a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\tsconfig.node.json": {
+    "mtime": 1778782926.059518,
+    "ast_hash": "281e378713152cccc7860c818db55849",
+    "semantic_hash": "281e378713152cccc7860c818db55849"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\vite.config.ts": {
+    "mtime": 1778783468.8680463,
+    "ast_hash": "074e6a94278558f70d72b4a5a0aff705",
+    "semantic_hash": "074e6a94278558f70d72b4a5a0aff705"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\.vscode\\extensions.json": {
+    "mtime": 1778782926.0468495,
+    "ast_hash": "d1846e92ceedfa6eb08a69cbb38c190a",
+    "semantic_hash": "d1846e92ceedfa6eb08a69cbb38c190a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\App.tsx": {
+    "mtime": 1779032427.2178605,
+    "ast_hash": "a7d2651d0838ce080bee59723519d8de",
+    "semantic_hash": "a7d2651d0838ce080bee59723519d8de"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\main.tsx": {
+    "mtime": 1779301122.5563548,
+    "ast_hash": "0a091a727651328c91f00ca5372a4988",
+    "semantic_hash": "0a091a727651328c91f00ca5372a4988"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\vite-env.d.ts": {
+    "mtime": 1778782926.0579994,
+    "ast_hash": "8f68c27c3fc38817b2726b20e2d4f1ee",
+    "semantic_hash": "8f68c27c3fc38817b2726b20e2d4f1ee"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\Dashboard.tsx": {
+    "mtime": 1779716660.207064,
+    "ast_hash": "4572e5f5ff73591a9a89e98db133e672",
+    "semantic_hash": "4572e5f5ff73591a9a89e98db133e672"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\QuickCapture.tsx": {
+    "mtime": 1779363036.1457787,
+    "ast_hash": "d4abaea2cf38d78a0c17578369fa291b",
+    "semantic_hash": "d4abaea2cf38d78a0c17578369fa291b"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\SearchModal.tsx": {
+    "mtime": 1779032509.825384,
+    "ast_hash": "5ee822a301842c045f42119e055ff56e",
+    "semantic_hash": "5ee822a301842c045f42119e055ff56e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\SortableTaskRow.tsx": {
+    "mtime": 1778843965.8154266,
+    "ast_hash": "c079810880b696fe9ab0365f13f90817",
+    "semantic_hash": "c079810880b696fe9ab0365f13f90817"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\ApplicationsView.tsx": {
+    "mtime": 1778846489.5484576,
+    "ast_hash": "831783a53b12c976f4ebf6c9bd6b2339",
+    "semantic_hash": "831783a53b12c976f4ebf6c9bd6b2339"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\HomeView.tsx": {
+    "mtime": 1779707623.3769925,
+    "ast_hash": "5a0bd2e30e45e4ed2d5ab3895542126d",
+    "semantic_hash": "5a0bd2e30e45e4ed2d5ab3895542126d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\InboxView.tsx": {
+    "mtime": 1779706849.76478,
+    "ast_hash": "4876f64f5b75706aa851ca13e2f9fe14",
+    "semantic_hash": "4876f64f5b75706aa851ca13e2f9fe14"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\SettingsView.tsx": {
+    "mtime": 1779716685.9284582,
+    "ast_hash": "a36dfb69c01cea74838e0b22cb1372ff",
+    "semantic_hash": "a36dfb69c01cea74838e0b22cb1372ff"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\SimpleListView.tsx": {
+    "mtime": 1779708168.3159847,
+    "ast_hash": "aa033413b1416ddd4acfeab630df483a",
+    "semantic_hash": "aa033413b1416ddd4acfeab630df483a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BankImportModal.tsx": {
+    "mtime": 1779374615.0112183,
+    "ast_hash": "07ebdce3851853326d6a3de863ea8086",
+    "semantic_hash": "07ebdce3851853326d6a3de863ea8086"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BudgetCharts.tsx": {
+    "mtime": 1779030311.038955,
+    "ast_hash": "17a24c40107de2792360e8e6433c7da0",
+    "semantic_hash": "17a24c40107de2792360e8e6433c7da0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BudgetView.tsx": {
+    "mtime": 1779707102.5314724,
+    "ast_hash": "bd8c1a01585e2270056d720db59671ca",
+    "semantic_hash": "bd8c1a01585e2270056d720db59671ca"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\calendar\\CalendarView.tsx": {
+    "mtime": 1778958585.6693313,
+    "ast_hash": "fdcf1c3c78fcdc77137f18370cedd719",
+    "semantic_hash": "fdcf1c3c78fcdc77137f18370cedd719"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\email\\EmailView.tsx": {
+    "mtime": 1779370472.8026655,
+    "ast_hash": "a381757a8933d165c0e918745944e79e",
+    "semantic_hash": "a381757a8933d165c0e918745944e79e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\review\\ReviewView.tsx": {
+    "mtime": 1779230706.168973,
+    "ast_hash": "be1dee234c175f0866c243c858ef1f7e",
+    "semantic_hash": "be1dee234c175f0866c243c858ef1f7e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\ConnectedAccountsBlock.tsx": {
+    "mtime": 1779298630.0211263,
+    "ast_hash": "3f1a0fc44ce8f0fcf4b1b7b7c1ed3e0d",
+    "semantic_hash": "3f1a0fc44ce8f0fcf4b1b7b7c1ed3e0d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\ConnectorsBlock.tsx": {
+    "mtime": 1779374717.066848,
+    "ast_hash": "27e4e054483597fd79bdcc1bafa0b1f3",
+    "semantic_hash": "27e4e054483597fd79bdcc1bafa0b1f3"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\TopicsBlock.tsx": {
+    "mtime": 1779716609.020914,
+    "ast_hash": "fb59bcf89c53f5b29b54a23f85540a3f",
+    "semantic_hash": "fb59bcf89c53f5b29b54a23f85540a3f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\ChoicePicker.tsx": {
+    "mtime": 1779708124.4297261,
+    "ast_hash": "2735d761dfa2c31343c5807e31c6bbe2",
+    "semantic_hash": "2735d761dfa2c31343c5807e31c6bbe2"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\DatePicker.tsx": {
+    "mtime": 1779708097.709018,
+    "ast_hash": "edd6489fa286b4ec24ae518013bcbe2d",
+    "semantic_hash": "edd6489fa286b4ec24ae518013bcbe2d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\DeadlineControl.tsx": {
+    "mtime": 1778843914.557767,
+    "ast_hash": "0c9c6e32e13c4fd22f72fb4b9dd3ea05",
+    "semantic_hash": "0c9c6e32e13c4fd22f72fb4b9dd3ea05"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\DonePile.tsx": {
+    "mtime": 1778846449.7969487,
+    "ast_hash": "886780379fa1316fe3557f26bd115727",
+    "semantic_hash": "886780379fa1316fe3557f26bd115727"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\MoodSwatch.tsx": {
+    "mtime": 1778846353.0204647,
+    "ast_hash": "3950def36e3575b49412c01dd1dfea2e",
+    "semantic_hash": "3950def36e3575b49412c01dd1dfea2e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\StatusToggle.tsx": {
+    "mtime": 1778839133.8282905,
+    "ast_hash": "400d62807534c0278ef404167e2de76f",
+    "semantic_hash": "400d62807534c0278ef404167e2de76f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\styles.ts": {
+    "mtime": 1778846390.704129,
+    "ast_hash": "927c1163da28dd37e7dc21946fb5b6a3",
+    "semantic_hash": "927c1163da28dd37e7dc21946fb5b6a3"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\ui.tsx": {
+    "mtime": 1778846411.8225095,
+    "ast_hash": "9de437255629c6d751bdf81f8dd85c96",
+    "semantic_hash": "9de437255629c6d751bdf81f8dd85c96"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\VoiceButton.tsx": {
+    "mtime": 1779362826.4343088,
+    "ast_hash": "2a43dddd485048fdf5824a410c203d5f",
+    "semantic_hash": "2a43dddd485048fdf5824a410c203d5f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\Widget.tsx": {
+    "mtime": 1779706981.29645,
+    "ast_hash": "b80b3cbd04ad2c7a9d1d581eb39bd748",
+    "semantic_hash": "b80b3cbd04ad2c7a9d1d581eb39bd748"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\ApplicationsWidget.tsx": {
+    "mtime": 1778846846.596757,
+    "ast_hash": "b13d248584329c3d1a5c2764cdce5e84",
+    "semantic_hash": "b13d248584329c3d1a5c2764cdce5e84"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\BudgetWidget.tsx": {
+    "mtime": 1779030145.0480516,
+    "ast_hash": "552423ce1da87d1799c049ee3fdc60c5",
+    "semantic_hash": "552423ce1da87d1799c049ee3fdc60c5"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\context.ts": {
+    "mtime": 1779706865.6080716,
+    "ast_hash": "f53bf15c547519dc5cc4005879391574",
+    "semantic_hash": "f53bf15c547519dc5cc4005879391574"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\EmailsWidget.tsx": {
+    "mtime": 1779231246.763134,
+    "ast_hash": "838ebe4a8b61c71ccba89b188e0a8773",
+    "semantic_hash": "838ebe4a8b61c71ccba89b188e0a8773"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\MiniCalendarWidget.tsx": {
+    "mtime": 1778846902.7574737,
+    "ast_hash": "26483b49ecb0563131bf73a96efaac5d",
+    "semantic_hash": "26483b49ecb0563131bf73a96efaac5d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\NextTaskWidget.tsx": {
+    "mtime": 1778846857.641916,
+    "ast_hash": "b79b906808e6e433042a471093d282fb",
+    "semantic_hash": "b79b906808e6e433042a471093d282fb"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\NotionWidget.tsx": {
+    "mtime": 1779301944.519354,
+    "ast_hash": "4d26cbec864bfea7a1de87fe8e69b9ca",
+    "semantic_hash": "4d26cbec864bfea7a1de87fe8e69b9ca"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\NowPlayingWidget.tsx": {
+    "mtime": 1779301268.3296857,
+    "ast_hash": "91980e5481ee31f46a9e5dfb9b336081",
+    "semantic_hash": "91980e5481ee31f46a9e5dfb9b336081"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\PlaceholderWidget.tsx": {
+    "mtime": 1778846931.1732588,
+    "ast_hash": "235b23d8899b904bbcb7bace6a45c5e7",
+    "semantic_hash": "235b23d8899b904bbcb7bace6a45c5e7"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\PomodoroWidget.tsx": {
+    "mtime": 1779287820.1930807,
+    "ast_hash": "2a6b9a8e225ac43a2b3c1b01b86be113",
+    "semantic_hash": "2a6b9a8e225ac43a2b3c1b01b86be113"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\QuickAddWidget.tsx": {
+    "mtime": 1779706888.7136152,
+    "ast_hash": "3c8b1fb1bf17cb924476b2c1e5ef6906",
+    "semantic_hash": "3c8b1fb1bf17cb924476b2c1e5ef6906"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\registry.tsx": {
+    "mtime": 1779706912.5184283,
+    "ast_hash": "208d698fbde4027bf9d542ca6f370ebc",
+    "semantic_hash": "208d698fbde4027bf9d542ca6f370ebc"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\SummaryWidget.tsx": {
+    "mtime": 1778846865.5455608,
+    "ast_hash": "1be3b2564d67ade5fe02b45af3011f77",
+    "semantic_hash": "1be3b2564d67ade5fe02b45af3011f77"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\UpcomingDeadlinesWidget.tsx": {
+    "mtime": 1778846915.1266794,
+    "ast_hash": "2420d17906d05de6bbbd53497304f8ab",
+    "semantic_hash": "2420d17906d05de6bbbd53497304f8ab"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\util.ts": {
+    "mtime": 1778846887.447436,
+    "ast_hash": "2e9abdc12df44531ef2bded26136d832",
+    "semantic_hash": "2e9abdc12df44531ef2bded26136d832"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\WeatherWidget.tsx": {
+    "mtime": 1779287854.692733,
+    "ast_hash": "a66e85c971c85df7c212cd8363bf8e21",
+    "semantic_hash": "a66e85c971c85df7c212cd8363bf8e21"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\appearance.ts": {
+    "mtime": 1779716538.5563557,
+    "ast_hash": "65cb3b193d6f9277ba4ee072f75e2fc7",
+    "semantic_hash": "65cb3b193d6f9277ba4ee072f75e2fc7"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\bankCsv.ts": {
+    "mtime": 1779374571.3662791,
+    "ast_hash": "0ed52dd190d50821464ae24379869f7e",
+    "semantic_hash": "0ed52dd190d50821464ae24379869f7e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\budget.ts": {
+    "mtime": 1779031643.8355548,
+    "ast_hash": "c72305f70c5305fcb82691a550d440e6",
+    "semantic_hash": "c72305f70c5305fcb82691a550d440e6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\calendar.ts": {
+    "mtime": 1778958168.2992692,
+    "ast_hash": "04ab7ac481f33c4b0e825a77a95384d3",
+    "semantic_hash": "04ab7ac481f33c4b0e825a77a95384d3"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\dates.ts": {
+    "mtime": 1778843899.6793175,
+    "ast_hash": "986ba6aa689110f84da2c3f3f7a5d36a",
+    "semantic_hash": "986ba6aa689110f84da2c3f3f7a5d36a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\email.ts": {
+    "mtime": 1779298560.7755368,
+    "ast_hash": "1a4eba430908f3db160a6329d1585d45",
+    "semantic_hash": "1a4eba430908f3db160a6329d1585d45"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\ical.ts": {
+    "mtime": 1778958409.5326388,
+    "ast_hash": "e98e4e96efcaa73eda43fa1331dcb63f",
+    "semantic_hash": "e98e4e96efcaa73eda43fa1331dcb63f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\platform.ts": {
+    "mtime": 1779523354.241366,
+    "ast_hash": "b4debc32b463cf6300f6946bb9cd9229",
+    "semantic_hash": "b4debc32b463cf6300f6946bb9cd9229"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\review.ts": {
+    "mtime": 1779230130.1533332,
+    "ast_hash": "bbf4ebe4d9ffc1aafa8bbe5a70140b71",
+    "semantic_hash": "bbf4ebe4d9ffc1aafa8bbe5a70140b71"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\search.ts": {
+    "mtime": 1779032475.834266,
+    "ast_hash": "4651a75c5f99cc62629240ca8e3d1285",
+    "semantic_hash": "4651a75c5f99cc62629240ca8e3d1285"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\storage.ts": {
+    "mtime": 1779523375.4981077,
+    "ast_hash": "4a31de5b26cde6afab6ec9214ae8def4",
+    "semantic_hash": "4a31de5b26cde6afab6ec9214ae8def4"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\themes.ts": {
+    "mtime": 1779302992.8212218,
+    "ast_hash": "dd5545a89b37066c92b60d10d9e52258",
+    "semantic_hash": "dd5545a89b37066c92b60d10d9e52258"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\types.ts": {
+    "mtime": 1779716526.4227426,
+    "ast_hash": "7b08a1d97ad9f14163f0ba31a9a8c6f1",
+    "semantic_hash": "7b08a1d97ad9f14163f0ba31a9a8c6f1"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\voice.ts": {
+    "mtime": 1779362778.254184,
+    "ast_hash": "243405d15559a26830b5afa0fc1b19c6",
+    "semantic_hash": "243405d15559a26830b5afa0fc1b19c6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\voiceRouter.ts": {
+    "mtime": 1779362808.1497967,
+    "ast_hash": "aa3b12ff3293387db8f273c92ab4578c",
+    "semantic_hash": "aa3b12ff3293387db8f273c92ab4578c"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\gmail.ts": {
+    "mtime": 1779298543.6015475,
+    "ast_hash": "3f554e5b9187f848074602e1d60c977f",
+    "semantic_hash": "3f554e5b9187f848074602e1d60c977f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\index.ts": {
+    "mtime": 1779231089.2951286,
+    "ast_hash": "3052921ea7260db76a40491d141f2a55",
+    "semantic_hash": "3052921ea7260db76a40491d141f2a55"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\keyring.ts": {
+    "mtime": 1779373045.2061188,
+    "ast_hash": "2ae099c2d5e1fb0b0d89020455e7c635",
+    "semantic_hash": "2ae099c2d5e1fb0b0d89020455e7c635"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\outlook.ts": {
+    "mtime": 1779298549.947693,
+    "ast_hash": "f1f56889b9f884ef44733d999aad1246",
+    "semantic_hash": "f1f56889b9f884ef44733d999aad1246"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\pkce.ts": {
+    "mtime": 1779231038.0032365,
+    "ast_hash": "c2e896e7cff980dc2285fd57b33f4790",
+    "semantic_hash": "c2e896e7cff980dc2285fd57b33f4790"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\spotify.ts": {
+    "mtime": 1779288594.7396214,
+    "ast_hash": "8a2c487d3627d9590bf3510cb5aa43f6",
+    "semantic_hash": "8a2c487d3627d9590bf3510cb5aa43f6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\build.rs": {
+    "mtime": 1778782926.0149534,
+    "ast_hash": "667702979da61fdc96948886b7cd7a33",
+    "semantic_hash": "667702979da61fdc96948886b7cd7a33"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\tauri.conf.json": {
+    "mtime": 1779370413.682711,
+    "ast_hash": "2c61e49d6a4f55e1608a80f354c03896",
+    "semantic_hash": "2c61e49d6a4f55e1608a80f354c03896"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\capabilities\\default.json": {
+    "mtime": 1779032392.9850955,
+    "ast_hash": "1608ed5f5d1ea9a8c963ecd909cde2f1",
+    "semantic_hash": "1608ed5f5d1ea9a8c963ecd909cde2f1"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\acl-manifests.json": {
+    "mtime": 1779032391.5768528,
+    "ast_hash": "a4b9ab86ee060493d906620407523eb4",
+    "semantic_hash": "a4b9ab86ee060493d906620407523eb4"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\capabilities.json": {
+    "mtime": 1779032396.1063714,
+    "ast_hash": "6fa6fc985e75481f69f63beeff44dedc",
+    "semantic_hash": "6fa6fc985e75481f69f63beeff44dedc"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\desktop-schema.json": {
+    "mtime": 1779032391.6590128,
+    "ast_hash": "4b3f078e5475e7304da471f7ecdca0ff",
+    "semantic_hash": "4b3f078e5475e7304da471f7ecdca0ff"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\windows-schema.json": {
+    "mtime": 1779032391.6590128,
+    "ast_hash": "4b3f078e5475e7304da471f7ecdca0ff",
+    "semantic_hash": "4b3f078e5475e7304da471f7ecdca0ff"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\src\\lib.rs": {
+    "mtime": 1779370415.9427598,
+    "ast_hash": "e412b10bf44d0d48a3f9a0119f84d6a5",
+    "semantic_hash": "e412b10bf44d0d48a3f9a0119f84d6a5"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\src\\main.rs": {
+    "mtime": 1778782926.0443223,
+    "ast_hash": "1d6ff231a4fd14fe5c266f9487427fbc",
+    "semantic_hash": "1d6ff231a4fd14fe5c266f9487427fbc"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\index.html": {
+    "mtime": 1779523389.7957726,
+    "ast_hash": "dc81b063300202906f5214974f1982a0",
+    "semantic_hash": "dc81b063300202906f5214974f1982a0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\README.md": {
+    "mtime": 1778782926.0478468,
+    "ast_hash": "070911911a8e1ac32796e78bff4a30c0",
+    "semantic_hash": "070911911a8e1ac32796e78bff4a30c0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\public\\tauri.svg": {
+    "mtime": 1778782926.066571,
+    "ast_hash": "f0966ff85db99f2d00771f92d18c9e7f",
+    "semantic_hash": "f0966ff85db99f2d00771f92d18c9e7f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\public\\vite.svg": {
+    "mtime": 1778782926.0615275,
+    "ast_hash": "8e3a10e157f75ada21ab742c022d5430",
+    "semantic_hash": "8e3a10e157f75ada21ab742c022d5430"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\public\\icons\\icon-192.png": {
+    "mtime": 1779523417.547054,
+    "ast_hash": "7e114756dfda6bd36b9f5359c6ce898d",
+    "semantic_hash": "7e114756dfda6bd36b9f5359c6ce898d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\public\\icons\\icon-512.png": {
+    "mtime": 1779523417.662953,
+    "ast_hash": "14e37a463bea0dec1b1969a4024d0bb0",
+    "semantic_hash": "14e37a463bea0dec1b1969a4024d0bb0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\assets\\react.svg": {
+    "mtime": 1778782926.0655587,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": "f0402b67b6ce880f65666bb49e841696"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\128x128.png": {
+    "mtime": 1779362640.3328927,
+    "ast_hash": "6c50b8e920452f030312118305b06deb",
+    "semantic_hash": "6c50b8e920452f030312118305b06deb"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\128x128@2x.png": {
+    "mtime": 1779362640.4150453,
+    "ast_hash": "45806db7865b96e22f8e073538e901ce",
+    "semantic_hash": "45806db7865b96e22f8e073538e901ce"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\32x32.png": {
+    "mtime": 1779362640.207122,
+    "ast_hash": "308a6cb71f6e44cf704e55b7ff56b9b1",
+    "semantic_hash": "308a6cb71f6e44cf704e55b7ff56b9b1"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\64x64.png": {
+    "mtime": 1779362640.270844,
+    "ast_hash": "59e2f5ce786236c236327b638bfea8c8",
+    "semantic_hash": "59e2f5ce786236c236327b638bfea8c8"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\icon.png": {
+    "mtime": 1779362640.5263724,
+    "ast_hash": "4631682d525814bb8ac20303d8c8e5fc",
+    "semantic_hash": "4631682d525814bb8ac20303d8c8e5fc"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\source-1024.png": {
+    "mtime": 1779362611.346459,
+    "ast_hash": "4fa5008be340525b711ec2d529f6354b",
+    "semantic_hash": "4fa5008be340525b711ec2d529f6354b"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square107x107Logo.png": {
+    "mtime": 1779362638.2659543,
+    "ast_hash": "18474923002ff28f4b6dfe54cd7b98ed",
+    "semantic_hash": "18474923002ff28f4b6dfe54cd7b98ed"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square142x142Logo.png": {
+    "mtime": 1779362638.331735,
+    "ast_hash": "834cb66e0304613621664486b4cac5c5",
+    "semantic_hash": "834cb66e0304613621664486b4cac5c5"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square150x150Logo.png": {
+    "mtime": 1779362638.3855944,
+    "ast_hash": "15832ac1f57d85857110c93f930ea54b",
+    "semantic_hash": "15832ac1f57d85857110c93f930ea54b"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square284x284Logo.png": {
+    "mtime": 1779362638.4639537,
+    "ast_hash": "225a57329fc4c4f831d6a14ab6f064af",
+    "semantic_hash": "225a57329fc4c4f831d6a14ab6f064af"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square30x30Logo.png": {
+    "mtime": 1779362638.0321052,
+    "ast_hash": "953cc47fb3568e371eecec1afac05a5f",
+    "semantic_hash": "953cc47fb3568e371eecec1afac05a5f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square310x310Logo.png": {
+    "mtime": 1779362638.5345726,
+    "ast_hash": "f1f105ce282d170e58367eed28041f72",
+    "semantic_hash": "f1f105ce282d170e58367eed28041f72"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square44x44Logo.png": {
+    "mtime": 1779362638.1028097,
+    "ast_hash": "7089fb837e9cce07ebc5de9d7a544d04",
+    "semantic_hash": "7089fb837e9cce07ebc5de9d7a544d04"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square71x71Logo.png": {
+    "mtime": 1779362638.1606457,
+    "ast_hash": "872b42ffcf337d7b3b62f7e18acad4b0",
+    "semantic_hash": "872b42ffcf337d7b3b62f7e18acad4b0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\Square89x89Logo.png": {
+    "mtime": 1779362638.2209706,
+    "ast_hash": "3fce37c1c91d829228a08c0ec12649ea",
+    "semantic_hash": "3fce37c1c91d829228a08c0ec12649ea"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\StoreLogo.png": {
+    "mtime": 1779362637.966007,
+    "ast_hash": "5e5db0556b2a1dd4cf5ade156a4c1aad",
+    "semantic_hash": "5e5db0556b2a1dd4cf5ade156a4c1aad"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-hdpi\\ic_launcher.png": {
+    "mtime": 1779362642.4142103,
+    "ast_hash": "62f0b617be5cd06adf7b10a101712612",
+    "semantic_hash": "62f0b617be5cd06adf7b10a101712612"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-hdpi\\ic_launcher_foreground.png": {
+    "mtime": 1779362641.9305675,
+    "ast_hash": "578c336e9098f5a95b945133269b37d1",
+    "semantic_hash": "578c336e9098f5a95b945133269b37d1"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-hdpi\\ic_launcher_round.png": {
+    "mtime": 1779362642.3348362,
+    "ast_hash": "e88cecc9e2b452ac7d1bb9dae1a6a4ac",
+    "semantic_hash": "e88cecc9e2b452ac7d1bb9dae1a6a4ac"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-mdpi\\ic_launcher.png": {
+    "mtime": 1779362642.5477645,
+    "ast_hash": "a1f36b80513e13da1e98ec07ae1fc915",
+    "semantic_hash": "a1f36b80513e13da1e98ec07ae1fc915"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-mdpi\\ic_launcher_foreground.png": {
+    "mtime": 1779362641.9907835,
+    "ast_hash": "f180efb7e8c5f0ebac7aa1f3de0885b0",
+    "semantic_hash": "f180efb7e8c5f0ebac7aa1f3de0885b0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-mdpi\\ic_launcher_round.png": {
+    "mtime": 1779362642.4837365,
+    "ast_hash": "4a62a115ae0f427dd63a371ec1cbdbd2",
+    "semantic_hash": "4a62a115ae0f427dd63a371ec1cbdbd2"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xhdpi\\ic_launcher.png": {
+    "mtime": 1779362642.67417,
+    "ast_hash": "d5ef43734f43000898b27e9a9079a54e",
+    "semantic_hash": "d5ef43734f43000898b27e9a9079a54e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xhdpi\\ic_launcher_foreground.png": {
+    "mtime": 1779362642.055648,
+    "ast_hash": "92dc467d05ae57f9721e023466b25c20",
+    "semantic_hash": "92dc467d05ae57f9721e023466b25c20"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xhdpi\\ic_launcher_round.png": {
+    "mtime": 1779362642.6110835,
+    "ast_hash": "61cad541b9f651dbb98f8a9f836c561d",
+    "semantic_hash": "61cad541b9f651dbb98f8a9f836c561d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xxhdpi\\ic_launcher.png": {
+    "mtime": 1779362642.7845292,
+    "ast_hash": "58bbf9195ed420e395e23d896064c861",
+    "semantic_hash": "58bbf9195ed420e395e23d896064c861"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xxhdpi\\ic_launcher_foreground.png": {
+    "mtime": 1779362642.149814,
+    "ast_hash": "9e84a1542bd6f78f36089b005fcb7b7f",
+    "semantic_hash": "9e84a1542bd6f78f36089b005fcb7b7f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xxhdpi\\ic_launcher_round.png": {
+    "mtime": 1779362642.7216077,
+    "ast_hash": "b6f373ee0775c5774044c946ed624df8",
+    "semantic_hash": "b6f373ee0775c5774044c946ed624df8"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xxxhdpi\\ic_launcher.png": {
+    "mtime": 1779362642.8952858,
+    "ast_hash": "c786600c5e601f9c0ce5bb272dac43f6",
+    "semantic_hash": "c786600c5e601f9c0ce5bb272dac43f6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xxxhdpi\\ic_launcher_foreground.png": {
+    "mtime": 1779362642.2561307,
+    "ast_hash": "bb3c98ff20f90748726b78559aae7525",
+    "semantic_hash": "bb3c98ff20f90748726b78559aae7525"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\android\\mipmap-xxxhdpi\\ic_launcher_round.png": {
+    "mtime": 1779362642.8358705,
+    "ast_hash": "f55d6cc1a5c08dd7f50b564121fb8906",
+    "semantic_hash": "f55d6cc1a5c08dd7f50b564121fb8906"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-20x20@1x.png": {
+    "mtime": 1779362640.688117,
+    "ast_hash": "c3986853b60687b0ade6edc1bd2b7d08",
+    "semantic_hash": "c3986853b60687b0ade6edc1bd2b7d08"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-20x20@2x-1.png": {
+    "mtime": 1779362640.6051662,
+    "ast_hash": "17e951e1df3b946f504399eb5b4374e6",
+    "semantic_hash": "17e951e1df3b946f504399eb5b4374e6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-20x20@2x.png": {
+    "mtime": 1779362640.7630577,
+    "ast_hash": "17e951e1df3b946f504399eb5b4374e6",
+    "semantic_hash": "17e951e1df3b946f504399eb5b4374e6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-20x20@3x.png": {
+    "mtime": 1779362640.8269806,
+    "ast_hash": "a3abe347c6181fa64140010052d371bc",
+    "semantic_hash": "a3abe347c6181fa64140010052d371bc"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-29x29@1x.png": {
+    "mtime": 1779362640.954497,
+    "ast_hash": "234ae213b57e3b443e94cf553e853d03",
+    "semantic_hash": "234ae213b57e3b443e94cf553e853d03"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-29x29@2x-1.png": {
+    "mtime": 1779362640.8903117,
+    "ast_hash": "d44e182e9fc78fd936dd1338847f36e0",
+    "semantic_hash": "d44e182e9fc78fd936dd1338847f36e0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-29x29@2x.png": {
+    "mtime": 1779362641.0170822,
+    "ast_hash": "d44e182e9fc78fd936dd1338847f36e0",
+    "semantic_hash": "d44e182e9fc78fd936dd1338847f36e0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-29x29@3x.png": {
+    "mtime": 1779362641.080405,
+    "ast_hash": "abfdf49672a7783965687ec163134c2f",
+    "semantic_hash": "abfdf49672a7783965687ec163134c2f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-40x40@1x.png": {
+    "mtime": 1779362641.2386444,
+    "ast_hash": "17e951e1df3b946f504399eb5b4374e6",
+    "semantic_hash": "17e951e1df3b946f504399eb5b4374e6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-40x40@2x-1.png": {
+    "mtime": 1779362641.159605,
+    "ast_hash": "b4a619363349de99a2ef1a7a5dba348a",
+    "semantic_hash": "b4a619363349de99a2ef1a7a5dba348a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-40x40@2x.png": {
+    "mtime": 1779362641.3172984,
+    "ast_hash": "b4a619363349de99a2ef1a7a5dba348a",
+    "semantic_hash": "b4a619363349de99a2ef1a7a5dba348a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-40x40@3x.png": {
+    "mtime": 1779362641.3821847,
+    "ast_hash": "9fd851addabe0e24aa5267e49086580f",
+    "semantic_hash": "9fd851addabe0e24aa5267e49086580f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-512@2x.png": {
+    "mtime": 1779362641.8670537,
+    "ast_hash": "bb27a8806fb07563138590c6c4b66f50",
+    "semantic_hash": "bb27a8806fb07563138590c6c4b66f50"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-60x60@2x.png": {
+    "mtime": 1779362641.451327,
+    "ast_hash": "9fd851addabe0e24aa5267e49086580f",
+    "semantic_hash": "9fd851addabe0e24aa5267e49086580f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-60x60@3x.png": {
+    "mtime": 1779362641.5147274,
+    "ast_hash": "8e1345314b7a840a0a34343c1cc55bc1",
+    "semantic_hash": "8e1345314b7a840a0a34343c1cc55bc1"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-76x76@1x.png": {
+    "mtime": 1779362641.5779805,
+    "ast_hash": "6ca9ee3bbbcca8bb43630e0d2cfc5f03",
+    "semantic_hash": "6ca9ee3bbbcca8bb43630e0d2cfc5f03"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-76x76@2x.png": {
+    "mtime": 1779362641.6407778,
+    "ast_hash": "fbcd3cdf896c889865a4e746d58dc6b1",
+    "semantic_hash": "fbcd3cdf896c889865a4e746d58dc6b1"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\icons\\ios\\AppIcon-83.5x83.5@2x.png": {
+    "mtime": 1779362641.7153404,
+    "ast_hash": "ad445565856722888b2057ec116e2f23",
+    "semantic_hash": "ad445565856722888b2057ec116e2f23"
+  }
+}

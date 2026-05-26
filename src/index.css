@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  /* Overridden at runtime by applyAppearanceVars(). Defaults keep the
+     app sane before prefs load / outside React. */
+  --app-font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --app-bg: #060506;
+  --app-bg-alt: #1e1e21;
+  --app-border: #2e2e33;
+  --app-border-strong: #3a3a40;
+  --app-text-dim: #5a5854;
+  color-scheme: dark;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Tauri frameless window — drag region and no-drag overrides */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] input {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+html, body {
+  /* Prevent elastic/bounce overscroll — stops blank space appearing at
+     top and bottom when the page is already at its scroll limits. */
+  overscroll-behavior: none;
+  height: 100%;
+  /* iOS PWA: avoid double-tap-to-zoom delays on tappable elements */
+  touch-action: manipulation;
+  /* Improve mobile tap response */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS standalone PWA: when launched from home screen, give a hint to the
+   system that this is an immersive app. */
+@supports (padding: env(safe-area-inset-top)) {
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+}
+
+body {
+  margin: 0;
+  font-family: var(--app-font);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input::placeholder {
+  opacity: 0.5;
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────
+   Themed, neutral grey — no warm/brown tones from the underlying webview
+   default. Tracks pick up the active mood, thumbs use the border colour. */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--app-bg);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--app-border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--app-bg);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-text-dim);
+}
+*::-webkit-scrollbar-corner {
+  background: var(--app-bg);
+}
+/* Firefox fallback */
+* {
+  scrollbar-color: var(--app-border-strong) var(--app-bg);
+  scrollbar-width: thin;
+}
+
+/* Bottom tab bar: hide its internal scrollbar on WebKit */
+nav[aria-label="Main navigation"]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive: full-width content on narrow screens */
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow from any fixed-width child */
+  #root { overflow-x: hidden; }
+
+  /* Ensure all interactive elements meet 44px minimum touch target */
+  button, [role="button"], a, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+  }
+
+  /* Allow sort/filter pill buttons to be smaller visually but keep
+     tap area large via padding override */
+  .sort-pill {
+    min-height: unset;
+    padding: 0.4rem 0.6rem;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes voicePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 80, 80, 0.55); }
+  50%      { box-shadow: 0 0 0 6px rgba(220, 80, 80, 0); }
+}
+
+/* Remove default focus outline — components handle focus styling inline */
+button:focus-visible {
+  outline: none;
+}
+
+/* react-grid-layout: keep the drop placeholder & resize handle subtle and
+   theme-neutral (CSS can't see the JS theme tokens). */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(140, 140, 140, 0.18) !important;
+  border-radius: 14px;
+  opacity: 1;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-right-color: rgba(140, 140, 140, 0.55);
+  border-bottom-color: rgba(140, 140, 140, 0.55);
+}
+.react-grid-item.react-draggable-dragging {
+  z-index: 10;
+  cursor: grabbing;
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-grid-item {
+    transition: none !important;
+  }
+}

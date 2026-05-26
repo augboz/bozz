@@ -1,0 +1,26 @@
+{
+  "name": "Life Bozz",
+  "short_name": "Life Bozz",
+  "description": "Personal life dashboard — tasks, calendar, budget, voice capture, and more.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101015",
+  "theme_color": "#1e6b73",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
