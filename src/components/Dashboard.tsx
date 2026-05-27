@@ -897,15 +897,22 @@ export default function Dashboard() {
               t={t}
               inbox={inbox}
               setInbox={setInbox}
-              onAssign={(text, dest, deadline) => {
-                if (dest === 'applications') {
-                  setApplications(prev => [
-                    ...prev,
-                    { id: Date.now(), name: text, status: 'need to apply' },
-                  ]);
-                } else {
-                  addTaskToList(dest, text, deadline);
-                }
+              topics={topics}
+              onAssign={(text, topicId, deadline) => {
+                setTopics(prev => prev.map(top => {
+                  if (top.id !== topicId) return top;
+                  const firstStage = top.stages.find(s => !s.done) ?? top.stages[0];
+                  return {
+                    ...top,
+                    items: [...top.items, {
+                      id: Date.now(),
+                      text,
+                      stageId: firstStage?.id ?? '',
+                      completedAt: null,
+                      deadline,
+                    }],
+                  };
+                }));
               }}
             />
           )}

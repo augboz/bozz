@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { Plus, X } from 'lucide-react';
-import type { Theme, Topic, TopicItem, TopicStage } from '../../lib/types';
+import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
+import type { Theme, Topic, TopicItem, TopicStage, ListItem, SortMode } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import { rowStyle, textStyle, iconBtn } from '../shared/styles';
 import DonePile from '../shared/DonePile';
 import DeadlineControl from '../shared/DeadlineControl';
-import type { ListItem } from '../../lib/types';
+import SortableTaskRow from '../SortableTaskRow';
 
 interface Props {
   topic: Topic;
@@ -13,29 +21,121 @@ interface Props {
   t: Theme;
 }
 
-/** Map a TopicStage to the nearest ListItem status — used for row styling. */
 function stageStatus(stages: TopicStage[], stageId: string): 'todo' | 'doing' | 'done' {
   const stage = stages.find(s => s.id === stageId);
   if (!stage) return 'todo';
   if (stage.done) return 'done';
-  const activeStages = stages.filter(s => !s.done);
-  return activeStages[0]?.id === stageId ? 'todo' : 'doing';
+  const active = stages.filter(s => !s.done);
+  return active[0]?.id === stageId ? 'todo' : 'doing';
 }
 
-/** Convert a TopicItem to a ListItem shape for DonePile. */
 function toListItem(item: TopicItem): ListItem {
-  return {
-    id: item.id,
-    text: item.text,
-    status: 'done',
-    completedAt: item.completedAt,
-    deadline: item.deadline,
+  return { id: item.id, text: item.text, status: 'done', completedAt: item.completedAt, deadline: item.deadline };
+}
+
+// ── Stage stepper: [< stage name >] ────────────────────────────────────────
+function StageStepper({ topic, item, t, onChange }: {
+  topic: Topic; item: TopicItem; t: Theme;
+  onChange: (next: TopicItem) => void;
+}) {
+  const allIds = topic.stages.map(s => s.id);
+  const idx = allIds.indexOf(item.stageId);
+  const stage = topic.stages[idx];
+  const prevId = idx > 0 ? allIds[idx - 1] : null;
+  const nextId = idx < allIds.length - 1 ? allIds[idx + 1] : null;
+
+  const setStage = (newId: string) => {
+    const newStage = topic.stages.find(s => s.id === newId);
+    onChange({
+      ...item,
+      stageId: newId,
+      completedAt: newStage?.done ? Date.now() : null,
+    });
   };
+
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center',
+      background: t.input, border: `1px solid ${t.border}`,
+      borderRadius: '999px', flexShrink: 0,
+      padding: '2px',
+    }}>
+      <button
+        onClick={() => prevId && setStage(prevId)}
+        disabled={!prevId}
+        aria-label="Previous stage"
+        style={stepBtn(t, !prevId)}
+      >
+        <ChevronLeft size={14} strokeWidth={1.8} />
+      </button>
+      <span style={{
+        display: 'inline-block',
+        padding: '0.15rem 0.7rem',
+        fontSize: '0.72rem', fontWeight: 500,
+        color: stage?.color ?? t.textMuted,
+        minWidth: '64px', textAlign: 'center',
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+      }}>
+        {stage?.label ?? '—'}
+      </span>
+      <button
+        onClick={() => nextId && setStage(nextId)}
+        disabled={!nextId}
+        aria-label="Next stage"
+        style={stepBtn(t, !nextId)}
+      >
+        <ChevronRight size={14} strokeWidth={1.8} />
+      </button>
+    </div>
+  );
+}
+
+// ── Sort control ───────────────────────────────────────────────────────────
+function SortControl({ mode, setMode, t, accent }: {
+  mode: SortMode; setMode: (m: SortMode) => void; t: Theme; accent: string;
+}) {
+  const opts: Array<{ id: SortMode; label: string }> = [
+    { id: 'manual', label: 'manual' },
+    { id: 'deadline', label: 'deadline' },
+    { id: 'status', label: 'stage' },
+  ];
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+      <span style={{ fontSize: '0.65rem', color: t.textDim, letterSpacing: '0.05em', marginRight: '0.35rem' }}>sort</span>
+      {opts.map(o => {
+        const on = mode === o.id;
+        return (
+          <button
+            key={o.id}
+            onClick={() => setMode(o.id)}
+            aria-pressed={on}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '0.68rem', letterSpacing: '0.04em',
+              padding: '0.15rem 0.4rem', borderRadius: '6px',
+              color: on ? t.text : t.textDim,
+              borderBottom: `1px solid ${on ? accent : 'transparent'}`,
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function TopicView({ topic, onChange, t }: Props) {
   const [newText, setNewText] = useState('');
   const [filterStageId, setFilterStageId] = useState<string | null>(null);
+
+  const sortMode: SortMode = topic.sortMode ?? 'manual';
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const activeStages = topic.stages.filter(s => !s.done);
   const doneStages = topic.stages.filter(s => s.done);
@@ -44,79 +144,74 @@ export default function TopicView({ topic, onChange, t }: Props) {
   const activeItems = topic.items.filter(i => !doneStageIds.has(i.stageId));
   const doneItems = topic.items.filter(i => doneStageIds.has(i.stageId));
 
-  const displayed = filterStageId
+  const filtered = filterStageId
     ? activeItems.filter(i => i.stageId === filterStageId)
     : activeItems;
 
+  // Apply sort
+  const displayed = (() => {
+    if (sortMode === 'deadline') {
+      return [...filtered].sort((a, b) => (a.deadline ?? Infinity) - (b.deadline ?? Infinity));
+    }
+    if (sortMode === 'status') {
+      const stageOrder = new Map(topic.stages.map((s, i) => [s.id, i]));
+      return [...filtered].sort((a, b) => (stageOrder.get(a.stageId) ?? 0) - (stageOrder.get(b.stageId) ?? 0));
+    }
+    return filtered; // manual — preserve insertion order
+  })();
+
+  const isManual = sortMode === 'manual';
   const defaultStageId = activeStages[0]?.id ?? topic.stages[0]?.id ?? '';
+
+  const updateItem = (next: TopicItem) =>
+    onChange({ ...topic, items: topic.items.map(i => i.id === next.id ? next : i) });
 
   const addItem = () => {
     const text = newText.trim();
     if (!text) return;
     const item: TopicItem = {
-      id: Date.now(),
-      text,
+      id: Date.now(), text,
       stageId: filterStageId ?? defaultStageId,
-      completedAt: null,
-      deadline: null,
+      completedAt: null, deadline: null,
     };
     onChange({ ...topic, items: [...topic.items, item] });
     setNewText('');
   };
 
-  const cycleStage = (itemId: number) => {
-    onChange({
-      ...topic,
-      items: topic.items.map(i => {
-        if (i.id !== itemId) return i;
-        const allIds = topic.stages.map(s => s.id);
-        const idx = allIds.indexOf(i.stageId);
-        const nextId = allIds[(idx + 1) % allIds.length];
-        const nextStage = topic.stages.find(s => s.id === nextId);
-        return {
-          ...i,
-          stageId: nextId,
-          completedAt: nextStage?.done ? Date.now() : null,
-        };
-      }),
-    });
-  };
+  const deleteItem = (id: number) =>
+    onChange({ ...topic, items: topic.items.filter(i => i.id !== id) });
 
-  const setDeadline = (itemId: number, ts: number | null) => {
-    onChange({
-      ...topic,
-      items: topic.items.map(i => i.id === itemId ? { ...i, deadline: ts } : i),
-    });
-  };
-
-  const deleteItem = (itemId: number) => {
-    onChange({ ...topic, items: topic.items.filter(i => i.id !== itemId) });
-  };
-
-  const restoreItem = (itemId: number) => {
+  const restoreItem = (id: number) =>
     onChange({
       ...topic,
       items: topic.items.map(i =>
-        i.id === itemId ? { ...i, stageId: defaultStageId, completedAt: null } : i,
+        i.id === id ? { ...i, stageId: defaultStageId, completedAt: null } : i,
       ),
     });
-  };
 
-  // DonePile expects ListItem callbacks
-  const handleRestore = (id: number) => restoreItem(id);
-  const handleDeleteDone = (id: number) => deleteItem(id);
+  const handleDragEnd = (e: DragEndEvent) => {
+    if (!isManual) return;
+    const { active: a, over } = e;
+    if (!over || a.id === over.id) return;
+    const oldIndex = activeItems.findIndex(i => i.id === a.id);
+    const newIndex = activeItems.findIndex(i => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(activeItems, oldIndex, newIndex);
+    onChange({ ...topic, items: [...reordered, ...doneItems] });
+  };
 
   return (
     <div>
-      <SectionHeader title={topic.name} t={t} />
+      <SectionHeader
+        title={topic.name}
+        t={t}
+        right={<SortControl mode={sortMode} setMode={(m) => onChange({ ...topic, sortMode: m })} t={t} accent={topic.color} />}
+      />
 
       {/* Stage filter pills */}
       {activeStages.length > 1 && (
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          <button
-            onClick={() => setFilterStageId(null)}
-            style={pillStyle(t, filterStageId === null, t.textMuted)}
-          >
+          <button onClick={() => setFilterStageId(null)} style={pillStyle(t, filterStageId === null, t.textMuted)}>
             All
           </button>
           {activeStages.map(s => (
@@ -135,54 +230,52 @@ export default function TopicView({ topic, onChange, t }: Props) {
       )}
 
       {/* Items */}
-      <div style={{ display: 'grid', gap: '0.4rem' }}>
-        {displayed.map(item => {
-          const stage = topic.stages.find(s => s.id === item.stageId);
-          const status = stageStatus(topic.stages, item.stageId);
-          return (
-            <div key={item.id} style={rowStyle(status, t)}>
-              {/* Stage pill — click to cycle */}
-              <button
-                onClick={() => cycleStage(item.id)}
-                title="Click to advance stage"
-                style={{
-                  background: stage?.color ?? t.textMuted,
-                  border: 'none', borderRadius: '999px',
-                  padding: '0.15rem 0.55rem',
-                  fontSize: '0.65rem', color: '#fff', fontWeight: 500,
-                  cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {stage?.label ?? '—'}
-              </button>
-
-              <span style={{ ...textStyle(status, t), flex: 1 }}>{item.text}</span>
-
-              <DeadlineControl
-                deadline={item.deadline}
-                onChange={(ts) => setDeadline(item.id, ts)}
-                t={t}
-              />
-              <button onClick={() => deleteItem(item.id)} style={iconBtn(t)} aria-label="Delete">
-                <X size={14} strokeWidth={1.5} />
-              </button>
-            </div>
-          );
-        })}
-        {displayed.length === 0 && (
-          <div style={{ color: t.textDim, fontSize: '0.82rem', padding: '0.5rem 0', fontStyle: 'italic' }}>
-            {filterStageId ? 'nothing in this stage' : 'no tasks yet'}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      >
+        <SortableContext items={displayed.map(i => i.id)} strategy={verticalListSortingStrategy}>
+          <div style={{ display: 'grid', gap: '0.4rem' }}>
+            {displayed.map(item => {
+              const status = stageStatus(topic.stages, item.stageId);
+              return (
+                <SortableTaskRow
+                  key={item.id}
+                  id={item.id}
+                  t={t}
+                  disabled={!isManual}
+                  containerStyle={rowStyle(status, t)}
+                >
+                  <StageStepper topic={topic} item={item} t={t} onChange={updateItem} />
+                  <span style={{ ...textStyle(status, t), flex: 1 }}>{item.text}</span>
+                  <DeadlineControl
+                    deadline={item.deadline}
+                    onChange={(ts) => updateItem({ ...item, deadline: ts })}
+                    t={t}
+                  />
+                  <button onClick={() => deleteItem(item.id)} style={iconBtn(t)} aria-label="Delete">
+                    <X size={14} strokeWidth={1.5} />
+                  </button>
+                </SortableTaskRow>
+              );
+            })}
+            {displayed.length === 0 && (
+              <div style={{ color: t.textDim, fontSize: '0.82rem', padding: '0.5rem 0', fontStyle: 'italic' }}>
+                {filterStageId ? 'nothing in this stage' : 'no tasks yet'}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Done pile */}
       <DonePile
         items={doneItems.map(toListItem)}
         t={t}
-        onRestore={handleRestore}
-        onDelete={handleDeleteDone}
+        onRestore={restoreItem}
+        onDelete={deleteItem}
       />
 
       {/* Add row */}
@@ -227,4 +320,13 @@ const pillStyle = (t: Theme, active: boolean, color: string): React.CSSPropertie
   cursor: 'pointer',
   fontFamily: 'inherit',
   transition: 'background 0.12s, color 0.12s',
+});
+
+const stepBtn = (t: Theme, disabled: boolean): React.CSSProperties => ({
+  background: 'transparent', border: 'none',
+  color: disabled ? t.textDim : t.textMuted,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  padding: '0.2rem', borderRadius: '999px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  opacity: disabled ? 0.35 : 1,
 });

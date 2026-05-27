@@ -287,6 +287,7 @@ function TopicCard({ t, topic, expanded, onToggle, onChange, onDelete, onMoveUp,
                   borderRadius: '10px', padding: '0.5rem',
                   display: 'grid', gridTemplateColumns: 'repeat(5, 32px)', gap: '0.3rem',
                   boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+                  maxHeight: '200px', overflowY: 'auto',
                 }}>
                   {TOPIC_ICONS.map(({ name, Icon }) => (
                     <button
