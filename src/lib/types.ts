@@ -231,6 +231,8 @@ export interface AppearancePrefs {
   fontSize: FontSize;
   /** Sections hidden from the nav (Settings can never be hidden). */
   hiddenSections: SectionId[];
+  /** Topic IDs hidden from the nav. */
+  hiddenTopicIds: string[];
   /** Section the app opens to on launch. */
   defaultSection: SectionId;
   /** Corner radius preset for home widgets. */

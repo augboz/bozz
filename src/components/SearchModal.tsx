@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
 import type { SearchEntry } from '../lib/search';
-import type { SectionId, Theme } from '../lib/types';
+import type { Theme } from '../lib/types';
 
 interface SearchModalProps {
   t: Theme;
   entries: SearchEntry[];
   recent: string[];
   onClose: () => void;
-  onJump: (section: SectionId) => void;
+  onJump: (section: string) => void;
   onRecent: (query: string) => void;
   isMobile?: boolean;
   tbOffset?: number;

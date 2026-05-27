@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, useMemo, useCallback, type ElementType } f
 import {
   Music, Briefcase, Sparkles, BookOpen,
   LayoutDashboard, FileText, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft,
+  PanelLeft, ListTree,
 } from 'lucide-react';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
 import VoiceButton from './shared/VoiceButton';
 import { isMobileViewport, isTauri } from '../lib/platform';
 import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
-import BottomTabBar, { BOTTOM_TAB_HEIGHT } from './BottomTabBar';
+import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
 import { getItem, setItem, initBackup } from '../lib/storage';
@@ -31,6 +31,7 @@ import type {
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
 import SimpleListView from './sections/SimpleListView';
+import TopicView from './sections/TopicView';
 import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
 import CalendarView from './sections/calendar/CalendarView';
@@ -49,7 +50,7 @@ const EMPTY_CACHE: CalendarCache = { lastSync: null, feeds: {} };
 
 export default function Dashboard() {
   const [appearance, setAppearance] = useState<AppearancePrefs>(DEFAULT_APPEARANCE);
-  const [activeSection, setActiveSection] = useState<SectionId>('home');
+  const [activeSection, setActiveSection] = useState<string>('home');
   const [loading, setLoading] = useState(true);
   const [musicItems, setMusicItems] = useState<ListItem[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -131,6 +132,7 @@ export default function Dashboard() {
       let appr: AppearancePrefs = { ...DEFAULT_APPEARANCE };
       let appearanceLoaded = false;
       let legacyDark: boolean | undefined;
+      let loadedTopics: Topic[] | null = null;
 
       for (const key of keys) {
         try {
@@ -218,7 +220,7 @@ export default function Dashboard() {
             } else if (key === 'sidebarCollapsed' && typeof val === 'boolean') {
               setSidebarCollapsed(val);
             } else if (key === 'topics' && Array.isArray(val)) {
-              setTopics(val as Topic[]);
+              loadedTopics = val as Topic[];
             }
           }
         } catch { /* ignore individual key errors */ }
@@ -230,9 +232,31 @@ export default function Dashboard() {
         appr.mood = legacyDark ? 'midnight' : 'light';
       }
 
+      // Seed a default "Tasks" topic for new users.
+      if (!loadedTopics || loadedTopics.length === 0) {
+        const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        const defaultTopic: Topic = {
+          id: genId(),
+          name: 'Tasks',
+          color: '#7da7d9',
+          keywords: [],
+          stages: [
+            { id: genId(), label: 'To do',  color: '#7a93ad' },
+            { id: genId(), label: 'Doing',  color: '#d99a52' },
+            { id: genId(), label: 'Done',   color: '#6fb088', done: true },
+          ],
+          items: [],
+          order: 0,
+          sortMode: 'manual',
+        };
+        setTopics([defaultTopic]);
+      } else {
+        setTopics(loadedTopics);
+      }
+
       setAppearance(appr);
       if (appr.defaultSection !== 'settings' && appr.hiddenSections.includes(appr.defaultSection)) {
-        setActiveSection('settings');
+        setActiveSection('home');
       } else {
         setActiveSection(appr.defaultSection);
       }
@@ -503,16 +527,37 @@ export default function Dashboard() {
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
-  const sections = allSections.filter(
-    s => s.id === 'settings' || !appearance.hiddenSections.includes(s.id),
-  );
 
-  // If the section you're viewing gets hidden, fall back to Settings.
+  // Unified nav: Home → visible topics → other visible sections → Settings
+  const hiddenTopicIds = appearance.hiddenTopicIds ?? [];
+  const navItems: NavTab[] = useMemo(() => {
+    const visibleSections = allSections.filter(
+      s => s.id === 'settings' || !appearance.hiddenSections.includes(s.id),
+    );
+    const visibleTopics = [...topics]
+      .filter(top => !hiddenTopicIds.includes(top.id))
+      .sort((a, b) => a.order - b.order)
+      .map(top => ({ id: top.id, label: top.name || '(unnamed)', icon: ListTree, accent: top.color }));
+
+    const home = visibleSections.find(s => s.id === 'home');
+    const middle = visibleSections.filter(s => s.id !== 'home' && s.id !== 'settings');
+    const settingsEntry = visibleSections.find(s => s.id === 'settings');
+
+    return [
+      ...(home ? [{ id: home.id, label: home.label, icon: home.icon }] : []),
+      ...visibleTopics,
+      ...middle.map(s => ({ id: s.id, label: s.label, icon: s.icon })),
+      ...(settingsEntry ? [{ id: settingsEntry.id, label: settingsEntry.label, icon: settingsEntry.icon }] : []),
+    ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appearance.hiddenSections, hiddenTopicIds, topics]);
+
+  // If the item you're viewing gets hidden, fall back to home.
   useEffect(() => {
-    if (activeSection !== 'settings' && appearance.hiddenSections.includes(activeSection)) {
-      setActiveSection('settings');
-    }
-  }, [appearance.hiddenSections, activeSection]);
+    if (activeSection === 'settings' || activeSection === 'home') return;
+    const stillVisible = navItems.some(n => n.id === activeSection);
+    if (!stillVisible) setActiveSection('home');
+  }, [navItems, activeSection]);
 
   const today = new Date();
 
@@ -634,9 +679,10 @@ export default function Dashboard() {
             slides toward the right edge and clips against overflow:hidden
             on the aside, which feels continuous with the width transition. */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.05rem', flex: 1 }}>
-          {sections.map(s => {
+          {navItems.map(s => {
             const Icon = s.icon;
-            const active = activeSection === s.id;
+            const isActive = activeSection === s.id;
+            const accent = s.accent ?? (sectionAccents as Record<string, string>)[s.id] ?? t.textMuted;
             const inboxBadgeVisible = s.id === 'inbox' && inbox.length > 0;
             return (
               <button
@@ -646,9 +692,9 @@ export default function Dashboard() {
                 style={{
                   display: 'flex', alignItems: 'center',
                   gap: '0.65rem',
-                  background: active ? t.panel : 'transparent',
+                  background: isActive ? t.panel : 'transparent',
                   border: 'none',
-                  color: active ? t.text : t.textMuted,
+                  color: isActive ? t.text : t.textMuted,
                   padding: '0.45rem 0.65rem',
                   cursor: 'pointer', borderRadius: '6px',
                   fontSize: '0.84rem', fontWeight: 400, letterSpacing: '0',
@@ -660,7 +706,7 @@ export default function Dashboard() {
               >
                 <Icon
                   size={16} strokeWidth={1.5}
-                  color={active ? sectionAccents[s.id] : t.textMuted}
+                  color={isActive ? accent : t.textMuted}
                   style={{ flexShrink: 0 }}
                 />
                 <span style={{
@@ -776,7 +822,7 @@ export default function Dashboard() {
               // try to set it active. Unhide first, then navigate.
               if (appearance.hiddenSections.includes('review')) {
                 patchAppearance({
-                  hiddenSections: appearance.hiddenSections.filter(s => s !== 'review'),
+                  hiddenSections: appearance.hiddenSections.filter((s): s is SectionId => s !== 'review'),
                 });
               }
               setActiveSection('review');
@@ -881,6 +927,19 @@ export default function Dashboard() {
               }}
             />
           )}
+          {(() => {
+            const activeTopic = topics.find(top => top.id === activeSection);
+            if (activeTopic) {
+              return (
+                <TopicView
+                  topic={activeTopic}
+                  onChange={(next) => setTopics(prev => prev.map(t => t.id === next.id ? next : t))}
+                  t={t}
+                />
+              );
+            }
+            return null;
+          })()}
           {activeSection === 'settings' && (
             <SettingsView
               t={t}
@@ -889,6 +948,12 @@ export default function Dashboard() {
               resetAppearance={resetAppearance}
               resetHomeLayout={resetHomeLayout}
               sections={allSections.map(s => ({ id: s.id, label: s.label }))}
+              hiddenTopicIds={hiddenTopicIds}
+              onResetNavigation={() => patchAppearance({
+                hiddenSections: DEFAULT_APPEARANCE.hiddenSections,
+                hiddenTopicIds: [],
+                defaultSection: DEFAULT_APPEARANCE.defaultSection,
+              })}
               calendarFeeds={calendarFeeds}
               onFeedsChange={setCalendarFeeds}
               onRefreshFeeds={refreshFeeds}
@@ -930,7 +995,7 @@ export default function Dashboard() {
       {/* Bottom tab bar — mobile only */}
       {isMobile && (
         <BottomTabBar
-          tabs={sections}
+          tabs={navItems}
           active={activeSection}
           onSelect={setActiveSection}
           inboxCount={inbox.length}

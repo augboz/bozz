@@ -9,21 +9,23 @@
  */
 
 import type { ElementType } from 'react';
-import type { SectionId, Theme } from '../lib/types';
+import type { Theme } from '../lib/types';
 import { sectionAccents } from '../lib/themes';
 
 export const BOTTOM_TAB_HEIGHT = 56; // px, not counting safe-area
 
-interface Tab {
-  id: SectionId;
+export interface NavTab {
+  id: string;
   label: string;
   icon: ElementType;
+  /** Explicit accent colour — falls back to sectionAccents[id] */
+  accent?: string;
 }
 
 interface Props {
-  tabs: Tab[];
-  active: SectionId;
-  onSelect: (id: SectionId) => void;
+  tabs: NavTab[];
+  active: string;
+  onSelect: (id: string) => void;
   inboxCount: number;
   t: Theme;
   /** Top offset from TitleBar (0 on web/PWA, TITLE_BAR_HEIGHT inside Tauri). */
@@ -39,26 +41,21 @@ export default function BottomTabBar({ tabs, active, onSelect, inboxCount, t }: 
         bottom: 0,
         left: 0,
         right: 0,
-        // Sit above everything including modals' backdrops
         zIndex: 60,
         background: t.bgAlt,
         borderTop: `1px solid ${t.border}`,
-        // Horizontal scroll when tabs overflow (many visible sections)
         display: 'flex',
         overflowX: 'auto',
         overflowY: 'hidden',
-        // Hide the scrollbar — navigation by swipe, not by scrollbar
         scrollbarWidth: 'none',
-        // Pad bottom for iOS home indicator
         paddingBottom: 'env(safe-area-inset-bottom)',
-        // Smooth momentum scroll on iOS
         WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
       } as React.CSSProperties}
     >
       {tabs.map(tab => {
         const Icon = tab.icon;
         const isActive = tab.id === active;
-        const accent = sectionAccents[tab.id];
+        const accent = tab.accent ?? (sectionAccents as Record<string, string>)[tab.id] ?? t.textMuted;
         const showBadge = tab.id === 'inbox' && inboxCount > 0;
 
         return (
@@ -68,9 +65,7 @@ export default function BottomTabBar({ tabs, active, onSelect, inboxCount, t }: 
             aria-label={tab.label}
             aria-current={isActive ? 'page' : undefined}
             style={{
-              // Flex-shrink 0 so tabs don't squish below their hit target
               flexShrink: 0,
-              // Minimum 44px wide, grow evenly if tabs fit on screen
               minWidth: 'max(44px, calc(100% / 6))',
               flex: 1,
               height: BOTTOM_TAB_HEIGHT,
@@ -83,7 +78,6 @@ export default function BottomTabBar({ tabs, active, onSelect, inboxCount, t }: 
               border: 'none',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              // Active tab: accent colour; inactive: dim
               color: isActive ? accent : t.textMuted,
               transition: 'color 0.15s ease',
               position: 'relative',
@@ -109,7 +103,6 @@ export default function BottomTabBar({ tabs, active, onSelect, inboxCount, t }: 
               {tab.label}
             </span>
 
-            {/* Inbox unread badge */}
             {showBadge && (
               <span style={{
                 position: 'absolute',

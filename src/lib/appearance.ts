@@ -13,6 +13,7 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
   // adds their own topics via Settings → Topics.
   hiddenSections: ['music', 'life', 'cv', 'other', 'applications',
                    'calendar', 'budget', 'email', 'review'],
+  hiddenTopicIds: [],
   defaultSection: 'home',
   widgetShape: 'rounded',
   widgetBorder: 'normal',

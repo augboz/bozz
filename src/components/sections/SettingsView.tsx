@@ -40,6 +40,8 @@ interface SettingsViewProps {
   onDisconnectAccount: (provider: EmailProvider, email: string) => Promise<void>;
   topics: Topic[];
   onTopicsChange: (next: Topic[]) => void;
+  hiddenTopicIds: string[];
+  onResetNavigation: () => void;
 }
 
 function Block({ title, t, icon: Icon, children, defaultOpen = false }: {
@@ -161,7 +163,7 @@ export default function SettingsView({
   currency, onCurrencyChange,
   reviewSettings, onReviewSettingsChange,
   oauthAccounts, emailSyncErrors, onConnectAccount, onDisconnectAccount,
-  topics, onTopicsChange,
+  topics, onTopicsChange, hiddenTopicIds, onResetNavigation,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -202,8 +204,15 @@ export default function SettingsView({
     const hidden = appearance.hiddenSections.includes(id)
       ? appearance.hiddenSections.filter(s => s !== id)
       : [...appearance.hiddenSections, id];
-    const defaultSection = hidden.includes(appearance.defaultSection) ? 'settings' : appearance.defaultSection;
+    const defaultSection = hidden.includes(appearance.defaultSection) ? 'home' : appearance.defaultSection;
     patchAppearance({ hiddenSections: hidden, defaultSection });
+  };
+
+  const toggleTopic = (id: string) => {
+    const next = hiddenTopicIds.includes(id)
+      ? hiddenTopicIds.filter(x => x !== id)
+      : [...hiddenTopicIds, id];
+    patchAppearance({ hiddenTopicIds: next });
   };
 
   return (
@@ -309,6 +318,38 @@ export default function SettingsView({
             />
           </Field>
         ))}
+        {topics.length > 0 && (
+          <>
+            <div style={{
+              fontSize: '0.68rem', color: t.textDim, letterSpacing: '0.08em',
+              textTransform: 'uppercase', padding: '0.75rem 0 0.1rem',
+            }}>
+              Topics
+            </div>
+            {topics.map(top => (
+              <Field key={top.id} label={top.name || '(unnamed)'} t={t}>
+                <Toggle
+                  on={!hiddenTopicIds.includes(top.id)}
+                  onClick={() => toggleTopic(top.id)}
+                  t={t}
+                />
+              </Field>
+            ))}
+          </>
+        )}
+        <div style={{ paddingTop: '0.85rem' }}>
+          <button
+            onClick={onResetNavigation}
+            style={{
+              background: 'transparent', border: `1px solid ${t.border}`,
+              borderRadius: '8px', padding: '0.4rem 0.9rem',
+              fontSize: '0.78rem', color: t.textMuted,
+              fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
+            }}
+          >
+            Reset navigation to defaults
+          </button>
+        </div>
       </Block>
 
       <Block title="Calendar feeds" t={t} icon={CalendarDays}>
