@@ -34,14 +34,20 @@ interface Props {
 
 export default function BottomTabBar({ tabs, active, onSelect, inboxCount, t }: Props) {
   return (
+    // Wrapper provides the fade hint for horizontal overflow
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60,
+    }}>
+      {/* Right-edge fade — hints that more tabs exist off-screen */}
+      <div style={{
+        position: 'absolute', right: 0, top: 0, bottom: 0,
+        width: '40px', pointerEvents: 'none',
+        background: `linear-gradient(to right, transparent, ${t.bgAlt})`,
+        zIndex: 1,
+      }} />
     <nav
       aria-label="Main navigation"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 60,
         background: t.bgAlt,
         borderTop: `1px solid ${t.border}`,
         display: 'flex',
@@ -125,5 +131,6 @@ export default function BottomTabBar({ tabs, active, onSelect, inboxCount, t }: 
         );
       })}
     </nav>
+    </div>
   );
 }

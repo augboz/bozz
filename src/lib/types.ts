@@ -39,6 +39,8 @@ export interface Topic {
   name: string;
   /** Accent colour used in the nav and as a default stage colour. */
   color: string;
+  /** Lucide icon name for the nav. Falls back to ListTree. */
+  icon?: string;
   /** Optional keywords for voice / quick-capture routing. */
   keywords: string[];
   /** Ordered stages — first is the default for new items. */

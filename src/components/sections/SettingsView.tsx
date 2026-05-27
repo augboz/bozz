@@ -198,7 +198,6 @@ export default function SettingsView({
   };
 
   const hideable = sections.filter(s => s.id !== 'settings');
-  const visibleSections = sections.filter(s => !appearance.hiddenSections.includes(s.id));
 
   const toggleSection = (id: SectionId) => {
     const hidden = appearance.hiddenSections.includes(id)
@@ -277,7 +276,11 @@ export default function SettingsView({
               fontFamily: 'inherit', outline: 'none',
             }}
           >
-            {visibleSections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            {[
+              { id: 'home' as SectionId, label: 'Home' },
+              { id: 'inbox' as SectionId, label: 'Inbox' },
+              ...sections.filter(s => !appearance.hiddenSections.includes(s.id)),
+            ].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
         </Field>
         <Field label="Widget shape" hint="Corner radius of home widgets" t={t}>

@@ -2,13 +2,14 @@ import { useState, useEffect, useRef, useMemo, useCallback, type ElementType } f
 import {
   Music, Briefcase, Sparkles, BookOpen,
   LayoutDashboard, FileText, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ListTree,
+  PanelLeft,
 } from 'lucide-react';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
 import VoiceButton from './shared/VoiceButton';
 import { isMobileViewport, isTauri } from '../lib/platform';
 import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
 import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
+import { iconForTopic } from './sections/settings/TopicsBlock';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
 import { getItem, setItem, initBackup } from '../lib/storage';
@@ -232,27 +233,8 @@ export default function Dashboard() {
         appr.mood = legacyDark ? 'midnight' : 'light';
       }
 
-      // Seed a default "Tasks" topic for new users.
-      if (!loadedTopics || loadedTopics.length === 0) {
-        const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-        const defaultTopic: Topic = {
-          id: genId(),
-          name: 'Tasks',
-          color: '#7da7d9',
-          keywords: [],
-          stages: [
-            { id: genId(), label: 'To do',  color: '#7a93ad' },
-            { id: genId(), label: 'Doing',  color: '#d99a52' },
-            { id: genId(), label: 'Done',   color: '#6fb088', done: true },
-          ],
-          items: [],
-          order: 0,
-          sortMode: 'manual',
-        };
-        setTopics([defaultTopic]);
-      } else {
-        setTopics(loadedTopics);
-      }
+      // No seeding — user starts with zero topics and creates their own.
+      if (loadedTopics) setTopics(loadedTopics);
 
       setAppearance(appr);
       if (appr.defaultSection !== 'settings' && appr.hiddenSections.includes(appr.defaultSection)) {
@@ -537,7 +519,7 @@ export default function Dashboard() {
     const visibleTopics = [...topics]
       .filter(top => !hiddenTopicIds.includes(top.id))
       .sort((a, b) => a.order - b.order)
-      .map(top => ({ id: top.id, label: top.name || '(unnamed)', icon: ListTree, accent: top.color }));
+      .map(top => ({ id: top.id, label: top.name || '(unnamed)', icon: iconForTopic(top.icon), accent: top.color }));
 
     const home = visibleSections.find(s => s.id === 'home');
     const middle = visibleSections.filter(s => s.id !== 'home' && s.id !== 'settings');
@@ -947,7 +929,9 @@ export default function Dashboard() {
               patchAppearance={patchAppearance}
               resetAppearance={resetAppearance}
               resetHomeLayout={resetHomeLayout}
-              sections={allSections.map(s => ({ id: s.id, label: s.label }))}
+              sections={allSections
+                .filter(s => ['budget','calendar','email','review'].includes(s.id))
+                .map(s => ({ id: s.id, label: s.label }))}
               hiddenTopicIds={hiddenTopicIds}
               onResetNavigation={() => patchAppearance({
                 hiddenSections: DEFAULT_APPEARANCE.hiddenSections,
