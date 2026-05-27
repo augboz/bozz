@@ -10,6 +10,9 @@ import { isMobileViewport, isTauri } from '../lib/platform';
 import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
 import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
 import { iconForTopic } from './sections/settings/TopicsBlock';
+import { useSession } from './AuthGate';
+import { pullSnapshot, schedulePush } from '../lib/sync';
+import { supabase } from '../lib/supabase';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
 import { getItem, setItem, initBackup } from '../lib/storage';
@@ -50,6 +53,8 @@ const FEED_REFRESH_MS = 60 * 60 * 1000;
 const EMPTY_CACHE: CalendarCache = { lastSync: null, feeds: {} };
 
 export default function Dashboard() {
+  const session = useSession();
+  const userId = session?.user.id ?? null;
   const [appearance, setAppearance] = useState<AppearancePrefs>(DEFAULT_APPEARANCE);
   const [activeSection, setActiveSection] = useState<string>('home');
   const [loading, setLoading] = useState(true);
@@ -122,6 +127,10 @@ export default function Dashboard() {
     }
 
     async function loadData() {
+      // Pull cloud snapshot first (overwrites local). If no session or first
+      // sign-in, nothing is overwritten.
+      if (userId) await pullSnapshot(userId);
+
       const keys = [
         'musicItems', 'tracks', 'applications', 'lifeItems', 'cvItems', 'otherItems',
         'darkMode', 'taskSortPrefs', 'appearance', 'homeLayout',
@@ -247,11 +256,14 @@ export default function Dashboard() {
       initBackup();
     }
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const save = async (key: string, value: unknown) => {
     try { await setItem(key, JSON.stringify(value)); }
     catch (e) { console.error('Save error:', e); }
+    // Debounced push to Supabase whenever any synced key changes
+    if (userId) schedulePush(userId);
   };
 
   useEffect(() => { applyAppearanceVars(appearance); }, [appearance]);
@@ -945,6 +957,8 @@ export default function Dashboard() {
                 hiddenTopicIds: [],
                 defaultSection: DEFAULT_APPEARANCE.defaultSection,
               })}
+              accountEmail={session?.user.email ?? null}
+              onSignOut={async () => { await supabase.auth.signOut(); }}
               calendarFeeds={calendarFeeds}
               onFeedsChange={setCalendarFeeds}
               onRefreshFeeds={refreshFeeds}

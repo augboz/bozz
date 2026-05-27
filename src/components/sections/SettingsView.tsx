@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ChevronDown, X, Palette, Menu, CalendarDays, Wallet,
-  AtSign, Plug, NotebookPen, Power, RotateCcw, ListTree,
+  AtSign, Plug, NotebookPen, Power, RotateCcw, ListTree, User, LogOut,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
@@ -42,6 +42,8 @@ interface SettingsViewProps {
   onTopicsChange: (next: Topic[]) => void;
   hiddenTopicIds: string[];
   onResetNavigation: () => void;
+  accountEmail: string | null;
+  onSignOut: () => Promise<void>;
 }
 
 function Block({ title, t, icon: Icon, children, defaultOpen = false }: {
@@ -164,6 +166,7 @@ export default function SettingsView({
   reviewSettings, onReviewSettingsChange,
   oauthAccounts, emailSyncErrors, onConnectAccount, onDisconnectAccount,
   topics, onTopicsChange, hiddenTopicIds, onResetNavigation,
+  accountEmail, onSignOut,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -217,6 +220,28 @@ export default function SettingsView({
   return (
     <div>
       <SectionHeader title="Settings" t={t} />
+
+      <Block title="Account" t={t} icon={User} defaultOpen>
+        <Field
+          label={accountEmail ?? 'Not signed in'}
+          hint={accountEmail ? 'Your data syncs across devices when signed in.' : 'Sign in to enable cloud sync.'}
+          t={t}
+        >
+          {accountEmail && (
+            <button
+              onClick={() => { void onSignOut(); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                background: 'transparent', border: `1px solid ${t.alertBorder}`,
+                color: t.alert, borderRadius: '8px', padding: '0.4rem 0.85rem',
+                fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
+              }}
+            >
+              <LogOut size={13} strokeWidth={1.6} /> Sign out
+            </button>
+          )}
+        </Field>
+      </Block>
 
       <Block title="Appearance" t={t} icon={Palette}>
         <div style={{ padding: '0.6rem 0' }}>
