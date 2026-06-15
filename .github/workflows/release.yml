@@ -43,3 +43,12 @@ jobs:
           releaseDraft: false
           prerelease: false
           updaterJsonKeepUniversal: true
+
+      - name: Upload fixed-name installer
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Where-Object { $_.Name -notlike "*.sig" } | Select-Object -First 1
+          Copy-Item $exe.FullName "src-tauri/target/release/bundle/nsis/Bozz-setup.exe"
+          gh release upload ${{ github.ref_name }} "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
