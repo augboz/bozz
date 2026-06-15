@@ -50,7 +50,6 @@ async fn oauth_run(app: tauri::AppHandle, port: Option<u16>) -> Result<std::coll
     let server = Server::http(addr).map_err(|e| e.to_string())?;
     let port = match server.server_addr() {
         tiny_http::ListenAddr::IP(a) => a.port(),
-        _ => return Err("unexpected listen address".into()),
     };
     app.emit("oauth:port", port).map_err(|e| e.to_string())?;
 
@@ -264,7 +263,7 @@ pub fn run() {
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .menu_on_left_click(false)
+                .show_menu_on_left_click(false)
                 .tooltip("Bozz")
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {

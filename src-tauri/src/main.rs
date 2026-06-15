@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    aug_dashboard_lib::run()
+    bozz_lib::run()
 }
