@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
+
+# Tauri signing keys — never commit these
+.tauri-private.key
+.tauri-private.key.pub

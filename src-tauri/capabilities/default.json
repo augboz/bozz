@@ -15,6 +15,7 @@
     "core:window:allow-unmaximize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-start-dragging",
+    "core:webview:allow-create-webview-window",
     "core:event:allow-emit",
     "core:event:allow-listen",
     "opener:default",
@@ -24,7 +25,13 @@
     "autostart:allow-is-enabled",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://**" }]
-    }
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://127.0.0.1:14985/**" },
+        { "url": "http://127.0.0.1:14986/**" }
+      ]
+    },
+    "updater:default",
+    "process:allow-relaunch"
   ]
 }

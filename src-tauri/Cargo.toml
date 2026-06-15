@@ -1,12 +1,12 @@
 [package]
-name = "aug-dashboard"
-version = "0.1.0"
-description = "Aug Dashboard — personal life dashboard"
+name = "bozz"
+version = "0.1.1"
+description = "Bozz — personal life dashboard"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "aug_dashboard_lib"
+name = "bozz_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -21,6 +21,8 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-http = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 keyring = "3"

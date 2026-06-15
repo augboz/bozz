@@ -4,7 +4,7 @@ use tauri::{
     Emitter, Manager, WebviewUrl, WebviewWindowBuilder,
 };
 
-const KEYCHAIN_SERVICE: &str = "aug-dashboard";
+const KEYCHAIN_SERVICE: &str = "bozz";
 
 #[tauri::command]
 fn secret_set(account: String, value: String) -> Result<(), String> {
@@ -61,7 +61,7 @@ async fn oauth_run(app: tauri::AppHandle, port: Option<u16>) -> Result<std::coll
 
     let url = req.url().to_string();
     let html = "<html><body style=\"font-family:system-ui;padding:40px;color:#333\">\
-                <h2>Connected.</h2><p>You can close this tab and return to Aug Dashboard.</p>\
+                <h2>Connected.</h2><p>You can close this tab and return to Bozz.</p>\
                 </body></html>";
     let _ = req.respond(
         Response::from_string(html)
@@ -253,9 +253,11 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let show = MenuItem::with_id(app, "show", "Show Aug Dashboard", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show Bozz", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
@@ -263,7 +265,7 @@ pub fn run() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .menu_on_left_click(false)
-                .tooltip("Aug Dashboard")
+                .tooltip("Bozz")
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,

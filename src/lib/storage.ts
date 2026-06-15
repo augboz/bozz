@@ -32,7 +32,7 @@ async function getTauriStore(): Promise<TauriStoreAPI> {
 
 // ── Web backend (IndexedDB) ────────────────────────────────────────────────
 
-const DB_NAME = 'aug-dashboard';
+const DB_NAME = 'bozz';
 const DB_STORE = 'kv';
 const DB_VERSION = 1;
 
