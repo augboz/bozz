@@ -4,7 +4,7 @@ use tauri::{
     Emitter, Manager, WebviewUrl, WebviewWindowBuilder,
 };
 
-const KEYCHAIN_SERVICE: &str = "life-bozz";
+const KEYCHAIN_SERVICE: &str = "aug-dashboard";
 
 #[tauri::command]
 fn secret_set(account: String, value: String) -> Result<(), String> {
@@ -61,7 +61,7 @@ async fn oauth_run(app: tauri::AppHandle, port: Option<u16>) -> Result<std::coll
 
     let url = req.url().to_string();
     let html = "<html><body style=\"font-family:system-ui;padding:40px;color:#333\">\
-                <h2>Connected.</h2><p>You can close this tab and return to Life Bozz.</p>\
+                <h2>Connected.</h2><p>You can close this tab and return to Aug Dashboard.</p>\
                 </body></html>";
     let _ = req.respond(
         Response::from_string(html)
@@ -74,6 +74,109 @@ async fn oauth_run(app: tauri::AppHandle, port: Option<u16>) -> Result<std::coll
         out.insert(k.into_owned(), v.into_owned());
     }
     Ok(out)
+}
+
+/// Fetch the most recent inbox messages over IMAP/TLS.
+/// Runs on a blocking thread (IMAP is synchronous I/O).
+#[tauri::command]
+fn imap_fetch(
+    host: String,
+    port: u16,
+    username: String,
+    password: String,
+) -> Result<Vec<serde_json::Value>, String> {
+    use native_tls::TlsConnector;
+
+    let tls = TlsConnector::new().map_err(|e| format!("TLS build failed: {e}"))?;
+
+    let client = imap::connect((host.as_str(), port), &host, &tls)
+        .map_err(|e| format!("IMAP connect failed: {e}"))?;
+
+    let mut session = client
+        .login(&username, &password)
+        .map_err(|(e, _)| format!("Login failed: {e}"))?;
+
+    let mailbox = session.select("INBOX").map_err(|e| e.to_string())?;
+    let total = mailbox.exists;
+
+    if total == 0 {
+        let _ = session.logout();
+        return Ok(vec![]);
+    }
+
+    // Fetch the last 30 messages (newest = highest sequence numbers)
+    let start = total.saturating_sub(29).max(1);
+    let seq = format!("{start}:{total}");
+
+    let messages = session
+        .fetch(&seq, "(FLAGS ENVELOPE INTERNALDATE)")
+        .map_err(|e| e.to_string())?;
+
+    let mut results: Vec<serde_json::Value> = Vec::new();
+
+    for msg in messages.iter().rev() {
+        let flags = msg.flags();
+        let unread = !flags.iter().any(|f| *f == imap::types::Flag::Seen);
+
+        // INTERNALDATE → unix ms
+        let date_ms: i64 = msg
+            .internal_date()
+            .map(|d| d.timestamp_millis())
+            .unwrap_or(0);
+
+        let (subject, from_name, from_email) = if let Some(env) = msg.envelope() {
+            let subject = decode_imap_bytes(env.subject.as_deref().unwrap_or(b"(no subject)"));
+
+            let (from_name, from_email) = env
+                .from
+                .as_ref()
+                .and_then(|addrs| addrs.first())
+                .map(|addr| {
+                    let name =
+                        decode_imap_bytes(addr.name.as_deref().unwrap_or(b""));
+                    let mbox =
+                        std::str::from_utf8(addr.mailbox.as_deref().unwrap_or(b""))
+                            .unwrap_or("")
+                            .to_string();
+                    let host_part =
+                        std::str::from_utf8(addr.host.as_deref().unwrap_or(b""))
+                            .unwrap_or("")
+                            .to_string();
+                    let email = if mbox.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{mbox}@{host_part}")
+                    };
+                    (name, email)
+                })
+                .unwrap_or_default();
+
+            (subject, from_name, from_email)
+        } else {
+            (String::from("(no subject)"), String::new(), String::new())
+        };
+
+        results.push(serde_json::json!({
+            "id": format!("imap:{}", msg.message),
+            "subject": subject,
+            "fromName": from_name,
+            "fromEmail": from_email,
+            "dateMs": date_ms,
+            "unread": unread,
+        }));
+    }
+
+    let _ = session.logout();
+    Ok(results)
+}
+
+/// Decode an IMAP byte slice: tries UTF-8, falls back to lossy UTF-8.
+/// Does NOT decode RFC 2047 encoded-words (=?charset?…?=) — most modern
+/// servers send plain UTF-8 in envelope data.
+fn decode_imap_bytes(bytes: &[u8]) -> String {
+    std::str::from_utf8(bytes)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|_| String::from_utf8_lossy(bytes).into_owned())
 }
 
 #[tauri::command]
@@ -152,7 +255,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let show = MenuItem::with_id(app, "show", "Show Life Bozz", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show Aug Dashboard", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
@@ -160,7 +263,7 @@ pub fn run() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .menu_on_left_click(false)
-                .tooltip("Life Bozz")
+                .tooltip("Aug Dashboard")
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -215,7 +318,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            create_backup, secret_set, secret_get, secret_delete, oauth_run
+            create_backup, secret_set, secret_get, secret_delete, oauth_run, imap_fetch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

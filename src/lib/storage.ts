@@ -32,7 +32,7 @@ async function getTauriStore(): Promise<TauriStoreAPI> {
 
 // ── Web backend (IndexedDB) ────────────────────────────────────────────────
 
-const DB_NAME = 'life-bozz';
+const DB_NAME = 'aug-dashboard';
 const DB_STORE = 'kv';
 const DB_VERSION = 1;
 
@@ -85,6 +85,19 @@ async function idbDelete(key: string): Promise<void> {
   });
 }
 
+async function idbListKeys(prefix?: string): Promise<string[]> {
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).getAllKeys();
+    req.onsuccess = () => {
+      const keys = (req.result as string[]);
+      resolve(prefix ? keys.filter(k => k.startsWith(prefix)) : keys);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 // ── Public API (same shape on both platforms) ──────────────────────────────
 
 export async function getItem(key: string): Promise<{ value: string } | null> {
@@ -113,6 +126,25 @@ export async function setItem(key: string, value: string): Promise<void> {
     }
   } catch (e) {
     console.error('Storage error:', e);
+  }
+}
+
+/** List all storage keys with the given prefix. */
+export async function listKeysByPrefix(prefix: string): Promise<string[]> {
+  try {
+    if (isTauri()) {
+      // Tauri store exposes keys() on the store instance
+      const s = await getTauriStore();
+      const store = s as unknown as { keys(): Promise<string[]> };
+      if (typeof store.keys === 'function') {
+        const all = await store.keys();
+        return all.filter((k: string) => k.startsWith(prefix));
+      }
+      return [];
+    }
+    return idbListKeys(prefix);
+  } catch {
+    return [];
   }
 }
 

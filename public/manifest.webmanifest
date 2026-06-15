@@ -1,6 +1,6 @@
 {
-  "name": "Life Bozz",
-  "short_name": "Life Bozz",
+  "name": "Aug Dashboard",
+  "short_name": "Aug Dashboard",
   "description": "Personal life dashboard — tasks, calendar, budget, voice capture, and more.",
   "start_url": "/",
   "scope": "/",
