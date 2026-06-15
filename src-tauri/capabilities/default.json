@@ -32,6 +32,6 @@
       ]
     },
     "updater:default",
-    "process:allow-relaunch"
+    "process:allow-restart"
   ]
 }
