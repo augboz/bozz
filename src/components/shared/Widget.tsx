@@ -4,10 +4,10 @@ import { StatusPill } from './StatusToggle';
 
 interface WidgetProps {
   children: React.ReactNode; t: Theme; accent: string;
-  onClick?: () => void; gridSpan?: number; compact?: boolean;
+  onClick?: () => void; gridSpan?: number; compact?: boolean; noPadding?: boolean;
 }
 
-export function Widget({ children, t, accent, onClick, gridSpan = 1, compact = false }: WidgetProps) {
+export function Widget({ children, t, accent, onClick, gridSpan = 1, compact = false, noPadding = false }: WidgetProps) {
   const [hover, setHover] = useState(false);
   return (
     <div
@@ -15,39 +15,52 @@ export function Widget({ children, t, accent, onClick, gridSpan = 1, compact = f
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        background: t.panel,
-        // Border width + radius are driven by user appearance prefs via
-        // CSS variables set in applyAppearanceVars. Falls back to sensible
-        // defaults if no var is set yet (e.g. during initial paint).
-        border: `var(--widget-border, 1px) solid ${hover && onClick ? t.borderStrong : t.border}`,
-        borderRadius: 'var(--widget-radius, 14px)',
-        padding: compact ? '1.1rem 1.5rem' : '1.5rem 1.75rem',
+        background: `var(--w-bg, linear-gradient(160deg, var(--glass-bg-top, var(--glass-bg, ${t.panel})) 0%, var(--glass-bg, ${t.panel}) 100%))`,
+        backdropFilter: 'var(--glass-blur, none)',
+        WebkitBackdropFilter: 'var(--glass-blur, none)',
+        color: `var(--w-text, ${t.text})`,
+        border: `var(--widget-border, 0.5px) solid ${hover ? 'var(--glass-border-strong, ' + t.borderStrong + ')' : 'var(--glass-border, ' + t.border + ')'}`,
+        borderRadius: 'var(--widget-radius, 20px)',
+        boxShadow: hover
+          ? 'var(--widget-shadow-hover, 0 2px 0 rgba(255,255,255,0.10) inset, 0 20px 60px rgba(0,0,0,0.65), 0 4px 16px rgba(0,0,0,0.35))'
+          : 'var(--widget-shadow, none)',
+        padding: noPadding ? 0 : compact ? '1.1rem 1.5rem' : '1.5rem 1.75rem',
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.2s ease',
+        transition: 'transform 0.25s var(--ease, cubic-bezier(0.16,1,0.3,1)), border-color 0.2s, box-shadow 0.25s var(--ease, cubic-bezier(0.16,1,0.3,1))',
         gridColumn: `span ${gridSpan}`,
         position: 'relative',
         overflow: 'hidden',
-        // Fill the grid cell so resizing scales the card itself instead of
-        // leaving empty space inside an over-sized cell.
         height: '100%',
         boxSizing: 'border-box',
-        transform: hover && onClick ? 'translateY(-1px)' : 'translateY(0)',
+        transform: hover ? 'translateY(-3px)' : 'translateY(0)',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <div style={{
-        position: 'absolute', top: 0, left: 0, width: '2px', height: '100%',
-        background: accent, opacity: hover ? 1 : 0.6, transition: 'opacity 0.2s',
-      }} />
+      {/* Accent line — hidden for no-padding (photo) widgets */}
+      {!noPadding && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, width: '2px', height: '100%',
+          background: `var(--w-accent, ${accent})`,
+          opacity: hover ? 1 : 0.55,
+          transition: `opacity 0.3s var(--ease, cubic-bezier(0.16,1,0.3,1))`,
+          display: 'var(--w-line, block)' as React.CSSProperties['display'],
+        }} />
+      )}
       {children}
     </div>
   );
 }
 
-export function WidgetHeader({ label, accent, t, icon: Icon }: { label: string; accent: string; t: Theme; icon: React.ElementType }) {
+export function WidgetHeader({ label, accent: _accent, t, icon: Icon }: { label: string; accent: string; t: Theme; icon: React.ElementType }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      {Icon && <Icon size={15} strokeWidth={1.5} color={accent} />}
-      <span style={{ fontSize: '0.82rem', color: t.textMuted, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 400 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      {Icon && <Icon size={11} strokeWidth={1.6} color={t.textDim} style={{ flexShrink: 0 }} />}
+      <span style={{
+        fontSize: '0.65rem', color: 'var(--w-text, ' + t.textMuted + ')',
+        letterSpacing: '0.07em', fontWeight: 500,
+        textTransform: 'uppercase' as const,
+      }}>
         {label}
       </span>
     </div>
@@ -67,7 +80,7 @@ export function MiniStat({ label, value, color, t }: { label: string; value: num
   return (
     <div style={{ textAlign: 'center', flex: 1 }}>
       <div style={{ fontSize: '1.35rem', fontWeight: 200, color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: '0.65rem', color: t.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: '0.3rem' }}>{label}</div>
+      <div style={{ fontSize: '0.65rem', color: t.textMuted, letterSpacing: '0em', marginTop: '0.3rem' }}>{label}</div>
     </div>
   );
 }
@@ -96,7 +109,7 @@ export function ProgressBar({ doing, todo: _todo, done, total, t }: { doing: num
 
 export function EmptyWidget({ text, t }: { text: string; t: Theme }) {
   return (
-    <div style={{ marginTop: '1.25rem', padding: '0.75rem 0', fontSize: '0.85rem', color: t.textDim, fontStyle: 'italic' }}>
+    <div style={{ marginTop: '1.25rem', padding: '0.75rem 0', fontSize: '0.8rem', color: t.textDim }}>
       {text}
     </div>
   );

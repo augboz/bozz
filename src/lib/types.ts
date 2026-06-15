@@ -1,6 +1,6 @@
 export type Status = 'todo' | 'doing' | 'done';
 export type ApplicationStatus = 'need to apply' | 'applied' | 'interview' | 'offer' | 'rejected';
-export type SectionId = 'home' | 'music' | 'applications' | 'life' | 'cv' | 'other' | 'calendar' | 'budget' | 'inbox' | 'review' | 'email' | 'settings';
+export type SectionId = 'home' | 'music' | 'applications' | 'life' | 'cv' | 'other' | 'calendar' | 'budget' | 'inbox' | 'review' | 'email' | 'settings' | 'planner' | 'dailyPlanner' | 'habits' | 'health';
 
 // ── User-defined topics ─────────────────────────────────────────────────────
 // A "topic" is a user-created task list with custom stages (e.g. To do /
@@ -32,6 +32,27 @@ export interface TopicItem {
   notes?: string;
 }
 
+export interface TopicLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
+export interface TopicFolder {
+  /** Stable id. */
+  id: string;
+  /** Display name e.g. "Girlfriend". */
+  name: string;
+  /** Lucide icon name. Falls back to Folder. */
+  icon?: string;
+  /** Accent colour shown in the nav header. */
+  color?: string;
+  /** Position in the nav relative to other folders/topics. */
+  order: number;
+  /** Whether the folder is collapsed in the sidebar. */
+  collapsed: boolean;
+}
+
 export interface Topic {
   /** Stable id, also used as the section id in the nav. */
   id: string;
@@ -41,6 +62,8 @@ export interface Topic {
   color: string;
   /** Lucide icon name for the nav. Falls back to ListTree. */
   icon?: string;
+  /** Optional short description shown in the dashboard header. */
+  description?: string;
   /** Optional keywords for voice / quick-capture routing. */
   keywords: string[];
   /** Ordered stages — first is the default for new items. */
@@ -49,8 +72,18 @@ export interface Topic {
   items: TopicItem[];
   /** Position in the nav. */
   order: number;
+  /** Optional folder this topic belongs to. */
+  folderId?: string;
   /** Per-topic sort preference. */
   sortMode?: SortMode;
+  /** Pinned links shown in the topic dashboard (Notion pages, docs, etc). */
+  links?: TopicLink[];
+  /** Freeform pinned note shown in the topic dashboard. */
+  pinnedNote?: string;
+  /** Per-topic widget layout for the topic page grid. */
+  widgetLayout?: HomeWidgetItem[];
+  /** Page background photo. */
+  pageBg?: { url: string; dim: number };
 }
 
 export interface WeeklyReview {
@@ -70,12 +103,30 @@ export interface ReviewSettings {
 
 export type EmailProvider = 'gmail' | 'outlook';
 
+export interface WAAccount {
+  token: string;
+  phone?: string;
+  name?: string;
+}
+
 export interface OAuthAccount {
   provider: EmailProvider;
   email: string;
   clientId: string;
   clientSecret: string;          // empty string for Outlook (public client)
   expiresAt: number;             // unix ms when the access token expires
+  lastSync: number | null;
+}
+
+/** A generic IMAP inbox connected with email + app-password. */
+export interface ImapAccount {
+  /** The email address / IMAP username. */
+  email: string;
+  /** IMAP hostname, e.g. imap.mail.me.com */
+  host: string;
+  /** IMAP port — almost always 993 (TLS). */
+  port: number;
+  /** Unix ms of last successful sync, or null. */
   lastSync: number | null;
 }
 
@@ -98,6 +149,11 @@ export interface InboxItem {
   id: number;
   text: string;
   createdAt: number;
+  /** Predicted topic from voice parsing — pre-selects the destination. */
+  suggestedTopicId?: string;
+  /** Predicted deadline from voice parsing (unix ms). */
+  deadline?: number | null;
+  deadlineLabel?: string | null;
 }
 
 /** Where an inbox item can be routed when triaged. */
@@ -154,10 +210,84 @@ export interface BudgetData {
 
 export type CalendarViewMode = 'month' | 'week' | 'day';
 
+/** A single block on the daily planner grid. */
+export interface PlannerItem {
+  id: number;
+  /** Unix ms at local midnight — identifies which day this block belongs to. */
+  date: number;
+  /** Start time in minutes from midnight (e.g. 480 = 08:00). */
+  startMin: number;
+  /** Duration in minutes (e.g. 60 = 1 hour). */
+  duration: number;
+  text: string;
+  color: string;
+  done: boolean;
+  /** Optional link to a user topic for colour inheritance. */
+  topicId?: string;
+}
+
+/** Maps localMidnight-ms-string → array of TopicItem id strings.
+ *  Persisted per user so the plan survives app restarts.
+ */
+export type DailyPlan = Record<string, string[]>;
+
+// ── Habits ──────────────────────────────────────────────────────────────────
+
+export interface Habit {
+  /** Stable id. */
+  id: string;
+  /** Display name e.g. "Morning run". */
+  name: string;
+  /** Accent colour. */
+  color: string;
+  /** Optional Lucide icon name. */
+  icon?: string;
+  /**
+   * Days this habit is active: 0=Mon … 6=Sun.
+   * Empty array means every day.
+   */
+  activeDays: number[];
+  /**
+   * Completion log: localMidnight-ms-string → true.
+   * Missing key = not completed that day.
+   */
+  entries: Record<string, true>;
+  /** Nav sort order. */
+  order: number;
+}
+
 export interface CalendarFeed {
   id: string;
   label: string;
   url: string;
+}
+
+export type CalendarProvider = 'googleCalendar' | 'appleCalendar';
+
+/** An OAuth-connected calendar account. */
+export interface CalendarConnection {
+  provider: CalendarProvider;
+  email: string;
+  connectedAt: number;
+  lastSync: number | null;
+  /** Whether to show this account's events in the calendar view. */
+  enabled: boolean;
+  /** Optional color override for all events from this account. */
+  color?: string;
+}
+
+/** A user-created calendar event (stored locally). */
+export interface CalendarNote {
+  id: string;
+  title: string;
+  /** Local midnight ms — which day this event belongs to. */
+  date: number;
+  /** Start time in minutes from midnight (e.g. 540 = 09:00). null = all-day. */
+  startMin: number | null;
+  /** End time in minutes from midnight. null = no explicit end. */
+  endMin: number | null;
+  color: string;
+  notes?: string;
 }
 
 export interface CalendarEvent {
@@ -167,9 +297,12 @@ export interface CalendarEvent {
   end: number | null;     // unix ms (null = point in time)
   allDay: boolean;
   color: string;
-  source: 'ical' | 'deadline';
+  source: 'ical' | 'deadline' | 'note';
   /** Set on deadline events so the day panel can jump to the section. */
   sectionId?: SectionId;
+  /** Minutes from midnight — set for timed note events. */
+  startMin?: number;
+  endMin?: number;
 }
 
 export interface FeedCacheEntry {
@@ -192,13 +325,18 @@ export type WidgetType =
   | 'applications' | 'nextMusic' | 'nextLife' | 'nextCv' | 'nextOther'
   | 'summary' | 'miniCalendar' | 'upcomingDeadlines'
   | 'weather' | 'pomodoro' | 'quickCapture' | 'nowPlaying'
-  | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd';
+  | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd'
+  | 'clock' | 'photo' | 'dailyPlanner' | 'todaySchedule' | 'today'
+  | 'topicTodos' | 'topicLinks' | 'topicNote'
+  | 'whatsapp';
 
 /** A placed widget on the home grid (combines instance + grid position). */
 export interface HomeWidgetItem {
   i: string;            // unique instance id, also the react-grid-layout key
   type: WidgetType;
   x: number; y: number; w: number; h: number;
+  /** Per-instance configuration (widget-type-specific, optional). */
+  config?: Record<string, unknown>;
 }
 
 export interface SpotifyAccount {
@@ -219,10 +357,8 @@ export interface SpotifyTrack {
   isPlaying: boolean;
 }
 
-export type MoodId =
-  | 'midnight' | 'sunset' | 'coffee' | 'forest'
-  | 'stone' | 'ocean' | 'light' | 'linen' | 'candy';
-export type FontChoice = 'inter' | 'manrope' | 'quicksand' | 'mono';
+export type MoodId = 'dark' | 'light' | 'warm';
+export type FontChoice = 'geist' | 'inter' | 'manrope' | 'quicksand' | 'mono' | 'fraunces';
 export type FontSize = 'small' | 'medium' | 'large';
 export type WidgetShape = 'rounded' | 'sharp' | 'pill';
 export type WidgetBorder = 'subtle' | 'normal' | 'bold';
@@ -241,6 +377,13 @@ export interface AppearancePrefs {
   widgetShape: WidgetShape;
   /** Border style preset for home widgets. */
   widgetBorder: WidgetBorder;
+  /**
+   * User's personal colour bank — the ONLY colours shown throughout the UI.
+   * Max 30 entries. Empty array means the default palette is shown.
+   */
+  colorBank: string[];
+  /** Ordered list of nav item IDs (topic IDs, folder IDs, section IDs). Controls full nav order. */
+  navOrder?: string[];
 }
 
 export interface ListItem {
@@ -286,4 +429,25 @@ export interface Theme {
   alert: string;
   alertBg: string;
   alertBorder: string;
+}
+
+// ── Health data ──────────────────────────────────────────────────────────────
+
+export type HealthProvider = 'appleHealth' | 'googleFit';
+
+export interface HealthConnection {
+  provider: HealthProvider;
+  connectedAt: number;
+  /** Most recent sync timestamp. */
+  lastSync: number | null;
+}
+
+/** A single day's summary of health metrics. */
+export interface HealthDay {
+  /** Local midnight unix ms. */
+  date: number;
+  steps: number | null;
+  sleepHours: number | null;
+  activeCalories: number | null;
+  heartRateAvg: number | null;
 }

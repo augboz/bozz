@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Cloud, MapPin } from 'lucide-react';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { MapPin } from 'lucide-react';
+import { platformFetch as httpFetch } from '../../lib/http';
 import { getItem, setItem } from '../../lib/storage';
-import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
+import { Widget, EmptyWidget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
 
 const ACCENT = '#a1bdc7';
@@ -46,7 +46,7 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const fetchWeather = useCallback(async (lat: number, lon: number, city: string) => {
     try {
-      const res = await tauriFetch(
+      const res = await httpFetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,weather_code`,
       );
       if (!res.ok) throw new Error(`Weather API: ${res.status}`);
@@ -70,7 +70,7 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
     try {
-      const res = await tauriFetch(
+      const res = await httpFetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
         { headers: { 'Accept-Language': 'en', 'User-Agent': 'AugCooker/1.0' } },
       );
@@ -94,7 +94,7 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
     setStatus('loading');
     setError(null);
     try {
-      const res = await tauriFetch(
+      const res = await httpFetch(
         `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1`,
       );
       if (!res.ok) throw new Error(`Geocoding: ${res.status}`);
@@ -199,7 +199,6 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={ACCENT}>
-      <WidgetHeader label="Weather" accent={ACCENT} t={t} icon={Cloud} />
 
       {(status === 'loading' || status === 'locating') && (
         <EmptyWidget text={status === 'locating' ? 'Detecting location…' : 'Loading weather…'} t={t} />
@@ -237,21 +236,17 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
             </span>
             <span style={{ fontSize: '0.82rem', color: t.textMuted }}>{weather.condition}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem' }}>
-            <MapPin size={11} strokeWidth={1.5} color={t.textDim} />
-            <span style={{ fontSize: '0.72rem', color: t.textDim }}>{weather.city}</span>
-            <span style={{ fontSize: '0.68rem', color: t.textDim, marginLeft: '0.35rem' }}>
-              · {weather.windSpeed} km/h
-            </span>
-          </div>
-
           <button
             onClick={() => setShowCityInput(s => !s)}
-            style={{ ...btn, marginTop: '0.6rem', padding: '0.2rem 0.5rem', fontSize: '0.65rem' }}
+            title="Change city"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem', opacity: 0.7 }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
           >
-            Change city
+            <MapPin size={11} strokeWidth={1.5} color={t.textDim} />
+            <span style={{ fontSize: '0.72rem', color: t.textDim }}>{weather.city}</span>
+            <span style={{ fontSize: '0.68rem', color: t.textDim, marginLeft: '0.1rem' }}>· {weather.windSpeed} km/h</span>
           </button>
-
           {showCityInput && <CityForm />}
         </div>
       )}

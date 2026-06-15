@@ -11,18 +11,24 @@
  */
 
 import { supabase } from './supabase';
-import { getItem, setItem } from './storage';
+import { getItem, setItem, deleteItem, listKeysByPrefix } from './storage';
 
 /** All keys that are synced. Add new ones here when new state appears. */
 export const SYNCED_KEYS = [
-  'appearance', 'topics', 'inbox',
+  'appearance', 'topics', 'topicFolders', 'inbox',
   'musicItems', 'lifeItems', 'cvItems', 'otherItems', 'applications',
-  'taskSortPrefs', 'homeLayout',
-  'calendarFeeds', 'calendarCache',
+  'taskSortPrefs', 'homeLayout', 'homeBackground',
+  'calendarFeeds', 'calendarCache', 'calendarConnections', 'calendarNotes',
   'budget',
   'reviews', 'reviewSettings',
-  'oauthAccounts', 'emailsCache',
+  'oauthAccounts', 'imapAccounts', 'emailsCache',
   'recentSearches',
+  'notionWidget', 'spotifyAccount', 'waAccount',
+  'dailyPlan',
+  'habits',
+  'healthConnections', 'healthDays',
+  'sidebarCollapsed',
+  'weatherLocation',
 ] as const;
 
 export type SyncedKey = typeof SYNCED_KEYS[number];
@@ -49,14 +55,21 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
     }
     if (!data) return false; // first sign-in for this account
     const row = data as RemoteRow;
-    for (const [key, value] of Object.entries(row.data ?? {})) {
-      if (value === undefined || value === null) continue;
-      try {
-        await setItem(key, JSON.stringify(value));
-      } catch (e) {
-        console.error(`[sync] writing local ${key}:`, e);
-      }
-    }
+    // Write all keys to local storage in parallel for faster sign-in.
+    await Promise.all(
+      Object.entries(row.data ?? {})
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(async ([key, value]) => {
+          try {
+            const serialised = key.startsWith('__tok__')
+              ? String(value)
+              : JSON.stringify(value);
+            await setItem(key, serialised);
+          } catch (e) {
+            console.error(`[sync] writing local ${key}:`, e);
+          }
+        })
+    );
     return true;
   } catch (e) {
     console.error('[sync] pull failed:', e);
@@ -67,16 +80,33 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
 /** Read all synced keys from local storage and return as one object. */
 export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {};
-  for (const key of SYNCED_KEYS) {
-    try {
-      const r = await getItem(key);
-      if (r?.value) {
-        out[key] = JSON.parse(r.value);
+
+  // Read all SYNCED_KEYS in parallel.
+  const results = await Promise.all(
+    SYNCED_KEYS.map(async key => {
+      try {
+        const r = await getItem(key);
+        return r?.value ? { key, value: JSON.parse(r.value) } : null;
+      } catch {
+        return null;
       }
-    } catch {
-      /* ignore individual key errors */
-    }
+    })
+  );
+  for (const entry of results) {
+    if (entry) out[entry.key] = entry.value;
   }
+
+  // Sync OAuth tokens (__tok__* keys).
+  try {
+    const tokenKeys = await listKeysByPrefix('__tok__');
+    await Promise.all(tokenKeys.map(async key => {
+      try {
+        const r = await getItem(key);
+        if (r?.value) out[key] = r.value;
+      } catch { /* ignore */ }
+    }));
+  } catch { /* ignore */ }
+
   return out;
 }
 
@@ -96,6 +126,19 @@ export async function pushSnapshot(userId: string): Promise<void> {
   }
 }
 
+/** Wipe all synced keys from local storage. Call on sign-out to prevent data leaking between users. */
+export async function clearLocalSnapshot(): Promise<void> {
+  // Cancel any pending debounced push so it doesn't fire after local storage
+  // is cleared and accidentally upload an empty snapshot.
+  cancelPendingPush();
+  const deletes: Promise<void>[] = SYNCED_KEYS.map(k => deleteItem(k));
+  try {
+    const tokenKeys = await listKeysByPrefix('__tok__');
+    tokenKeys.forEach(k => deletes.push(deleteItem(k)));
+  } catch { /* ignore */ }
+  await Promise.all(deletes);
+}
+
 // ── Debounced push helper ────────────────────────────────────────────────
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 const PUSH_DEBOUNCE_MS = 1500;
@@ -103,6 +146,15 @@ const PUSH_DEBOUNCE_MS = 1500;
 export function schedulePush(userId: string): void {
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
+    pushTimer = null;
     void pushSnapshot(userId);
   }, PUSH_DEBOUNCE_MS);
+}
+
+/** Cancel any pending debounced push (call before wiping local storage). */
+export function cancelPendingPush(): void {
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
 }

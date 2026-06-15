@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useMemo, useCallback, type ElementType } f
 import {
   Music, Briefcase, Sparkles, BookOpen,
   LayoutDashboard, FileText, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap,
 } from 'lucide-react';
+import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
 import VoiceButton from './shared/VoiceButton';
 import { isMobileViewport, isTauri } from '../lib/platform';
@@ -11,7 +12,7 @@ import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
 import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
 import { iconForTopic } from './sections/settings/TopicsBlock';
 import { useSession } from './AuthGate';
-import { pullSnapshot, schedulePush } from '../lib/sync';
+import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
@@ -28,9 +29,9 @@ import { outlookConfig } from '../lib/oauth/outlook';
 import { archive as archiveEmail, deleteEmail, disconnectAccount, markRead as markEmailRead, syncAllAccounts } from '../lib/email';
 import type {
   ListItem, Application, Status, SectionId, SortMode, TaskListKey, AppearancePrefs, HomeWidgetItem,
-  CalendarFeed, CalendarCache, CalendarEvent, BudgetData, InboxItem,
+  CalendarFeed, CalendarCache, CalendarEvent, CalendarConnection, BudgetData, InboxItem,
   WeeklyReview, ReviewSettings, OAuthAccount, EmailMessage, EmailProvider,
-  Topic,
+  Topic, TopicFolder,
 } from '../lib/types';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
@@ -39,6 +40,10 @@ import TopicView from './sections/TopicView';
 import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
 import CalendarView from './sections/calendar/CalendarView';
+import DailyPlannerView from './sections/DailyPlannerView';
+import HabitsView from './sections/HabitsView';
+import HealthView from './sections/HealthView';
+import QuickAddModal from './QuickAddModal';
 import BudgetView from './sections/budget/BudgetView';
 import InboxView from './sections/InboxView';
 import ReviewView from './sections/review/ReviewView';
@@ -69,7 +74,10 @@ export default function Dashboard() {
   const [homeItems, setHomeItems] = useState<HomeWidgetItem[]>(DEFAULT_HOME);
   const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>([]);
   const [calendarCache, setCalendarCache] = useState<CalendarCache>(EMPTY_CACHE);
-  const [feedsSyncing, setFeedsSyncing] = useState(false);
+  const [calendarConnections, setCalendarConnections] = useState<CalendarConnection[]>([]);
+  const [gcalEvents, setGcalEvents] = useState<CalendarEvent[]>([]);
+  const [gcalError, setGcalError] = useState<string | null>(null);
+  const [, setFeedsSyncing] = useState(false);
   const syncingRef = useRef(false);
   const [budget, setBudget] = useState<BudgetData>(DEFAULT_BUDGET);
   const [inbox, setInbox] = useState<InboxItem[]>([]);
@@ -77,6 +85,7 @@ export default function Dashboard() {
   const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(DEFAULT_REVIEW_SETTINGS);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [oauthAccounts, setOauthAccounts] = useState<OAuthAccount[]>([]);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [emailsSyncing, setEmailsSyncing] = useState(false);
@@ -86,6 +95,15 @@ export default function Dashboard() {
   const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
   const [voicePartial, setVoicePartial] = useState<string>('');
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [topicFolders, setTopicFolders] = useState<TopicFolder[]>([]);
+  const [sidebarEditing, setSidebarEditing] = useState(false);
+  const [collapsedFolderOpen, setCollapsedFolderOpen] = useState<string | null>(null);
+
+  // Exit edit mode automatically when the user navigates away or collapses the sidebar
+  useEffect(() => { setSidebarEditing(false); }, [activeSection, sidebarCollapsed]);
+  const [dailyPlan, setDailyPlan] = useState<import('../lib/types').DailyPlan>({});
+  const [habits, setHabits] = useState<import('../lib/types').Habit[]>([]);
+  const [healthDays, setHealthDays] = useState<import('../lib/types').HealthDay[]>([]);
   // Phone-width auto-collapse: on viewports under 768px (iPhone-ish), the
   // 232px sidebar would swallow most of the screen. Force-collapse it and
   // re-evaluate on resize so the sidebar pops back open on orientation
@@ -134,9 +152,10 @@ export default function Dashboard() {
       const keys = [
         'musicItems', 'tracks', 'applications', 'lifeItems', 'cvItems', 'otherItems',
         'darkMode', 'taskSortPrefs', 'appearance', 'homeLayout',
-        'calendarFeeds', 'calendarCache', 'budget', 'inbox', 'recentSearches',
+        'calendarFeeds', 'calendarCache', 'calendarConnections', 'budget', 'inbox', 'recentSearches',
         'reviews', 'reviewSettings', 'oauthAccounts', 'emailsCache', 'sidebarCollapsed',
-        'topics',
+        'topics', 'topicFolders',
+        'dailyPlan', 'habits', 'healthDays',
       ];
       let musicLoaded = false;
       let appr: AppearancePrefs = { ...DEFAULT_APPEARANCE };
@@ -190,6 +209,8 @@ export default function Dashboard() {
             } else if (key === 'calendarCache' && val && typeof val === 'object') {
               const c = val as CalendarCache;
               if (c.feeds) setCalendarCache({ lastSync: c.lastSync ?? null, feeds: c.feeds });
+            } else if (key === 'calendarConnections' && Array.isArray(val)) {
+              setCalendarConnections(val as CalendarConnection[]);
             } else if (key === 'budget' && val && typeof val === 'object') {
               const raw = val as Partial<BudgetData> & {
                 ious?: Array<{ id: number; person: string; amount: number; direction: 'owedToMe' | 'iOwe'; note: string; settled: boolean; date: number }>;
@@ -231,6 +252,14 @@ export default function Dashboard() {
               setSidebarCollapsed(val);
             } else if (key === 'topics' && Array.isArray(val)) {
               loadedTopics = val as Topic[];
+            } else if (key === 'topicFolders' && Array.isArray(val)) {
+              setTopicFolders(val as TopicFolder[]);
+            } else if (key === 'dailyPlan' && val && typeof val === 'object') {
+              setDailyPlan(val as import('../lib/types').DailyPlan);
+            } else if (key === 'habits' && Array.isArray(val)) {
+              setHabits(val as import('../lib/types').Habit[]);
+            } else if (key === 'healthDays' && Array.isArray(val)) {
+              setHealthDays(val as import('../lib/types').HealthDay[]);
             }
           }
         } catch { /* ignore individual key errors */ }
@@ -239,8 +268,10 @@ export default function Dashboard() {
       // Migrate the old boolean dark/light toggle into a mood, only if the
       // new appearance prefs were never written.
       if (!appearanceLoaded && legacyDark !== undefined) {
-        appr.mood = legacyDark ? 'midnight' : 'light';
+        appr.mood = legacyDark ? 'dark' : 'light';
       }
+      // Migrate any old mood names to valid values
+      if (appr.mood !== 'dark' && appr.mood !== 'light' && appr.mood !== 'warm') appr.mood = 'dark';
 
       // No seeding — user starts with zero topics and creates their own.
       if (loadedTopics) setTopics(loadedTopics);
@@ -278,6 +309,7 @@ export default function Dashboard() {
   useEffect(() => { if (!loading) save('homeLayout', homeItems); }, [homeItems, loading]);
   useEffect(() => { if (!loading) save('calendarFeeds', calendarFeeds); }, [calendarFeeds, loading]);
   useEffect(() => { if (!loading) save('calendarCache', calendarCache); }, [calendarCache, loading]);
+  useEffect(() => { if (!loading) save('calendarConnections', calendarConnections); }, [calendarConnections, loading]);
   useEffect(() => { if (!loading) save('budget', budget); }, [budget, loading]);
   useEffect(() => { if (!loading) save('inbox', inbox); }, [inbox, loading]);
   useEffect(() => { if (!loading) save('recentSearches', recentSearches); }, [recentSearches, loading]);
@@ -287,6 +319,10 @@ export default function Dashboard() {
   useEffect(() => { if (!loading) save('emailsCache', emails); }, [emails, loading]);
   useEffect(() => { if (!loading) save('sidebarCollapsed', sidebarCollapsed); }, [sidebarCollapsed, loading]);
   useEffect(() => { if (!loading) save('topics', topics); }, [topics, loading]);
+  useEffect(() => { if (!loading) save('topicFolders', topicFolders); }, [topicFolders, loading]);
+  useEffect(() => { if (!loading) save('dailyPlan', dailyPlan); }, [dailyPlan, loading]);
+  useEffect(() => { if (!loading) save('habits', habits); }, [habits, loading]);
+  useEffect(() => { if (!loading) save('healthDays', healthDays); }, [healthDays, loading]);
 
   const lastEmailSync = useMemo(() => {
     if (oauthAccounts.length === 0) return null;
@@ -419,13 +455,8 @@ export default function Dashboard() {
     setVoiceStatus(`→ ${describeRoute(route)}`);
     if (route.kind === 'inbox') {
       setInbox(prev => [...prev, { id: Date.now(), text: route.text, createdAt: Date.now() }]);
-    } else if (route.kind === 'task') {
-      const setter =
-        route.list === 'music' ? setMusicItems
-        : route.list === 'life' ? setLifeItems
-        : route.list === 'cv' ? setCvItems
-        : setOtherItems;
-      setter(prev => [...prev, route.item]);
+    } else if (route.kind === 'topic') {
+      addTopicItem(route.topicId, route.item.text, route.item.deadline ?? null);
     } else if (route.kind === 'budget') {
       setBudget(b => ({ ...b, transactions: [...b.transactions, route.transaction] }));
     }
@@ -434,12 +465,19 @@ export default function Dashboard() {
     window.setTimeout(() => setVoiceStatus(null), 2200);
   }, []);
 
-  // Ctrl/Cmd+K opens global search.
+  // Ctrl/Cmd+K opens global search. Ctrl/Cmd+B opens Quicks.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'f')) {
         e.preventDefault();
         setSearchOpen(o => !o);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        // Desktop opens the native always-on-top capture window; in the
+        // browser we show the in-app quick-add modal instead.
+        if (isTauri()) setActiveSection('inbox');
+        else setQuickAddOpen(true);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -447,6 +485,19 @@ export default function Dashboard() {
   }, []);
 
   const t = themes[appearance.mood];
+
+  // Sidebar may have a dark background (e.g. warm terracotta) while the main
+  // content is light — use CSS vars so the sidebar text always contrasts.
+  const sT = {
+    text:         'var(--sidebar-text, ' + t.text + ')',
+    textMuted:    'var(--sidebar-text-muted, ' + t.textMuted + ')',
+    textDim:      'var(--sidebar-text-dim, ' + t.textDim + ')',
+    bgAlt:        'var(--sidebar-bg-alt, ' + t.bgAlt + ')',
+    border:       'var(--sidebar-border, ' + t.border + ')',
+    borderStrong: 'var(--sidebar-border-strong, ' + t.borderStrong + ')',
+    panel:        'var(--sidebar-bg-alt, ' + t.panel + ')',
+    doneAccent:   t.doneAccent,
+  };
 
   const setSort = (k: TaskListKey) => (m: SortMode) =>
     setTaskSortPrefs(p => ({ ...p, [k]: m }));
@@ -469,6 +520,36 @@ export default function Dashboard() {
   };
   const addTaskWithDeadline = (list: TaskListKey, text: string, deadlineMs: number) =>
     addTaskToList(list, text, deadlineMs);
+
+  const addTopicItem = (topicId: string, text: string, deadline: number | null, stageId?: string) => {
+    setTopics(prev => prev.map(top => {
+      if (top.id !== topicId) return top;
+      const targetStage = stageId
+        ? top.stages.find(s => s.id === stageId)
+        : top.stages.find(s => !s.done);
+      const sid = targetStage?.id ?? top.stages[0]?.id ?? '';
+      return {
+        ...top,
+        items: [...top.items, { id: Date.now(), text, stageId: sid, completedAt: null, deadline }],
+      };
+    }));
+  };
+
+  const onAdvanceStage = (topicId: string, itemId: number) => {
+    setTopics(prev => prev.map(top => {
+      if (top.id !== topicId) return top;
+      return {
+        ...top,
+        items: top.items.map(item => {
+          if (item.id !== itemId) return item;
+          const idx = top.stages.findIndex(s => s.id === item.stageId);
+          const next = top.stages[idx + 1];
+          if (!next) return item;
+          return { ...item, stageId: next.id, completedAt: next.done ? Date.now() : null };
+        }),
+      };
+    }));
+  };
 
   const refreshFeeds = useCallback(async () => {
     if (syncingRef.current || calendarFeeds.length === 0) return;
@@ -502,10 +583,33 @@ export default function Dashboard() {
 
   const feedEvents = useMemo<CalendarEvent[]>(() => {
     const ids = new Set(calendarFeeds.map(f => f.id));
-    return Object.entries(calendarCache.feeds)
+    const icsEvents = Object.entries(calendarCache.feeds)
       .filter(([id]) => ids.has(id))
       .flatMap(([, entry]) => entry.events);
-  }, [calendarFeeds, calendarCache]);
+    // Merge in Google Calendar events from enabled connections.
+    return [...icsEvents, ...gcalEvents];
+  }, [calendarFeeds, calendarCache, gcalEvents]);
+
+  // Fetch Google Calendar events whenever there's an enabled connection.
+  const gcalConn = useMemo(
+    () => calendarConnections.find(c => c.provider === 'googleCalendar' && c.enabled),
+    [calendarConnections],
+  );
+  useEffect(() => {
+    if (loading) return;
+    if (!gcalConn) { setGcalEvents([]); setGcalError(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { fetchGCalEvents } = await import('../lib/gcal');
+        const events = await fetchGCalEvents(gcalConn.color);
+        if (!cancelled) { setGcalEvents(events); setGcalError(null); }
+      } catch (e) {
+        if (!cancelled) { setGcalEvents([]); setGcalError(String(e instanceof Error ? e.message : e)); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [gcalConn, loading]);
 
   const allSections: Array<{ id: SectionId; label: string; icon: ElementType }> = [
     { id: 'home', label: 'Home', icon: LayoutDashboard },
@@ -522,36 +626,54 @@ export default function Dashboard() {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  // Unified nav: Home → visible topics → other visible sections → Settings
+  // Unified nav: Home → topics (in sidebar order) → other visible sections
   const hiddenTopicIds = appearance.hiddenTopicIds ?? [];
   const navItems: NavTab[] = useMemo(() => {
     const visibleSections = allSections.filter(
-      s => s.id === 'settings' || !appearance.hiddenSections.includes(s.id),
+      s => s.id !== 'settings' && s.id !== 'inbox' && !appearance.hiddenSections.includes(s.id),
     );
-    const visibleTopics = [...topics]
-      .filter(top => !hiddenTopicIds.includes(top.id))
-      .sort((a, b) => a.order - b.order)
-      .map(top => ({ id: top.id, label: top.name || '(unnamed)', icon: iconForTopic(top.icon), accent: top.color }));
+    const home   = visibleSections.find(s => s.id === 'home');
+    const middle = visibleSections.filter(s => s.id !== 'home');
 
-    const home = visibleSections.find(s => s.id === 'home');
-    const middle = visibleSections.filter(s => s.id !== 'home' && s.id !== 'settings');
-    const settingsEntry = visibleSections.find(s => s.id === 'settings');
+    const allVisible = topics.filter(tp => !hiddenTopicIds.includes(tp.id));
+    const unfiled    = allVisible.filter(tp => !tp.folderId);
+
+    // Mirror the sidebar order: unfiled topics + folders interleaved by unified order,
+    // then folder topics nested under their folder's position.
+    type TLItem = { order: number; tabs: NavTab[] };
+    const topLevel: TLItem[] = [
+      ...unfiled.map(tp => ({
+        order: tp.order,
+        tabs: [{ id: tp.id, label: tp.name || '(unnamed)', icon: iconForTopic(tp.icon), accent: tp.color }],
+      })),
+      ...topicFolders.map(f => ({
+        order: f.order,
+        tabs: allVisible
+          .filter(tp => tp.folderId === f.id)
+          .sort((a, b) => a.order - b.order)
+          .map(tp => ({ id: tp.id, label: tp.name || '(unnamed)', icon: iconForTopic(tp.icon), accent: tp.color })),
+      })),
+    ].sort((a, b) => a.order - b.order);
 
     return [
       ...(home ? [{ id: home.id, label: home.label, icon: home.icon }] : []),
-      ...visibleTopics,
+      ...topLevel.flatMap(i => i.tabs),
       ...middle.map(s => ({ id: s.id, label: s.label, icon: s.icon })),
-      ...(settingsEntry ? [{ id: settingsEntry.id, label: settingsEntry.label, icon: settingsEntry.icon }] : []),
     ];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appearance.hiddenSections, hiddenTopicIds, topics]);
+  }, [appearance.hiddenSections, hiddenTopicIds, topics, topicFolders]);
 
   // If the item you're viewing gets hidden, fall back to home.
+  // 'settings' and 'inbox' are intentionally absent from navItems but still valid sections.
+  // Built-in sections (email, calendar, budget, etc.) remain valid even when hidden from
+  // the sidebar — only bounce if it's a topic ID that no longer exists.
+  const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'music', 'life', 'cv', 'other',
+    'applications', 'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health']);
   useEffect(() => {
-    if (activeSection === 'settings' || activeSection === 'home') return;
+    if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
     const stillVisible = navItems.some(n => n.id === activeSection);
     if (!stillVisible) setActiveSection('home');
-  }, [navItems, activeSection]);
+  }, [navItems, activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = new Date();
 
@@ -575,6 +697,8 @@ export default function Dashboard() {
   return (
     <div style={{
       display: 'flex', minHeight: '100vh', background: t.bg, color: t.text,
+      backgroundImage: 'var(--app-gradient)',
+      backgroundAttachment: 'fixed',
       fontFamily: 'var(--app-font)',
       fontWeight: 300, transition: 'background 0.3s, color 0.3s',
       // Push content below the fixed title bar
@@ -589,153 +713,249 @@ export default function Dashboard() {
       {/* ── Sidebar — desktop only. Mobile navigation is handled by BottomTabBar. */}
       <aside style={{
         display: isMobile ? 'none' : 'flex',
-        width: sidebarCollapsed ? '60px' : '232px',
+        width: sidebarCollapsed ? '64px' : '220px',
         flexShrink: 0,
-        background: t.bgAlt,
-        borderRight: `1px solid ${t.border}`,
-        padding: '1rem 0.55rem 0.85rem',
+        background: 'var(--sidebar-bg, ' + t.panel + ')',
+        backdropFilter: 'var(--sidebar-blur, none)',
+        WebkitBackdropFilter: 'var(--sidebar-blur, none)',
+        border: `1px solid ${sT.border}`,
+        borderRadius: '16px',
+        boxShadow: 'var(--widget-shadow, 0 8px 32px rgba(0,0,0,0.35)), 0 0 0 0.5px ' + sT.border,
+        padding: '1rem 0.6rem 0.85rem',
         flexDirection: 'column',
         position: 'sticky',
-        top: tbOffset, left: 0,
+        top: tbOffset + 10, left: 0,
         zIndex: 1,
-        height: `calc(100vh - ${tbOffset}px)`,
+        margin: `10px 0 10px 10px`,
+        height: `calc(100vh - ${tbOffset}px - 20px)`,
         overflowY: 'auto', overflowX: 'hidden',
-        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.35s var(--ease, cubic-bezier(0.16,1,0.3,1))',
       }}>
-        {/* Brand row — LB monogram is the toggle (clicking it always
-            collapses/expands). The wordmark + dedicated chevron fade in
-            and out via opacity but stay mounted so the layout doesn't
-            shift. */}
+        {/* Brand row — BOZZ wordmark navigates home; chevron collapses/expands. */}
         <div style={{
           display: 'flex', alignItems: 'center',
-          gap: '0.6rem',
+          gap: '0.4rem',
           padding: '0.3rem 0.05rem 1.2rem',
           minWidth: 0,
+          justifyContent: sidebarCollapsed ? 'center' : 'space-between',
         }}>
+          {/* BOZZ wordmark — go to home. Hidden when collapsed. */}
+          <button
+            onClick={() => setActiveSection('home')}
+            aria-label="Go to home"
+            title="Home"
+            style={{
+              background: 'transparent', border: 'none',
+              color: sT.text, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: '1.02rem', fontWeight: 700, letterSpacing: '-0.01em',
+              padding: '0.1rem 0.05rem', textAlign: 'left',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              flex: 1, minWidth: 0,
+              opacity: sidebarCollapsed ? 0 : 1,
+              pointerEvents: sidebarCollapsed ? 'none' : 'auto',
+              display: sidebarCollapsed ? 'none' : 'block',
+              transition: 'opacity 0.18s ease',
+            }}
+          >BOZZ</button>
+
+          {/* Chevron — collapses when expanded, expands when collapsed. */}
           <button
             onClick={() => setSidebarCollapsed(c => !c)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             style={{
-              width: '30px', height: '30px', borderRadius: '7px',
-              background: t.text, color: t.bg,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.02em',
-              flexShrink: 0,
-              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'transform 0.18s ease',
+              background: 'transparent', border: 'none',
+              color: sT.textDim, cursor: 'pointer',
+              padding: '0.3rem', display: 'flex', flexShrink: 0,
+              borderRadius: '6px',
+              transition: 'background 0.12s, color 0.12s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.textMuted; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textDim; }}
           >
-            LB
+            <PanelLeft size={17} strokeWidth={1.6} />
           </button>
-
-          {/* Right side — wordmark + chevron. Cross-fades via opacity so
-              nothing pops. pointer-events also toggles so the chevron
-              isn't accidentally clickable while invisible. */}
-          <div style={{
-            flex: 1, minWidth: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: '0.4rem',
-            opacity: sidebarCollapsed ? 0 : 1,
-            pointerEvents: sidebarCollapsed ? 'none' : 'auto',
-            transition: 'opacity 0.18s ease',
-          }}>
-            <span style={{
-              fontSize: '1.02rem', fontWeight: 600, color: t.text,
-              letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              flex: 1, minWidth: 0,
-            }}>Life Bozz</span>
-            <button
-              onClick={() => setSidebarCollapsed(true)}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-              tabIndex={sidebarCollapsed ? -1 : 0}
-              style={{
-                background: 'transparent', border: 'none',
-                color: t.textDim, cursor: 'pointer',
-                padding: '0.3rem', display: 'flex', flexShrink: 0,
-                borderRadius: '6px',
-                transition: 'background 0.12s, color 0.12s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = t.panel; e.currentTarget.style.color = t.textMuted; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = t.textDim; }}
-            >
-              <PanelLeft size={17} strokeWidth={1.6} />
-            </button>
-          </div>
         </div>
 
-        {/* Nav — padding + gap stay constant, only the label text fades.
-            The flex layout means as the sidebar shrinks, the label visually
-            slides toward the right edge and clips against overflow:hidden
-            on the aside, which feels continuous with the width transition. */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.05rem', flex: 1 }}>
-          {navItems.map(s => {
-            const Icon = s.icon;
-            const isActive = activeSection === s.id;
-            const accent = s.accent ?? (sectionAccents as Record<string, string>)[s.id] ?? t.textMuted;
-            const inboxBadgeVisible = s.id === 'inbox' && inbox.length > 0;
-            return (
-              <button
-                key={s.id}
-                onClick={() => setActiveSection(s.id)}
-                title={sidebarCollapsed ? s.label : undefined}
-                style={{
-                  display: 'flex', alignItems: 'center',
-                  gap: '0.65rem',
-                  background: isActive ? t.panel : 'transparent',
-                  border: 'none',
-                  color: isActive ? t.text : t.textMuted,
-                  padding: '0.45rem 0.65rem',
-                  cursor: 'pointer', borderRadius: '6px',
-                  fontSize: '0.84rem', fontWeight: 400, letterSpacing: '0',
-                  fontFamily: 'inherit', textAlign: 'left',
-                  transition: 'background 0.12s, color 0.12s',
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-              >
-                <Icon
-                  size={16} strokeWidth={1.5}
-                  color={isActive ? accent : t.textMuted}
-                  style={{ flexShrink: 0 }}
-                />
-                <span style={{
-                  flex: 1, minWidth: 0,
-                  whiteSpace: 'nowrap', overflow: 'hidden',
-                  opacity: sidebarCollapsed ? 0 : 1,
-                  transition: 'opacity 0.16s ease',
-                }}>
-                  {s.label}
-                </span>
-                {inboxBadgeVisible && (
-                  <span style={{
-                    background: sectionAccents.inbox, color: t.bg,
-                    fontSize: '0.62rem', fontWeight: 500, borderRadius: '999px',
-                    padding: '0.05rem 0.4rem', lineHeight: 1.5,
-                    flexShrink: 0,
-                    opacity: sidebarCollapsed ? 0 : 1,
-                    transition: 'opacity 0.16s ease',
-                  }}>
-                    {inbox.length}
-                  </span>
-                )}
-                {inboxBadgeVisible && (
-                  <span style={{
-                    position: 'absolute', top: 5, right: 7,
-                    width: '6px', height: '6px', borderRadius: '50%',
-                    background: sectionAccents.inbox,
-                    opacity: sidebarCollapsed ? 1 : 0,
-                    transition: 'opacity 0.16s ease',
-                    pointerEvents: 'none',
-                  }} />
-                )}
-              </button>
+        {/* Nav — folder-aware rendering, or edit mode drag list */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.05rem', flex: 1, overflowY: sidebarEditing ? 'auto' : undefined }}>
+          {sidebarEditing ? (
+            <SidebarEditNav
+              topics={topics}
+              topicFolders={topicFolders}
+              hiddenTopicIds={hiddenTopicIds}
+              sections={allSections.filter(s => s.id !== 'settings' && s.id !== 'inbox' && s.id !== 'home' && !appearance.hiddenSections.includes(s.id))}
+              navOrder={appearance.navOrder}
+              sidebarCollapsed={sidebarCollapsed}
+              t={t}
+              onTopicsChange={setTopics}
+              onTopicFoldersChange={setTopicFolders}
+              onNavOrderChange={order => setAppearance(a => ({ ...a, navOrder: order }))}
+            />
+          ) : (() => {
+            const visibleSections = allSections.filter(
+              s => s.id !== 'settings' && s.id !== 'inbox' && !appearance.hiddenSections.includes(s.id),
             );
-          })}
+            const middleSections = visibleSections.filter(s => s.id !== 'home');
+            const visibleTopics = [...topics]
+              .filter(top => !hiddenTopicIds.includes(top.id));
+            const unfiledTopics = visibleTopics.filter(top => !top.folderId);
+
+            // Unified nav: topics + folders + sections, all sorted by navOrder if present
+            type NavTopItem =
+              | { type: 'topic'; order: number; topic: typeof visibleTopics[0] }
+              | { type: 'folder'; order: number; folder: typeof topicFolders[0] }
+              | { type: 'section'; order: number; section: typeof middleSections[0] };
+
+            const navOrder = appearance.navOrder;
+            const orderOf = (id: string, fallback: number) =>
+              navOrder ? (navOrder.indexOf(id) === -1 ? 9999 + fallback : navOrder.indexOf(id)) : fallback;
+
+            const topLevelNav: NavTopItem[] = [
+              ...unfiledTopics.map(tp  => ({ type: 'topic'   as const, order: orderOf(tp.id, tp.order), topic: tp })),
+              ...topicFolders.map(f   => ({ type: 'folder'  as const, order: orderOf(f.id, f.order),   folder: f })),
+              ...middleSections.map((s, i) => ({ type: 'section' as const, order: orderOf(s.id, 1000 + i), section: s })),
+            ].sort((a, b) => a.order - b.order);
+
+            const navBtn = (id: string, label: string, Icon: ElementType, _accent?: string, indent = false) => {
+              const isActive = activeSection === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveSection(id)}
+                  title={sidebarCollapsed ? label : undefined}
+                  style={{
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                    gap: '0.5rem',
+                    width: '100%',
+                    background: isActive ? sT.bgAlt : 'transparent',
+                    border: 'none',
+                    color: isActive ? sT.text : sT.textMuted,
+                    padding: sidebarCollapsed ? '0.5rem' : indent ? '0.42rem 0.6rem 0.42rem 1.4rem' : '0.42rem 0.6rem',
+                    cursor: 'pointer', borderRadius: '8px',
+                    fontSize: '0.875rem', fontWeight: isActive ? 500 : 400, letterSpacing: '-0.01em',
+                    fontFamily: 'inherit', textAlign: 'left',
+                    transition: 'background 0.15s, color 0.15s, transform 0.12s',
+                    position: 'relative',
+                  }}
+                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; if (sidebarCollapsed) e.currentTarget.style.transform = 'scale(1.12)'; } }}
+                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; if (sidebarCollapsed) e.currentTarget.style.transform = 'scale(1)'; } }}
+                >
+                  {sidebarCollapsed ? (
+                    <Icon size={16} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                  ) : (
+                    <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                      {label}
+                    </span>
+                  )}
+                </button>
+              );
+            };
+
+            return (
+              <>
+                {/* Home always first */}
+                {navBtn('home', 'Home', LayoutDashboard)}
+                {topLevelNav.map(item => {
+                  if (item.type === 'topic') {
+                    const top = item.topic;
+                    return navBtn(top.id, top.name || '(unnamed)', iconForTopic(top.icon), top.color);
+                  }
+                  if (item.type === 'section') {
+                    const s = item.section;
+                    return navBtn(s.id, s.label, s.icon);
+                  }
+                  // Folder
+                  const folder = item.folder;
+                  const folderTopics = visibleTopics.filter(top => top.folderId === folder.id);
+                  const FolderIcon = iconForTopic(folder.icon);
+
+                  if (sidebarCollapsed) {
+                    // Collapsed: show folder icon, click to toggle inline topic icons
+                    if (folderTopics.length === 0) return null;
+                    const isOpen = collapsedFolderOpen === folder.id;
+                    return (
+                      <div key={folder.id}>
+                        <button
+                          onClick={() => setCollapsedFolderOpen(isOpen ? null : folder.id)}
+                          title={folder.name}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: '100%',
+                            background: isOpen ? sT.bgAlt : 'transparent',
+                            border: 'none',
+                            color: isOpen ? sT.text : sT.textMuted,
+                            padding: '0.5rem', cursor: 'pointer',
+                            borderRadius: isOpen ? '8px 8px 0 0' : '8px',
+                            transition: 'background 0.15s, color 0.15s, border-radius 0.15s, transform 0.12s',
+                          }}
+                          onMouseEnter={e => { if (!isOpen) { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; e.currentTarget.style.transform = 'scale(1.12)'; } }}
+                          onMouseLeave={e => { if (!isOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; e.currentTarget.style.transform = 'scale(1)'; } }}
+                        >
+                          <FolderIcon size={16} strokeWidth={1.5} />
+                        </button>
+                        {isOpen && (
+                          <div style={{
+                            background: sT.bgAlt,
+                            borderRadius: '0 0 8px 8px',
+                            borderTop: `1px solid ${sT.border}`,
+                            paddingTop: '0.2rem',
+                            paddingBottom: '0.2rem',
+                          }}>
+                            {folderTopics.map(top =>
+                              navBtn(top.id, top.name || '(unnamed)', iconForTopic(top.icon), top.color)
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Expanded: show folder name with collapse chevron
+                  const isCollapsed = folder.collapsed;
+                  return (
+                    <div key={folder.id}>
+                      <button
+                        onClick={() => setTopicFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: !f.collapsed } : f))}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.4rem',
+                          background: 'transparent', border: 'none',
+                          color: sT.textMuted, padding: '0.42rem 0.6rem',
+                          cursor: 'pointer', borderRadius: '8px',
+                          fontSize: '0.875rem', fontWeight: 400, letterSpacing: '-0.01em',
+                          fontFamily: 'inherit', textAlign: 'left', width: '100%',
+                          transition: 'background 0.15s, color 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
+                      >
+                        <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                          {folder.name || '(folder)'}
+                        </span>
+                        {isCollapsed
+                          ? <ChevronRight size={11} strokeWidth={1.5} color={sT.textDim} style={{ flexShrink: 0 }} />
+                          : <ChevronDown size={11} strokeWidth={1.5} color={sT.textDim} style={{ flexShrink: 0 }} />
+                        }
+                      </button>
+                      {!isCollapsed && (
+                        <div style={{
+                          borderLeft: `2px solid ${sT.border}`,
+                          marginLeft: '0.9rem',
+                          paddingLeft: '0.3rem',
+                          marginBottom: '0.1rem',
+                        }}>
+                          {folderTopics.map(top =>
+                            navBtn(top.id, top.name || '(unnamed)', iconForTopic(top.icon), top.color)
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            );
+          })()}
         </nav>
 
         {/* Voice status — only useful when there's room to read it */}
@@ -752,7 +972,7 @@ export default function Dashboard() {
         </div>
         <div style={{
           padding: voicePartial && !sidebarCollapsed ? '0 0.7rem 0.4rem' : '0 0.7rem',
-          fontSize: '0.72rem', color: t.textMuted, fontStyle: 'italic',
+          fontSize: '0.72rem', color: sT.textMuted, fontStyle: 'italic',
           maxHeight: voicePartial && !sidebarCollapsed ? '3.2em' : '0',
           opacity: voicePartial && !sidebarCollapsed ? 1 : 0,
           overflow: 'hidden',
@@ -761,15 +981,62 @@ export default function Dashboard() {
           {voicePartial}
         </div>
 
-        {/* Bottom row: mic always visible, date fades when collapsed.
-            Layout direction stays row in both states; the mic just shrinks
-            to icon-only via its iconOnly prop. */}
+        {/* Quick add + Edit row — compact, side by side */}
+        {!sidebarCollapsed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.1rem 0' }}>
+            {!isTauri() && (
+              <button
+                onClick={() => setQuickAddOpen(true)}
+                title="Quick add (Ctrl+B)"
+                aria-label="Quick add"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  flexShrink: 0,
+                  background: 'transparent',
+                  border: `1px solid ${sT.border}`,
+                  color: sT.textMuted,
+                  cursor: 'pointer', borderRadius: '6px',
+                  padding: '0.28rem 0.6rem',
+                  fontSize: '0.75rem', fontWeight: 500,
+                  fontFamily: 'inherit',
+                  transition: 'background 0.15s, color 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
+              >
+                <Zap size={10} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Quick add</span>
+              </button>
+            )}
+            <button
+              onClick={() => setSidebarEditing(e => !e)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                flexShrink: 0,
+                background: sidebarEditing ? t.doneAccent : 'transparent',
+                border: `1px solid ${sidebarEditing ? t.doneAccent : sT.border}`,
+                borderRadius: '6px',
+                padding: '0.28rem 0.6rem',
+                fontSize: '0.75rem', fontWeight: 500,
+                color: sidebarEditing ? '#fff' : sT.textMuted,
+                cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {sidebarEditing ? <><span style={{ fontSize: '0.7rem' }}>✓</span> Done</> : <><Pencil size={9} strokeWidth={1.8} /> Edit</>}
+            </button>
+          </div>
+        )}
+
+        {/* Bottom row: mic + settings gear always visible, date fades when collapsed. */}
         <div style={{
           display: 'flex', flexDirection: 'row',
-          alignItems: 'center', justifyContent: 'space-between',
-          gap: '0.5rem',
+          alignItems: 'center',
+          gap: '0.3rem',
           padding: '0.7rem 0.15rem 0.1rem',
-          borderTop: `1px solid ${t.border}`,
+          borderTop: `1px solid ${sT.border}`,
           marginTop: '0.4rem',
           minWidth: 0,
         }}>
@@ -778,28 +1045,68 @@ export default function Dashboard() {
             onTranscript={handleVoiceTranscript}
             onPartial={setVoicePartial}
             iconOnly={sidebarCollapsed}
-            label={!sidebarCollapsed}
-            iconSize={15}
+            label={false}
+            iconSize={17}
           />
+          {!sidebarCollapsed && (<>
+          <button
+            onClick={() => setActiveSection('settings')}
+            title="Settings"
+            style={{
+              background: 'transparent', border: 'none',
+              color: sT.textDim, cursor: 'pointer', borderRadius: '6px',
+              padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'background 0.12s, color 0.12s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textDim; }}
+          >
+            <Settings size={17} strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={() => setActiveSection('inbox')}
+            title={isTauri() ? 'Quicks (Ctrl+B)' : 'Quicks'}
+            aria-label="Quicks"
+            style={{
+              background: activeSection === 'inbox' ? sT.panel : 'transparent',
+              border: 'none',
+              color: activeSection === 'inbox' ? sT.text : sT.textDim,
+              cursor: 'pointer', borderRadius: '6px',
+              padding: '0.4rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+              position: 'relative',
+              transition: 'background 0.12s, color 0.12s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = sT.panel; e.currentTarget.style.color = sT.textMuted; }}
+            onMouseLeave={e => { e.currentTarget.style.background = activeSection === 'inbox' ? sT.panel : 'transparent'; e.currentTarget.style.color = activeSection === 'inbox' ? sT.text : sT.textDim; }}
+          >
+            <Zap size={17} strokeWidth={1.5} />
+            {inbox.length > 0 && (
+              <span style={{
+                position: 'absolute', top: 2, right: 2,
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: t.doneAccent, pointerEvents: 'none',
+              }} />
+            )}
+          </button>
           <span style={{
-            fontSize: '0.7rem', color: t.textDim,
+            fontSize: '0.7rem', color: sT.textDim,
             letterSpacing: '0.02em', textAlign: 'right',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
-            opacity: sidebarCollapsed ? 0 : 1,
-            transition: 'opacity 0.16s ease',
-            pointerEvents: sidebarCollapsed ? 'none' : 'auto',
             flex: 1, minWidth: 0,
           }}>
             {today.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
           </span>
+          </>)}
         </div>
       </aside>
 
       {/* ── Main content ── */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          maxWidth: '1200px', margin: '0 auto',
-          padding: isMobile ? '1.25rem 1rem 1.5rem' : '2.5rem 2.75rem',
+          maxWidth: '1600px', margin: '0 auto',
+          padding: isMobile ? '1.25rem 1rem 1.5rem' : '2.5rem 3.25rem',
           // Respect iOS safe-area insets when running as PWA.
           paddingTop: `max(${isMobile ? '1.25rem' : '2.5rem'}, env(safe-area-inset-top))`,
           // On mobile, leave room below for the bottom tab bar + safe area.
@@ -808,41 +1115,24 @@ export default function Dashboard() {
             : `max(2.5rem, env(safe-area-inset-bottom))`,
         }}>
 
-        {reviews.some(r => r.reviewedAt == null) && activeSection !== 'review' && (
-          <button
-            onClick={() => {
-              // If Review has been hidden via Settings → Navigation, the
-              // safety effect below will bounce us off it the moment we
-              // try to set it active. Unhide first, then navigate.
-              if (appearance.hiddenSections.includes('review')) {
-                patchAppearance({
-                  hiddenSections: appearance.hiddenSections.filter((s): s is SectionId => s !== 'review'),
-                });
-              }
-              setActiveSection('review');
-            }}
-            style={{
-              width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-              background: t.bgAlt, border: `1px solid ${t.borderStrong}`,
-              borderRadius: '10px', padding: '0.65rem 1rem', marginBottom: '1.25rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: t.text }}>
-              your week is ready to review
-            </span>
-            <span style={{ fontSize: '0.72rem', color: t.textMuted, letterSpacing: '0.05em' }}>
-              open →
-            </span>
-          </button>
-        )}
 
         <main>
           {activeSection === 'home' && (
             <HomeView
               items={homeItems}
               setItems={setHomeItems}
-              ctx={{ t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails, setActiveSection, addTask: addTaskToList }}
+              widgetShape={appearance.widgetShape ?? 'rounded'}
+              widgetBorder={appearance.widgetBorder ?? 'normal'}
+              onWidgetShape={(s) => patchAppearance({ widgetShape: s })}
+              onWidgetBorder={(b) => patchAppearance({ widgetBorder: b })}
+              ctx={{
+                t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails,
+                setActiveSection, addTask: addTaskToList,
+                topics, addTopicItem, dailyPlan, onDailyPlanChange: setDailyPlan,
+                onAdvanceStage, colorBank: appearance.colorBank ?? [],
+                habits, onHabitsChange: setHabits,
+                widgetConfig: {}, onWidgetConfig: () => {},
+              }}
             />
           )}
           {activeSection === 'music' && (
@@ -875,6 +1165,35 @@ export default function Dashboard() {
               feedEvents={feedEvents}
               lists={{ music: musicItems, life: lifeItems, cv: cvItems, other: otherItems }}
               onAddTask={addTaskWithDeadline}
+              calendarConnections={calendarConnections}
+              onCalendarConnectionsChange={setCalendarConnections}
+              gcalError={gcalError ?? undefined}
+              colorBank={appearance.colorBank ?? []}
+            />
+          )}
+          {activeSection === 'dailyPlanner' && (
+            <DailyPlannerView
+              t={t}
+              topics={topics}
+              plan={dailyPlan}
+              onPlanChange={setDailyPlan}
+              onAdvanceStage={onAdvanceStage}
+            />
+          )}
+          {activeSection === 'habits' && (
+            <HabitsView
+              t={t}
+              habits={habits}
+              onChange={setHabits}
+              colorBank={appearance.colorBank ?? []}
+            />
+          )}
+          {activeSection === 'health' && (
+            <HealthView
+              t={t}
+              healthDays={healthDays}
+              onChange={setHealthDays}
+              userRef={session?.user.email ?? session?.user.id ?? 'anon'}
             />
           )}
           {activeSection === 'budget' && (
@@ -936,6 +1255,16 @@ export default function Dashboard() {
                   topic={activeTopic}
                   onChange={(next) => setTopics(prev => prev.map(t => t.id === next.id ? next : t))}
                   t={t}
+                  ctx={{
+                    t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails,
+                    setActiveSection, addTask: addTaskToList,
+                    topics, addTopicItem, dailyPlan, onDailyPlanChange: setDailyPlan,
+                    onAdvanceStage, colorBank: appearance.colorBank ?? [],
+                    habits, onHabitsChange: setHabits,
+                    widgetConfig: {}, onWidgetConfig: () => {},
+                    currentTopicId: activeTopic.id,
+                    onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
+                  }}
                 />
               );
             }
@@ -958,12 +1287,15 @@ export default function Dashboard() {
                 defaultSection: DEFAULT_APPEARANCE.defaultSection,
               })}
               accountEmail={session?.user.email ?? null}
-              onSignOut={async () => { await supabase.auth.signOut(); }}
-              calendarFeeds={calendarFeeds}
-              onFeedsChange={setCalendarFeeds}
-              onRefreshFeeds={refreshFeeds}
-              feedsSyncing={feedsSyncing}
-              lastSync={calendarCache.lastSync}
+              onSignOut={async () => {
+                cancelPendingPush();
+                // Best-effort flush + wipe — never let these block the sign-out.
+                try { if (userId) await pushSnapshot(userId); } catch { /* ignore */ }
+                try { await clearLocalSnapshot(); } catch { /* ignore */ }
+                // scope:'local' clears the session without needing a network call.
+                // onAuthStateChange SIGNED_OUT fires → AuthGate shows login screen.
+                try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
+              }}
               currency={budget.currency}
               onCurrencyChange={(c) => setBudget(b => ({ ...b, currency: c }))}
               reviewSettings={reviewSettings}
@@ -974,11 +1306,26 @@ export default function Dashboard() {
               onDisconnectAccount={disconnect}
               topics={topics}
               onTopicsChange={setTopics}
+              topicFolders={topicFolders}
+              onTopicFoldersChange={setTopicFolders}
+              calendarConnections={calendarConnections}
+              onCalendarConnectionsChange={setCalendarConnections}
             />
           )}
         </main>
         </div>
       </div>
+
+      {quickAddOpen && (
+        <QuickAddModal
+          t={t}
+          topics={topics}
+          onClose={() => setQuickAddOpen(false)}
+          onAddInbox={(items) => setInbox(prev => [...prev, ...items])}
+          onAddTopicItem={(topicId, text, deadline) => addTopicItem(topicId, text, deadline)}
+          onAddBudget={(transaction) => setBudget(b => ({ ...b, transactions: [...b.transactions, transaction] }))}
+        />
+      )}
 
       {searchOpen && (
         <SearchModal
@@ -1003,7 +1350,19 @@ export default function Dashboard() {
           tabs={navItems}
           active={activeSection}
           onSelect={setActiveSection}
-          inboxCount={inbox.length}
+          quicksCount={inbox.length}
+          onQuicks={() => setActiveSection('inbox')}
+          onSettings={() => setActiveSection('settings')}
+          micButton={
+            <VoiceButton
+              t={t}
+              onTranscript={handleVoiceTranscript}
+              onPartial={setVoicePartial}
+              iconOnly
+              label={false}
+              iconSize={16}
+            />
+          }
           t={t}
           tbOffset={tbOffset}
         />

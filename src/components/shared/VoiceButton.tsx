@@ -11,6 +11,8 @@ interface Props {
   onPartial?: (text: string) => void;
   /** Optional error callback. */
   onError?: (msg: string) => void;
+  /** Fires when recording starts (true) or stops (false). */
+  onRecordingChange?: (recording: boolean) => void;
   /** Show the word "Talk" / "Stop" alongside the icon. */
   label?: boolean;
   /** Compact icon-only style (used in the collapsed sidebar). */
@@ -20,7 +22,7 @@ interface Props {
 }
 
 export default function VoiceButton({
-  t, onTranscript, onPartial, onError, label, iconOnly, iconSize = 15,
+  t, onTranscript, onPartial, onError, onRecordingChange, label, iconOnly, iconSize = 15,
 }: Props) {
   const [recording, setRecording] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -39,12 +41,13 @@ export default function VoiceButton({
       const cap = new VoiceCapture({
         onPartial,
         onFinal: (final) => onTranscript(final),
-        onError: (msg) => { setErr(msg); onError?.(msg); setRecording(false); },
-        onEnd:   () => { setRecording(false); capRef.current = null; },
+        onError: (msg) => { setErr(msg); onError?.(msg); setRecording(false); onRecordingChange?.(false); },
+        onEnd:   () => { setRecording(false); onRecordingChange?.(false); capRef.current = null; },
       });
       capRef.current = cap;
       cap.start();
       setRecording(true);
+      onRecordingChange?.(true);
     } catch (e) {
       const m = String(e);
       setErr(m); onError?.(m);

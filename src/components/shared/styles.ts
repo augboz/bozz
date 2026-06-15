@@ -7,8 +7,8 @@ export const rowStyle = (status: Status, t: Theme): CSSProperties => {
   const leftBar = status === 'done' ? t.doneAccent : status === 'doing' ? t.doingAccent : 'transparent';
   return {
     background: bg, border: `1px solid ${border}`, borderLeft: `3px solid ${leftBar}`,
-    borderRadius: '8px', padding: '0.85rem 1.1rem',
-    display: 'flex', alignItems: 'center', gap: '0.85rem', transition: 'all 0.2s ease',
+    borderRadius: '8px', padding: '0.45rem 0.75rem',
+    display: 'flex', alignItems: 'center', gap: '0.55rem', transition: 'all 0.2s ease',
   };
 };
 

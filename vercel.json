@@ -1,0 +1,15 @@
+{
+  "buildCommand": "",
+  "outputDirectory": "public",
+  "functions": {
+    "api/notion-redirect.js":  { "memory": 128, "maxDuration": 10 },
+    "api/terra-widget.js":     { "memory": 128, "maxDuration": 10 },
+    "api/terra-webhook.js":    { "memory": 256, "maxDuration": 20 },
+    "api/gc-institutions.js":  { "memory": 128, "maxDuration": 15 },
+    "api/gc-link.js":          { "memory": 128, "maxDuration": 15 },
+    "api/gc-transactions.js":  { "memory": 256, "maxDuration": 30 },
+    "api/gc-callback.js":         { "memory": 128, "maxDuration": 10 },
+    "api/send-topic-invite.js":   { "memory": 128, "maxDuration": 10 },
+    "api/topic-invite.js":        { "memory": 128, "maxDuration": 10 }
+  }
+}

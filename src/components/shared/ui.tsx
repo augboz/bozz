@@ -9,7 +9,7 @@ export function SectionHeader({ title, t, hint = '', right }: {
   if (!title && !hint && !right) return null;
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '0 0 1rem' }}>
-      {title && <h2 style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: t.textMuted, fontWeight: 400, margin: 0 }}>{title}</h2>}
+      {title && <h2 style={{ fontSize: '0.78rem', letterSpacing: '0em', color: t.textMuted, fontWeight: 500, margin: 0 }}>{title}</h2>}
       {right
         ? <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{right}</div>
         : (hint && <p style={{ fontSize: '0.7rem', color: t.textDim, margin: 0, letterSpacing: '0.02em', marginLeft: 'auto' }}>{hint}</p>)}

@@ -1,11 +1,11 @@
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { platformFetch } from '../http';
 import type { EmailMessage, OAuthAccount } from '../types';
 import type { ProviderConfig } from './index';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
 async function graphFetch(accessToken: string, url: string, init?: RequestInit): Promise<Response> {
-  return tauriFetch(url, {
+  return platformFetch(url, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),

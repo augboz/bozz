@@ -1,22 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  ChevronDown, X, Palette, Menu, CalendarDays, Wallet,
-  AtSign, Plug, NotebookPen, Power, RotateCcw, ListTree, User, LogOut,
+  ChevronDown, Palette, Menu, Wallet,
+  Plug, NotebookPen, Power, RotateCcw, ListTree, User, LogOut, Plus, X,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
-  AppearancePrefs, CalendarFeed, EmailProvider, FontChoice, FontSize,
-  MoodId, OAuthAccount, ReviewSettings, SectionId, Theme, Topic,
-  WidgetBorder, WidgetShape,
+  AppearancePrefs, CalendarConnection, EmailProvider, FontChoice, FontSize,
+  HealthConnection, MoodId, OAuthAccount, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
 } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
-import { MOODS } from '../../lib/themes';
+import { MOODS, THEME_COLOR_BANKS } from '../../lib/themes';
 import { CURRENCIES } from '../../lib/budget';
-import { relativeCompleted } from '../../lib/dates';
-import MoodSwatch from '../shared/MoodSwatch';
-import ConnectedAccountsBlock from './settings/ConnectedAccountsBlock';
-import ConnectorsBlock from './settings/ConnectorsBlock';
+import { DEFAULT_COLOR_BANK } from '../../lib/appearance';
 import TopicsBlock from './settings/TopicsBlock';
+import IntegrationsBlock from './settings/IntegrationsBlock';
 
 interface SettingsViewProps {
   t: Theme;
@@ -25,11 +22,6 @@ interface SettingsViewProps {
   resetAppearance: () => void;
   resetHomeLayout: () => void;
   sections: Array<{ id: SectionId; label: string }>;
-  calendarFeeds: CalendarFeed[];
-  onFeedsChange: (next: CalendarFeed[]) => void;
-  onRefreshFeeds: () => void;
-  feedsSyncing: boolean;
-  lastSync: number | null;
   currency: string;
   onCurrencyChange: (c: string) => void;
   reviewSettings: ReviewSettings;
@@ -38,8 +30,14 @@ interface SettingsViewProps {
   emailSyncErrors: Array<{ account: string; error: string }>;
   onConnectAccount: (provider: EmailProvider, clientId: string, clientSecret: string) => Promise<void>;
   onDisconnectAccount: (provider: EmailProvider, email: string) => Promise<void>;
+  calendarConnections?: CalendarConnection[];
+  onCalendarConnectionsChange?: (next: CalendarConnection[]) => void;
+  healthConnections?: HealthConnection[];
+  onHealthConnectionsChange?: (next: HealthConnection[]) => void;
   topics: Topic[];
   onTopicsChange: (next: Topic[]) => void;
+  topicFolders: TopicFolder[];
+  onTopicFoldersChange: (next: TopicFolder[]) => void;
   hiddenTopicIds: string[];
   onResetNavigation: () => void;
   accountEmail: string | null;
@@ -159,33 +157,216 @@ function Toggle({ on, onClick, t, disabled }: { on: boolean; onClick: () => void
   );
 }
 
+// ── Colour bank editor ────────────────────────────────────────────────────────
+
+const MAX_BANK = 30;
+
+function ColorBankEditor({ t, bank, onChange, currentMood }: {
+  t: Theme;
+  bank: string[];
+  onChange: (next: string[]) => void;
+  currentMood: MoodId;
+}) {
+  const [pickerValue, setPickerValue] = useState('#7da7d9');
+  const [themeSuggestion, setThemeSuggestion] = useState<MoodId | null>(null);
+  const prevMood = useRef<MoodId>(currentMood);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // When mood changes, offer to replace the bank with theme defaults
+  useEffect(() => {
+    if (prevMood.current !== currentMood) {
+      prevMood.current = currentMood;
+      setThemeSuggestion(currentMood);
+    }
+  }, [currentMood]);
+
+  const addColor = () => {
+    const hex = pickerValue.toLowerCase();
+    if (bank.includes(hex)) return;
+    if (bank.length >= MAX_BANK) return;
+    onChange([...bank, hex]);
+  };
+
+  const removeColor = (c: string) => onChange(bank.filter(x => x !== c));
+
+  const applyThemeBank = (mood: MoodId, replace: boolean) => {
+    const suggestions = THEME_COLOR_BANKS[mood] ?? DEFAULT_COLOR_BANK;
+    if (replace) {
+      onChange(suggestions.slice(0, MAX_BANK));
+    } else {
+      const merged = [...bank];
+      for (const c of suggestions) {
+        if (!merged.includes(c) && merged.length < MAX_BANK) merged.push(c);
+      }
+      onChange(merged);
+    }
+    setThemeSuggestion(null);
+  };
+
+  const moodLabel = MOODS.find(m => m.id === (themeSuggestion ?? currentMood))?.label ?? '';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+
+      {/* Theme suggestion banner */}
+      {themeSuggestion && (
+        <div style={{
+          background: t.doingBg, border: `1px solid ${t.doingBorder}`,
+          borderRadius: '10px', padding: '0.65rem 0.9rem',
+          display: 'flex', flexDirection: 'column', gap: '0.45rem',
+        }}>
+          <div style={{ fontSize: '0.78rem', color: t.text, fontWeight: 400 }}>
+            Load <strong>{moodLabel}</strong> suggested colours?
+          </div>
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+            {(THEME_COLOR_BANKS[themeSuggestion] ?? []).slice(0, 10).map(c => (
+              <div key={c} style={{ width: '14px', height: '14px', borderRadius: '3px', background: c, flexShrink: 0 }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => applyThemeBank(themeSuggestion, false)}
+              style={{ background: t.doingAccent, color: '#fff', border: 'none', borderRadius: '7px', padding: '0.3rem 0.7rem', fontSize: '0.73rem', fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              Add to bank
+            </button>
+            <button
+              onClick={() => applyThemeBank(themeSuggestion, true)}
+              style={{ background: 'transparent', color: t.doingAccent, border: `1px solid ${t.doingBorder}`, borderRadius: '7px', padding: '0.3rem 0.7rem', fontSize: '0.73rem', fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              Replace bank
+            </button>
+            <button
+              onClick={() => setThemeSuggestion(null)}
+              style={{ background: 'transparent', color: t.textMuted, border: 'none', fontSize: '0.73rem', fontFamily: 'inherit', cursor: 'pointer', padding: '0.3rem 0.4rem' }}
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Color wheel + add button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+        {/* Native color picker — full RGB wheel */}
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: `conic-gradient(red, yellow, lime, cyan, blue, magenta, red)`,
+            boxShadow: '0 0 0 2px ' + t.border,
+            cursor: 'pointer', flexShrink: 0, overflow: 'hidden',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+            onClick={() => inputRef.current?.click()}
+          >
+            <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: pickerValue, border: '2px solid rgba(255,255,255,0.8)' }} />
+          </div>
+          <input
+            ref={inputRef}
+            type="color"
+            value={pickerValue}
+            onChange={e => setPickerValue(e.target.value)}
+            style={{ position: 'absolute', opacity: 0, width: '36px', height: '36px', cursor: 'pointer', border: 'none', padding: 0 }}
+          />
+        </div>
+        <span style={{ fontSize: '0.72rem', color: t.textMuted, fontFamily: 'monospace' }}>{pickerValue}</span>
+        <button
+          onClick={addColor}
+          disabled={bank.length >= MAX_BANK || bank.includes(pickerValue.toLowerCase())}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+            background: bank.includes(pickerValue.toLowerCase()) ? t.bgAlt : t.text,
+            color: bank.includes(pickerValue.toLowerCase()) ? t.textMuted : t.bg,
+            border: 'none', borderRadius: '8px', padding: '0.35rem 0.75rem',
+            fontSize: '0.73rem', fontFamily: 'inherit', cursor: 'pointer',
+            opacity: bank.length >= MAX_BANK ? 0.5 : 1,
+          }}
+        >
+          <Plus size={12} strokeWidth={2} />
+          {bank.includes(pickerValue.toLowerCase()) ? 'Already added' : 'Add to bank'}
+        </button>
+        <span style={{ fontSize: '0.68rem', color: t.textDim }}>
+          {bank.length}/{MAX_BANK}
+        </span>
+      </div>
+
+      {/* Current bank swatches */}
+      {bank.length === 0 ? (
+        <p style={{ fontSize: '0.75rem', color: t.textDim, fontStyle: 'italic', margin: 0 }}>
+          No colours in the bank — add some above, or load a theme palette.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+          {bank.map(c => (
+            <div key={c} style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '6px', background: c,
+                border: `1px solid ${t.border}`,
+              }} title={c} />
+              <button
+                onClick={() => removeColor(c)}
+                title={`Remove ${c}`}
+                style={{
+                  position: 'absolute', top: '-5px', right: '-5px',
+                  width: '14px', height: '14px', borderRadius: '50%',
+                  background: t.panel, border: `1px solid ${t.borderStrong}`,
+                  color: t.textMuted, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 0, fontSize: '8px', lineHeight: 1,
+                }}
+              >
+                <X size={8} strokeWidth={2.5} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick-reset to defaults */}
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => onChange(DEFAULT_COLOR_BANK)}
+          style={{
+            background: 'transparent',
+            border: `1px solid ${t.border}`, borderRadius: '7px',
+            padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontFamily: 'inherit',
+            cursor: 'pointer', color: t.textMuted,
+          }}
+        >
+          Reset to defaults
+        </button>
+        <button
+          onClick={() => onChange([])}
+          disabled={bank.length === 0}
+          style={{
+            background: 'transparent',
+            border: `1px solid ${bank.length === 0 ? t.border : t.alertBorder}`,
+            borderRadius: '7px',
+            padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontFamily: 'inherit',
+            cursor: bank.length === 0 ? 'default' : 'pointer',
+            color: bank.length === 0 ? t.textDim : t.alert,
+            opacity: bank.length === 0 ? 0.45 : 1,
+          }}
+        >
+          Empty bank
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, sections,
-  calendarFeeds, onFeedsChange, onRefreshFeeds, feedsSyncing, lastSync,
   currency, onCurrencyChange,
   reviewSettings, onReviewSettingsChange,
   oauthAccounts, emailSyncErrors, onConnectAccount, onDisconnectAccount,
-  topics, onTopicsChange, hiddenTopicIds, onResetNavigation,
+  calendarConnections, onCalendarConnectionsChange,
+  healthConnections, onHealthConnectionsChange,
+  topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
   accountEmail, onSignOut,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
-  const [feedLabel, setFeedLabel] = useState('');
-  const [feedUrl, setFeedUrl] = useState('');
-
-  const addFeed = () => {
-    const label = feedLabel.trim();
-    let url = feedUrl.trim();
-    if (!label || !url) return;
-    // Accept webcal:// (e.g. Scientia, Apple Calendar) — just swap the scheme
-    if (/^webcal:\/\//i.test(url)) url = 'https://' + url.slice(9);
-    if (!/^https:\/\//i.test(url)) return;
-    onFeedsChange([...calendarFeeds, { id: crypto.randomUUID(), label, url }]);
-    setFeedLabel('');
-    setFeedUrl('');
-  };
-  const removeFeed = (id: string) =>
-    onFeedsChange(calendarFeeds.filter(f => f.id !== id));
 
   useEffect(() => {
     isEnabled()
@@ -221,7 +402,7 @@ export default function SettingsView({
     <div>
       <SectionHeader title="Settings" t={t} />
 
-      <Block title="Account" t={t} icon={User} defaultOpen>
+      <Block title="Account" t={t} icon={User}>
         <Field
           label={accountEmail ?? 'Not signed in'}
           hint={accountEmail ? 'Your data syncs across devices when signed in.' : 'Sign in to enable cloud sync.'}
@@ -244,41 +425,26 @@ export default function SettingsView({
       </Block>
 
       <Block title="Appearance" t={t} icon={Palette}>
-        <div style={{ padding: '0.6rem 0' }}>
-          <div style={{ fontSize: '0.88rem', color: t.text, fontWeight: 300, marginBottom: '0.75rem' }}>Mood</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem' }}>
-            {MOODS.map(m => {
-              const on = appearance.mood === m.id;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => patchAppearance({ mood: m.id as MoodId })}
-                  aria-pressed={on}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.6rem',
-                    background: on ? t.bgAlt : 'transparent',
-                    border: `1px solid ${on ? t.borderStrong : t.border}`,
-                    borderRadius: '10px', padding: '0.6rem 0.75rem',
-                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                  }}
-                >
-                  <MoodSwatch color={m.swatch} />
-                  <span style={{ fontSize: '0.82rem', color: on ? t.text : t.textMuted, fontWeight: 300 }}>
-                    {m.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <Field label="Theme" t={t}>
+          <Segmented<MoodId>
+            value={appearance.mood} t={t}
+            onChange={(v) => patchAppearance({ mood: v })}
+            options={[
+              { id: 'dark',  label: 'Dark' },
+              { id: 'light', label: 'Light' },
+            ]}
+          />
+        </Field>
 
         <Field label="Font" t={t}>
           <Segmented<FontChoice>
             value={appearance.font} t={t}
             onChange={(v) => patchAppearance({ font: v })}
             options={[
-              { id: 'inter', label: 'Inter' },
+              { id: 'geist', label: 'Geist' },
               { id: 'manrope', label: 'Manrope' },
+              { id: 'inter', label: 'Inter' },
+              { id: 'fraunces', label: 'Fraunces' },
               { id: 'quicksand', label: 'Quicksand' },
               { id: 'mono', label: 'Mono' },
             ]}
@@ -308,32 +474,30 @@ export default function SettingsView({
             ].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
         </Field>
-        <Field label="Widget shape" hint="Corner radius of home widgets" t={t}>
-          <Segmented<WidgetShape>
-            value={appearance.widgetShape ?? 'rounded'} t={t}
-            onChange={(v) => patchAppearance({ widgetShape: v })}
-            options={[
-              { id: 'sharp',   label: 'Sharp' },
-              { id: 'rounded', label: 'Rounded' },
-              { id: 'pill',    label: 'Pill' },
-            ]}
+
+        {/* ── Colour bank ── */}
+        <div style={{ paddingTop: '0.5rem', borderTop: `1px solid ${t.border}` }}>
+          <div style={{ fontSize: '0.78rem', color: t.text, fontWeight: 400, marginBottom: '0.6rem' }}>
+            Colour bank
+            <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', color: t.textDim, fontWeight: 300 }}>
+              — the colours used everywhere in the app
+            </span>
+          </div>
+          <ColorBankEditor
+            t={t}
+            bank={appearance.colorBank ?? []}
+            onChange={(next) => patchAppearance({ colorBank: next })}
+            currentMood={appearance.mood}
           />
-        </Field>
-        <Field label="Widget border" hint="How prominent each widget's outline is" t={t}>
-          <Segmented<WidgetBorder>
-            value={appearance.widgetBorder ?? 'normal'} t={t}
-            onChange={(v) => patchAppearance({ widgetBorder: v })}
-            options={[
-              { id: 'subtle', label: 'None' },
-              { id: 'normal', label: 'Thin' },
-              { id: 'bold',   label: 'Bold' },
-            ]}
-          />
-        </Field>
+        </div>
       </Block>
 
-      <Block title="Topics" t={t} icon={ListTree} defaultOpen>
-        <TopicsBlock t={t} topics={topics} setTopics={onTopicsChange} />
+      <Block title="Topics" t={t} icon={ListTree}>
+        <TopicsBlock
+          t={t} topics={topics} setTopics={onTopicsChange}
+          topicFolders={topicFolders} setTopicFolders={onTopicFoldersChange}
+          colorBank={appearance.colorBank}
+        />
       </Block>
 
       <Block title="Navigation" t={t} icon={Menu}>
@@ -380,102 +544,6 @@ export default function SettingsView({
         </div>
       </Block>
 
-      <Block title="Calendar feeds" t={t} icon={CalendarDays}>
-        <p style={{ fontSize: '0.72rem', color: t.textMuted, margin: '0 0 0.85rem', lineHeight: 1.6 }}>
-          Paste any <strong style={{ color: t.text }}>.ics / iCal</strong> URL here —
-          Google Calendar, Outlook, and most uni timetable systems support them.
-          Both <code style={{ fontSize: '0.68rem', background: t.bgAlt, padding: '0.1rem 0.3rem', borderRadius: '3px' }}>https://</code> and{' '}
-          <code style={{ fontSize: '0.68rem', background: t.bgAlt, padding: '0.1rem 0.3rem', borderRadius: '3px' }}>webcal://</code> links work.
-        </p>
-        <p style={{ fontSize: '0.72rem', color: t.textMuted, margin: '0 0 0.85rem', lineHeight: 1.6 }}>
-          <strong style={{ color: t.text }}>Imperial Scientia:</strong>{' '}
-          Log into <strong>my.imperial.ac.uk</strong> → My timetable → look for a
-          "Subscribe" or "iCal" export button. Copy that URL (it may start with{' '}
-          <code style={{ fontSize: '0.68rem', background: t.bgAlt, padding: '0.1rem 0.3rem', borderRadius: '3px' }}>webcal://</code>
-          — paste it as-is, it will be converted automatically).
-        </p>
-
-        {calendarFeeds.length > 0 && (
-          <div style={{ display: 'grid', gap: '0.4rem', marginBottom: '0.85rem' }}>
-            {calendarFeeds.map(f => (
-              <div key={f.id} style={{
-                display: 'flex', alignItems: 'center', gap: '0.6rem',
-                background: t.todoBg, border: `1px solid ${t.border}`,
-                borderRadius: '8px', padding: '0.5rem 0.75rem',
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.82rem', color: t.text }}>{f.label}</div>
-                  <div style={{
-                    fontSize: '0.68rem', color: t.textDim,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {f.url}
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeFeed(f.id)}
-                  aria-label={`Remove ${f.label}`}
-                  style={{
-                    background: 'transparent', border: 'none', color: t.textMuted,
-                    cursor: 'pointer', padding: '0.2rem', flexShrink: 0,
-                  }}
-                >
-                  <X size={14} strokeWidth={1.5} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
-          <input
-            value={feedLabel}
-            onChange={e => setFeedLabel(e.target.value)}
-            placeholder="label — e.g. Imperial timetable"
-            style={feedInput(t)}
-          />
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              value={feedUrl}
-              onChange={e => setFeedUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addFeed()}
-              placeholder="https:// or webcal:// …"
-              style={{ ...feedInput(t), flex: 1 }}
-            />
-            <button onClick={addFeed} style={{
-              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
-              padding: '0 0.9rem', color: t.textMuted, cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: '0.78rem',
-            }}>
-              add
-            </button>
-          </div>
-        </div>
-
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginTop: '0.85rem',
-        }}>
-          <span style={{ fontSize: '0.7rem', color: t.textDim }}>
-            {feedsSyncing
-              ? 'syncing…'
-              : lastSync != null ? `synced ${relativeCompleted(lastSync)}` : 'not synced yet'}
-          </span>
-          <button
-            onClick={onRefreshFeeds}
-            disabled={feedsSyncing || calendarFeeds.length === 0}
-            style={{
-              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
-              padding: '0.35rem 0.8rem', color: t.textMuted,
-              cursor: feedsSyncing || calendarFeeds.length === 0 ? 'default' : 'pointer',
-              fontFamily: 'inherit', fontSize: '0.75rem', opacity: calendarFeeds.length === 0 ? 0.5 : 1,
-            }}
-          >
-            Refresh now
-          </button>
-        </div>
-      </Block>
-
       <Block title="Budget" t={t} icon={Wallet}>
         <Field label="Currency" hint="Used across the Budget section" t={t}>
           <select
@@ -493,18 +561,19 @@ export default function SettingsView({
         </Field>
       </Block>
 
-      <Block title="Connected accounts" t={t} icon={AtSign}>
-        <ConnectedAccountsBlock
+      <Block title="Integrations" t={t} icon={Plug}>
+        <IntegrationsBlock
           t={t}
-          accounts={oauthAccounts}
-          syncErrors={emailSyncErrors}
-          onConnect={onConnectAccount}
-          onDisconnect={onDisconnectAccount}
+          oauthAccounts={oauthAccounts}
+          emailSyncErrors={emailSyncErrors}
+          onConnectAccount={onConnectAccount}
+          onDisconnectAccount={onDisconnectAccount}
+          calendarConnections={calendarConnections ?? []}
+          onCalendarConnectionsChange={onCalendarConnectionsChange ?? (() => {})}
+          healthConnections={healthConnections ?? []}
+          onHealthConnectionsChange={onHealthConnectionsChange ?? (() => {})}
+          colorBank={appearance.colorBank}
         />
-      </Block>
-
-      <Block title="Connectors" t={t} icon={Plug}>
-        <ConnectorsBlock t={t} />
       </Block>
 
       <Block title="Weekly review" t={t} icon={NotebookPen}>
@@ -543,7 +612,7 @@ export default function SettingsView({
       </Block>
 
       <Block title="Startup" t={t} icon={Power}>
-        <Field label="Launch at startup" hint="Open Life Bozz automatically when you log in" t={t}>
+        <Field label="Launch at startup" hint="Open BOZZ automatically when you log in" t={t}>
           <Toggle on={autostartOn} onClick={toggleAutostart} t={t} disabled={checking} />
         </Field>
       </Block>
@@ -578,8 +647,3 @@ export default function SettingsView({
   );
 }
 
-const feedInput = (t: Theme): React.CSSProperties => ({
-  background: t.input, border: `1px solid ${t.border}`, borderRadius: '8px',
-  padding: '0.5rem 0.7rem', color: t.text, fontSize: '0.8rem',
-  fontFamily: 'inherit', outline: 'none',
-});

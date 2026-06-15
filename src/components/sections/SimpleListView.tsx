@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { isMobileViewport } from '../../lib/platform';
 import { Plus, X } from 'lucide-react';
 import {
-  DndContext, closestCenter, PointerSensor, KeyboardSensor,
+  DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -66,9 +67,11 @@ export default function SimpleListView({
 }: SimpleListViewProps) {
   const [newItem, setNewItem] = useState('');
   const [newDeadline, setNewDeadline] = useState<number | null>(null);
+  const circleSize = isMobileViewport() ? 13 : 16;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -152,7 +155,7 @@ export default function SimpleListView({
                 disabled={!isManual}
                 containerStyle={rowStyle(i.status, t)}
               >
-                <StatusToggle status={i.status} onClick={(s) => setStatus(i.id, s)} t={t} />
+                <StatusToggle status={i.status} onClick={(s) => setStatus(i.id, s)} t={t} size={circleSize} />
                 <span style={textStyle(i.status, t)}>{i.text}</span>
                 <DeadlineControl deadline={i.deadline} onChange={(ts) => setDeadline(i.id, ts)} t={t} />
                 <button onClick={() => deletePermanently(i.id)} style={iconBtn(t)} aria-label="Delete">

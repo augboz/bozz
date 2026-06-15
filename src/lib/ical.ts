@@ -1,5 +1,6 @@
+import { platformFetch } from './http';
 import ICAL from 'ical.js';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+
 import type { CalendarEvent, CalendarFeed } from './types';
 
 // Recurring events are expanded across a bounded window so navigating the
@@ -66,7 +67,7 @@ export function parseICal(text: string, feedId: string, color: string): Calendar
 
 /** Fetch (via Tauri, bypassing CORS) and parse a single feed. */
 export async function fetchFeed(feed: CalendarFeed, color: string): Promise<CalendarEvent[]> {
-  const res = await tauriFetch(feed.url, { method: 'GET' });
+  const res = await platformFetch(feed.url, { method: 'GET' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   return parseICal(text, feed.id, color);

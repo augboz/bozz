@@ -1,7 +1,7 @@
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { platformFetch } from '../http';
+import { isTauri } from '../platform';
+// OAuth connection (listen/invoke/openUrl) is Tauri-desktop-only.
+// These are imported lazily inside connectSpotify so they don't crash on web.
 import { secretSet, secretGet, tokenKey } from './keyring';
 import { pkceChallenge, randomString } from './pkce';
 import type { SpotifyAccount, SpotifyTrack } from '../types';
@@ -11,60 +11,126 @@ const AUTH_URL = 'https://accounts.spotify.com/authorize';
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const SCOPES = ['user-read-currently-playing', 'user-read-playback-state'];
 
-/** Run PKCE OAuth for Spotify on a fixed port. Returns the new account. */
+/** Run PKCE OAuth for Spotify. Returns the new account. */
 export async function connectSpotify(clientId: string): Promise<SpotifyAccount> {
   const verifier = randomString(64);
   const challenge = await pkceChallenge(verifier);
   const state = randomString(24);
-  const redirectUri = `http://127.0.0.1:${SPOTIFY_PORT}`;
 
-  // Start listening for the port event BEFORE invoking (prevents race).
-  // Expose reject so we can fail fast if oauth_run rejects first (e.g. port in use).
-  let portReject: (e: Error) => void = () => {};
-  const portPromise = new Promise<number>((resolve, reject) => {
-    portReject = reject;
-    const timer = setTimeout(
-      () => reject(new Error('OAuth timed out waiting for port — is port 14985 already in use?')),
-      5000,
-    );
-    let unlisten: (() => void) | null = null;
-    listen<number>('oauth:port', (e) => {
-      clearTimeout(timer);
-      if (unlisten) unlisten();
-      resolve(e.payload);
-    }).then(fn => { unlisten = fn; });
-  });
+  let params: Record<string, string>;
+  let redirectUri: string;
 
-  const runPromise = invoke<Record<string, string>>('oauth_run', { port: SPOTIFY_PORT });
+  if (isTauri()) {
+    // ── Desktop (Tauri): Rust spins up a local HTTP server on a fixed port ──
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
 
-  // If oauth_run fails immediately (e.g. EADDRINUSE because a previous attempt is still
-  // running), propagate that error to portPromise right away instead of waiting 5 s.
-  runPromise.catch((e: unknown) => {
-    const msg = String(e);
-    if (msg.includes('in use') || msg.includes('EADDRINUSE') || msg.includes('already')) {
-      portReject(new Error(
-        'Port 14985 is still held by a previous connection attempt. ' +
-        'Wait ~2 minutes (or restart the app) then try again.',
-      ));
-    } else {
-      portReject(new Error(msg));
-    }
-  });
+    redirectUri = `http://127.0.0.1:${SPOTIFY_PORT}`;
 
-  await portPromise; // wait until Rust has bound the port
+    let portReject: (e: Error) => void = () => {};
+    const portPromise = new Promise<number>((resolve, reject) => {
+      portReject = reject;
+      const timer = setTimeout(
+        () => reject(new Error('OAuth timed out waiting for port — is port 14985 already in use?')),
+        5000,
+      );
+      let unlisten: (() => void) | null = null;
+      listen<number>('oauth:port', (e) => {
+        clearTimeout(timer);
+        if (unlisten) unlisten();
+        resolve(e.payload);
+      }).then(fn => { unlisten = fn; });
+    });
 
-  const authParams = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: SCOPES.join(' '),
-    state,
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-  });
-  await openUrl(`${AUTH_URL}?${authParams.toString()}`);
+    const runPromise = invoke<Record<string, string>>('oauth_run', { port: SPOTIFY_PORT });
+    runPromise.catch((e: unknown) => {
+      const msg = String(e);
+      if (msg.includes('in use') || msg.includes('EADDRINUSE') || msg.includes('already')) {
+        portReject(new Error(
+          'Port 14985 is still held by a previous connection attempt. ' +
+          'Wait ~2 minutes (or restart the app) then try again.',
+        ));
+      } else {
+        portReject(new Error(msg));
+      }
+    });
 
-  const params = await runPromise;
+    await portPromise;
+
+    const authParams = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: SCOPES.join(' '),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+    });
+    await openUrl(`${AUTH_URL}?${authParams.toString()}`);
+    params = await runPromise;
+
+  } else {
+    // ── Browser: popup window posts back via postMessage ─────────────────
+    // Spotify redirects back to the app root (?code=…&state=…).
+    // App.tsx detects those params and posts them to window.opener.
+    // Register this origin (e.g. http://localhost:1420) in your Spotify
+    // developer dashboard under Redirect URIs.
+    redirectUri = window.location.origin;
+
+    const authParams = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: SCOPES.join(' '),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+    });
+
+    params = await new Promise<Record<string, string>>((resolve, reject) => {
+      const popup = window.open(
+        `${AUTH_URL}?${authParams.toString()}`,
+        'spotify_oauth',
+        'width=520,height=660,left=200,top=100',
+      );
+      if (!popup) {
+        reject(new Error('Popup was blocked — please allow popups for this page and try again.'));
+        return;
+      }
+
+      let done = false;
+
+      const onMessage = (e: MessageEvent) => {
+        const loopbackPort = window.location.port || '80';
+        const allowed = new Set([window.location.origin, `http://127.0.0.1:${loopbackPort}`]);
+        if (!allowed.has(e.origin)) return;
+        if (e.data?.type !== 'oauth_callback') return;
+        done = true;
+        window.removeEventListener('message', onMessage);
+        clearInterval(closedPoll);
+        resolve(e.data.params as Record<string, string>);
+      };
+      window.addEventListener('message', onMessage);
+
+      const closedPoll = setInterval(() => {
+        if (popup.closed && !done) {
+          clearInterval(closedPoll);
+          window.removeEventListener('message', onMessage);
+          reject(new Error('OAuth popup was closed before completing sign-in.'));
+        }
+      }, 500);
+
+      setTimeout(() => {
+        if (done) return;
+        clearInterval(closedPoll);
+        window.removeEventListener('message', onMessage);
+        if (!popup.closed) popup.close();
+        reject(new Error('OAuth timed out — no response after 5 minutes.'));
+      }, 5 * 60 * 1000);
+    });
+  }
+
   if (params.error) throw new Error(`Spotify OAuth error: ${params.error}`);
   if (!params.code) throw new Error('Spotify OAuth returned no code');
   if (params.state !== state) throw new Error('Spotify state mismatch');
@@ -76,7 +142,7 @@ export async function connectSpotify(clientId: string): Promise<SpotifyAccount> 
     client_id: clientId,
     code_verifier: verifier,
   });
-  const tokenRes = await tauriFetch(TOKEN_URL, {
+  const tokenRes = await platformFetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: tokenBody.toString(),
@@ -91,7 +157,7 @@ export async function connectSpotify(clientId: string): Promise<SpotifyAccount> 
   };
   if (!tokens.refresh_token) throw new Error('Spotify did not return a refresh token');
 
-  const meRes = await tauriFetch('https://api.spotify.com/v1/me', {
+  const meRes = await platformFetch('https://api.spotify.com/v1/me', {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
   if (!meRes.ok) throw new Error(`Spotify /me failed: ${meRes.status}`);
@@ -122,12 +188,17 @@ export async function refreshSpotifyToken(
     refresh_token: refreshToken,
     client_id: account.clientId,
   });
-  const res = await tauriFetch(TOKEN_URL, {
+  const res = await platformFetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  if (!res.ok) throw new Error(`Spotify refresh failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    const body_text = await res.text().catch(() => '');
+    const err = new Error(`Spotify refresh failed: HTTP ${res.status}${body_text ? ` — ${body_text}` : ''}`);
+    (err as Error & { status: number }).status = res.status;
+    throw err;
+  }
   const json = (await res.json()) as {
     access_token: string;
     refresh_token?: string;
@@ -155,7 +226,7 @@ interface SpotifyPlaybackState {
 
 /** Fetch the currently-playing track. Returns null if nothing is playing. */
 export async function getCurrentlyPlaying(accessToken: string): Promise<SpotifyTrack | null> {
-  const res = await tauriFetch('https://api.spotify.com/v1/me/player/currently-playing', {
+  const res = await platformFetch('https://api.spotify.com/v1/me/player/currently-playing', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   // 204 = no active device / nothing playing; 202 = loading
@@ -169,7 +240,6 @@ export async function getCurrentlyPlaying(accessToken: string): Promise<SpotifyT
   if (!data.item) return null;
 
   const images = data.item.album.images;
-  // Prefer a medium-sized image (64–300px wide) for thumbnails
   const albumArt = images.length > 0
     ? (images.find(img => img.width >= 64 && img.width <= 300) ?? images[images.length - 1]).url
     : null;

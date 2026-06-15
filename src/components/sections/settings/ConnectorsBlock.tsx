@@ -342,7 +342,13 @@ function SpotifySection({ t }: { t: Theme }) {
     (async () => {
       const saved = await getItem('spotifyAccount');
       if (saved?.value) {
-        try { setAccount(JSON.parse(saved.value) as SpotifyAccount); } catch { /* ignore */ }
+        try {
+          const parsed = JSON.parse(saved.value) as Partial<SpotifyAccount>;
+          // Only treat as connected if the account has the required fields
+          if (parsed.clientId && parsed.userId) {
+            setAccount(parsed as SpotifyAccount);
+          }
+        } catch { /* ignore */ }
       }
       setLoaded(true);
     })();
@@ -396,7 +402,7 @@ function SpotifySection({ t }: { t: Theme }) {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '0.85rem', color: t.text, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.doneAccent, display: 'inline-block' }} />
-              {account.displayName}
+              {account.displayName || account.userId}
             </div>
             <div style={{ fontSize: '0.68rem', color: t.textDim, marginTop: '0.15rem' }}>Connected</div>
           </div>

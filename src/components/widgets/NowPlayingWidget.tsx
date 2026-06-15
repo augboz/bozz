@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Music2, RefreshCw } from 'lucide-react';
-import { getItem, setItem } from '../../lib/storage';
-import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
+import { RefreshCw } from 'lucide-react';
+import { getItem, setItem, deleteItem } from '../../lib/storage';
+import { Widget, EmptyWidget } from '../shared/Widget';
 import { getCurrentlyPlaying, refreshSpotifyToken } from '../../lib/oauth/spotify';
 import { secretGet, tokenKey } from '../../lib/oauth/keyring';
 import type { WidgetCtx } from './context';
@@ -26,19 +26,26 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
   const accountRef = useRef<SpotifyAccount | null>(null);
   accountRef.current = account;
 
-  const getAccessToken = useCallback(async (acc: SpotifyAccount): Promise<string> => {
-    if (Date.now() < acc.expiresAt) {
+  const getAccessToken = useCallback(async (acc: SpotifyAccount, forceRefresh = false): Promise<string> => {
+    if (!forceRefresh && Date.now() < acc.expiresAt) {
       const stored = await secretGet(tokenKey('spotify', acc.userId, 'access'));
       if (stored) return stored;
     }
-    const { accessToken, expiresAt } = await refreshSpotifyToken(acc);
-    const updated: SpotifyAccount = { ...acc, expiresAt };
-    await setItem('spotifyAccount', JSON.stringify(updated));
-    setAccount(updated);
-    return accessToken;
+    try {
+      const { accessToken, expiresAt } = await refreshSpotifyToken(acc);
+      const updated: SpotifyAccount = { ...acc, expiresAt };
+      await setItem('spotifyAccount', JSON.stringify(updated));
+      setAccount(updated);
+      return accessToken;
+    } catch (refreshErr) {
+      // Refresh failed transiently — fall back to stored access token if available
+      const stored = await secretGet(tokenKey('spotify', acc.userId, 'access'));
+      if (stored) return stored;
+      throw refreshErr;
+    }
   }, []);
 
-  const fetchNowPlaying = useCallback(async (acc: SpotifyAccount) => {
+  const fetchNowPlaying = useCallback(async (acc: SpotifyAccount, retrying = false) => {
     try {
       const token = await getAccessToken(acc);
       const nowPlaying = await getCurrentlyPlaying(token);
@@ -46,6 +53,32 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
       setStatus('ready');
       setError(null);
     } catch (e) {
+      const statusCode = (e as Error & { status?: number }).status;
+      // 401 = access token rejected → force a refresh and retry once
+      if (statusCode === 401 && !retrying) {
+        try {
+          const fresh = await getAccessToken(acc, true);
+          const nowPlaying = await getCurrentlyPlaying(fresh);
+          setTrack(nowPlaying);
+          setStatus('ready');
+          setError(null);
+        } catch (retryErr) {
+          const retryCode = (retryErr as Error & { status?: number }).status;
+          if (retryCode === 400) {
+            await deleteItem('spotifyAccount');
+            setAccount(null); setTrack(null); setStatus('idle');
+          } else {
+            setError(String(retryErr)); setStatus('error');
+          }
+        }
+        return;
+      }
+      // 400 = refresh token revoked — clear and show reconnect prompt
+      if (statusCode === 400) {
+        await deleteItem('spotifyAccount');
+        setAccount(null); setTrack(null); setStatus('idle');
+        return;
+      }
       setError(String(e));
       setStatus('error');
     }
@@ -81,17 +114,9 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={ACCENT}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <WidgetHeader label="Now Playing" accent={ACCENT} t={t} icon={Music2} />
-        <button
-          onClick={reload}
-          aria-label="Reload"
-          title="Reload from settings"
-          style={{
-            background: 'transparent', border: 'none', color: t.textDim,
-            cursor: 'pointer', padding: '0.15rem', display: 'flex',
-          }}
-        >
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={reload} aria-label="Reload" title="Reload"
+          style={{ background: 'transparent', border: 'none', color: t.textDim, cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
           <RefreshCw size={11} strokeWidth={1.5} />
         </button>
       </div>
@@ -109,7 +134,7 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
           </div>
           {account && (
             <div style={{ fontSize: '0.68rem', color: t.textDim, marginTop: '0.3rem' }}>
-              {account.displayName}
+              {account.displayName || account.userId}
             </div>
           )}
         </div>

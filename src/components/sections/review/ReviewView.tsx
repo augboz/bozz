@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { Check, ChevronDown, ChevronRight, X } from 'lucide-react';
 import type {
-  Application, BudgetData, ListItem, TaskListKey, Theme, WeeklyReview,
+  Application, BudgetData, ListItem, TaskListKey, Theme, Topic, WeeklyReview,
 } from '../../../lib/types';
 import { SectionHeader } from '../../shared/ui';
 import { formatMoney } from '../../../lib/budget';
@@ -18,6 +18,7 @@ interface ReviewViewProps {
   lists: Record<TaskListKey, ListItem[]>;
   applications: Application[];
   budget: BudgetData;
+  topics?: Topic[];
 }
 
 const LIST_LABEL: Record<TaskListKey, string> = {
@@ -39,7 +40,84 @@ function Panel({ t, title, children }: { t: Theme; title: string; children: Reac
   );
 }
 
-export default function ReviewView({ t, reviews, setReviews, lists, applications, budget }: ReviewViewProps) {
+// ── Topics panel ──────────────────────────────────────────────────────────────
+
+function TopicsPanel({ t, topics, weekStart, weekEnd }: {
+  t: Theme; topics: Topic[]; weekStart: number; weekEnd: number;
+}) {
+  const inWeek = (ts: number) => ts >= weekStart && ts <= weekEnd;
+
+  const rows = topics.map(topic => {
+    const doneStageIds = new Set(topic.stages.filter(s => s.done).map(s => s.id));
+    const activeStageIds = new Set(topic.stages.filter(s => !s.done).map(s => s.id));
+    const doingStageIds = new Set(
+      topic.stages.filter(s => !s.done).slice(1).map(s => s.id),
+    );
+
+    const allActive = topic.items.filter(i => activeStageIds.has(i.stageId));
+    const completedThisWeek = topic.items.filter(
+      i => doneStageIds.has(i.stageId) && i.completedAt != null && inWeek(i.completedAt),
+    );
+    const inProgress = topic.items.filter(i => doingStageIds.has(i.stageId));
+    const upcoming = topic.items.filter(
+      i => activeStageIds.has(i.stageId) && i.deadline != null && inWeek(i.deadline),
+    );
+
+    return { topic, active: allActive.length, done: completedThisWeek.length, inProgress: inProgress.length, upcoming: upcoming.length };
+  });
+
+  // Only show topics that have items
+  const nonEmpty = rows.filter(r => r.active + r.done > 0 || r.upcoming > 0);
+  if (nonEmpty.length === 0) return null;
+
+  return (
+    <Panel t={t} title="By topic">
+      <div style={{ display: 'grid', gap: '0.6rem' }}>
+        {nonEmpty.map(({ topic, active, done, inProgress, upcoming }) => (
+          <div key={topic.id} style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+            padding: '0.55rem 0.75rem',
+            background: topic.color + '0d', border: `1px solid ${topic.color}33`,
+            borderLeft: `3px solid ${topic.color}`,
+            borderRadius: '8px',
+          }}>
+            <span style={{ flex: 1, fontSize: '0.85rem', color: t.text, fontWeight: 400 }}>{topic.name}</span>
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+              {done > 0 && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', color: t.doneAccent }}>
+                  <Check size={11} strokeWidth={2} />{done} done
+                </span>
+              )}
+              {inProgress > 0 && (
+                <span style={{ fontSize: '0.72rem', color: t.doingAccent }}>{inProgress} in progress</span>
+              )}
+              {upcoming > 0 && (
+                <span style={{ fontSize: '0.72rem', color: t.alert }}>{upcoming} due</span>
+              )}
+              {done === 0 && inProgress === 0 && upcoming === 0 && active > 0 && (
+                <span style={{ fontSize: '0.72rem', color: t.textDim }}>{active} open</span>
+              )}
+              {/* Progress bar */}
+              {active + done > 0 && (
+                <div style={{
+                  width: '60px', height: '4px', background: t.border, borderRadius: '2px', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    width: `${Math.round((done / (active + done)) * 100)}%`,
+                    height: '100%', background: topic.color, borderRadius: '2px',
+                    transition: 'width 0.3s',
+                  }} />
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+export default function ReviewView({ t, reviews, setReviews, lists, applications, budget, topics }: ReviewViewProps) {
   const pending = useMemo(() => reviews.find(r => r.reviewedAt == null), [reviews]);
 
   // The pending entry may target a week other than the one currently in
@@ -134,6 +212,10 @@ export default function ReviewView({ t, reviews, setReviews, lists, applications
           />
         </div>
       </Panel>
+
+      {topics && topics.length > 0 && (
+        <TopicsPanel t={t} topics={topics} weekStart={window.start} weekEnd={window.end} />
+      )}
 
       <Panel t={t} title="Scheduled vs done">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

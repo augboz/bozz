@@ -4,16 +4,59 @@
   /* Overridden at runtime by applyAppearanceVars(). Defaults keep the
      app sane before prefs load / outside React. */
   --app-font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --app-bg: #060506;
-  --app-bg-alt: #1e1e21;
-  --app-border: #2e2e33;
-  --app-border-strong: #3a3a40;
-  --app-text-dim: #5a5854;
+  --app-bg: #0a0a0a;
+  --app-bg-alt: #141414;
+  --app-border: rgba(255,255,255,0.08);
+  --app-border-strong: rgba(255,255,255,0.16);
+  --app-text-dim: #555555;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --glass-bg: rgba(28,28,36,0.65);
+  --glass-blur: blur(40px) saturate(150%);
+  --widget-shadow: 0 1px 0 rgba(255,255,255,0.09) inset, 0 6px 24px rgba(0,0,0,0.50), 0 2px 8px rgba(0,0,0,0.30), 0 0 0 0.5px rgba(255,255,255,0.08);
+  --widget-shadow-hover: 0 1px 0 rgba(255,255,255,0.12) inset, 0 12px 40px rgba(0,0,0,0.60), 0 4px 12px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.12);
   color-scheme: dark;
 }
 
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes fadeRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalRise {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Entrance stagger for section children */
+.section-enter > * {
+  animation: fadeRise 0.5s var(--ease, cubic-bezier(0.16,1,0.3,1)) both;
+}
+.section-enter > *:nth-child(1)  { animation-delay: 0ms; }
+.section-enter > *:nth-child(2)  { animation-delay: 45ms; }
+.section-enter > *:nth-child(3)  { animation-delay: 90ms; }
+.section-enter > *:nth-child(4)  { animation-delay: 135ms; }
+.section-enter > *:nth-child(5)  { animation-delay: 180ms; }
+.section-enter > *:nth-child(6)  { animation-delay: 225ms; }
+.section-enter > *:nth-child(7)  { animation-delay: 270ms; }
+.section-enter > *:nth-child(8)  { animation-delay: 315ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .section-enter > * { animation: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 /* Tauri frameless window — drag region and no-drag overrides */
@@ -61,8 +104,8 @@ input::placeholder {
    Themed, neutral grey — no warm/brown tones from the underlying webview
    default. Tracks pick up the active mood, thumbs use the border colour. */
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 *::-webkit-scrollbar-track {
   background: var(--app-bg);
@@ -94,17 +137,6 @@ nav[aria-label="Main navigation"]::-webkit-scrollbar {
   /* Prevent horizontal overflow from any fixed-width child */
   #root { overflow-x: hidden; }
 
-  /* Ensure all interactive elements meet 44px minimum touch target */
-  button, [role="button"], a, input[type="checkbox"], input[type="radio"] {
-    min-height: 44px;
-  }
-
-  /* Allow sort/filter pill buttons to be smaller visually but keep
-     tap area large via padding override */
-  .sort-pill {
-    min-height: unset;
-    padding: 0.4rem 0.6rem;
-  }
 }
 
 @keyframes pulse {
@@ -126,12 +158,16 @@ button:focus-visible {
    theme-neutral (CSS can't see the JS theme tokens). */
 .react-grid-item.react-grid-placeholder {
   background: rgba(140, 140, 140, 0.18) !important;
-  border-radius: 14px;
+  border-radius: var(--widget-radius, 20px);
   opacity: 1;
 }
 .react-grid-item > .react-resizable-handle::after {
   border-right-color: rgba(140, 140, 140, 0.55);
   border-bottom-color: rgba(140, 140, 140, 0.55);
+}
+/* Suppress position animation on initial topic page load */
+.topic-grid:not(.topic-grid-ready) .react-grid-item {
+  transition: none !important;
 }
 .react-grid-item.react-draggable-dragging {
   z-index: 10;
@@ -141,4 +177,10 @@ button:focus-visible {
   .react-grid-item {
     transition: none !important;
   }
+}
+
+/* Allow interactive elements inside widgets to receive clicks even when
+   the widget grid is in edit mode (pointer-events: none on the wrapper). */
+.widget-edit-overlay .widget-interactive {
+  pointer-events: auto;
 }

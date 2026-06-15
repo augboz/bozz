@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Timer } from 'lucide-react';
-import { Widget, WidgetHeader } from '../shared/Widget';
+import { Widget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
 
 type Mode = 'work' | 'short' | 'long';
@@ -106,7 +105,6 @@ export default function PomodoroWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={ACCENT}>
-      <WidgetHeader label="Pomodoro" accent={ACCENT} t={t} icon={Timer} />
 
       {/* Mode tabs */}
       <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.85rem' }}>

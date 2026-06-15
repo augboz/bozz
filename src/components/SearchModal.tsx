@@ -71,10 +71,14 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
           maxHeight: isMobile ? `calc(100vh - ${tbOffset}px)` : '70vh',
           height: isMobile ? `calc(100vh - ${tbOffset}px)` : undefined,
           display: 'flex', flexDirection: 'column',
-          background: t.panel,
+          background: 'var(--glass-bg, ' + t.panel + ')',
+          backdropFilter: 'var(--glass-blur, none)',
+          WebkitBackdropFilter: 'var(--glass-blur, none)',
           border: isMobile ? 'none' : `1px solid ${t.borderStrong}`,
-          borderRadius: isMobile ? 0 : '14px',
+          borderRadius: isMobile ? 0 : '16px',
+          boxShadow: 'var(--widget-shadow, none)',
           overflow: 'hidden', fontFamily: 'var(--app-font)',
+          animation: 'modalRise 0.4s var(--ease, cubic-bezier(0.16,1,0.3,1)) both',
         }}
       >
         <input

@@ -1,11 +1,11 @@
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { platformFetch } from '../http';
 import type { EmailMessage, OAuthAccount } from '../types';
 import type { ProviderConfig } from './index';
 
 const BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
 async function googleFetch(accessToken: string, url: string, init?: RequestInit): Promise<Response> {
-  return tauriFetch(url, {
+  return platformFetch(url, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),

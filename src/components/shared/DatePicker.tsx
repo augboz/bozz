@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import {
   addMonths, subMonths, format, isSameDay, isSameMonth,
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isToday,
@@ -9,97 +9,134 @@ import type { Theme } from '../../lib/types';
 
 interface Props {
   t: Theme;
-  value: number | null;            // unix ms (local midnight) or null
+  value: number | null;            // unix ms or null
   onChange: (next: number | null) => void;
   placeholder?: string;
   allowClear?: boolean;
+  showTime?: boolean;
   size?: 'sm' | 'md';
   align?: 'left' | 'right';
-  /** Optional minimum date (e.g. today only-future). */
   min?: number;
   disabled?: boolean;
+  defaultOpen?: boolean;
+  onClose?: () => void;
 }
 
 const POPOVER_W = 266;
-const POPOVER_H = 320;
+const POPOVER_H_DATE = 320;
+const POPOVER_H_TIME = 390;
 
-/**
- * Calendar-popover date picker. The calendar is rendered via a React
- * Portal so it can escape parent overflow:hidden / clipped widgets and
- * always sit above everything else.
- */
 export default function DatePicker({
   t, value, onChange, placeholder = 'pick date',
-  allowClear, size = 'md', align = 'left', min, disabled,
+  allowClear, showTime, size = 'md', align = 'left',
+  min, disabled, defaultOpen, onClose,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen ?? false);
   const [month, setMonth] = useState<Date>(value ? new Date(value) : new Date());
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  // Time state (extracted from value when it has time, otherwise defaults)
+  const initTime = (v: number | null) => {
+    if (!v) return { hour: '12', minute: '00', period: 'AM' as const };
+    const d = new Date(v);
+    let h = d.getHours();
+    const period = h >= 12 ? 'PM' : 'AM';
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return { hour: String(h).padStart(2, '0'), minute: String(d.getMinutes()).padStart(2, '0'), period };
+  };
+  const [timeState, setTimeState] = useState(() => initTime(value));
+
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (value) setMonth(new Date(value)); }, [value]);
 
-  // Compute the portal popover's position from the trigger's rect.
+  const close = useCallback(() => {
+    setOpen(false);
+    onClose?.();
+  }, [onClose]);
+
   const reposition = useCallback(() => {
     const btn = btnRef.current;
     if (!btn) return;
     const r = btn.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    // Default: directly below, aligned with the trigger's chosen edge.
+    const popH = showTime ? POPOVER_H_TIME : POPOVER_H_DATE;
     let left = align === 'right' ? r.right - POPOVER_W : r.left;
     let top = r.bottom + 6;
-    // Keep inside viewport.
     if (left + POPOVER_W > vw - 8) left = vw - POPOVER_W - 8;
     if (left < 8) left = 8;
-    if (top + POPOVER_H > vh - 8) top = Math.max(8, r.top - POPOVER_H - 6);
+    if (top + popH > vh - 8) top = Math.max(8, r.top - popH - 6);
     setCoords({ top, left });
-  }, [align]);
+  }, [align, showTime]);
 
   useEffect(() => {
     if (!open) return;
     reposition();
-    const onScrollResize = () => reposition();
-    window.addEventListener('scroll', onScrollResize, true);
-    window.addEventListener('resize', onScrollResize);
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
     return () => {
-      window.removeEventListener('scroll', onScrollResize, true);
-      window.removeEventListener('resize', onScrollResize);
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
     };
   }, [open, reposition]);
 
-  // Outside click + Escape
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       if (popRef.current?.contains(e.target as Node)) return;
       if (btnRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
+      close();
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, close]);
 
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
     end:   endOfWeek(endOfMonth(month),   { weekStartsOn: 1 }),
   });
 
-  const pick = (d: Date) => {
-    const v = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    if (min && v < min) return;
-    onChange(v);
-    setOpen(false);
+  const buildTimestamp = (d: Date, ts: typeof timeState): number => {
+    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (showTime) {
+      let h = parseInt(ts.hour, 10);
+      if (ts.period === 'PM' && h < 12) h += 12;
+      if (ts.period === 'AM' && h === 12) h = 0;
+      date.setHours(h, parseInt(ts.minute, 10), 0, 0);
+    }
+    return date.getTime();
   };
 
-  const triggerPadding = size === 'sm' ? '0.34rem 0.55rem' : '0.45rem 0.7rem';
-  const triggerFont = size === 'sm' ? '0.78rem' : '0.82rem';
+  const pick = (d: Date) => {
+    const v = buildTimestamp(d, timeState);
+    if (min && v < min) return;
+    onChange(v);
+    if (!showTime) close();
+  };
+
+  const applyTime = () => {
+    if (!value) return;
+    onChange(buildTimestamp(new Date(value), timeState));
+    close();
+  };
+
+  const triggerPad = size === 'sm' ? '0.34rem 0.55rem' : '0.45rem 0.7rem';
+  const triggerFontSize = size === 'sm' ? '0.78rem' : '0.82rem';
+
+  const selStyle = (w: string): React.CSSProperties => ({
+    background: t.bgAlt, border: `1px solid ${t.border}`,
+    borderRadius: '7px', padding: '0.28rem 0.4rem',
+    color: t.text, fontSize: '0.8rem', fontFamily: 'inherit',
+    cursor: 'pointer', width: w, outline: 'none',
+  });
 
   const popover = open && coords ? (
     <div
@@ -108,33 +145,34 @@ export default function DatePicker({
       style={{
         position: 'fixed', top: coords.top, left: coords.left,
         background: t.panel, border: `1px solid ${t.borderStrong}`,
-        borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+        borderRadius: '14px',
+        boxShadow: '0 12px 48px rgba(0,0,0,0.45), 0 3px 10px rgba(0,0,0,0.28), 0 0 0 0.5px rgba(255,255,255,0.06)',
         padding: '0.8rem', zIndex: 10000, width: `${POPOVER_W}px`,
         fontFamily: 'var(--app-font)',
       }}
       onMouseDown={e => e.stopPropagation()}
     >
+      {/* Month nav */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-        <button onClick={() => setMonth(m => subMonths(m, 1))} style={navBtn(t)} aria-label="Previous month">
+        <button onClick={() => setMonth(m => subMonths(m, 1))} style={navBtnStyle(t)}>
           <ChevronLeft size={14} strokeWidth={1.6} />
         </button>
         <div style={{ fontSize: '0.85rem', color: t.text, fontWeight: 500 }}>
           {format(month, 'MMMM yyyy')}
         </div>
-        <button onClick={() => setMonth(m => addMonths(m, 1))} style={navBtn(t)} aria-label="Next month">
+        <button onClick={() => setMonth(m => addMonths(m, 1))} style={navBtnStyle(t)}>
           <ChevronRight size={14} strokeWidth={1.6} />
         </button>
       </div>
 
+      {/* Day-of-week headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '0.2rem' }}>
         {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
-          <div key={d} style={{
-            fontSize: '0.6rem', textAlign: 'center', color: t.textDim,
-            letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0.25rem 0',
-          }}>{d}</div>
+          <div key={d} style={{ fontSize: '0.6rem', textAlign: 'center', color: t.textDim, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0.25rem 0' }}>{d}</div>
         ))}
       </div>
 
+      {/* Calendar grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
         {days.map(d => {
           const inMonth  = isSameMonth(d, month);
@@ -142,35 +180,58 @@ export default function DatePicker({
           const today    = isToday(d);
           const blocked  = min != null && d.getTime() < min;
           return (
-            <button
-              key={d.toISOString()}
-              onClick={() => pick(d)}
-              disabled={blocked}
-              style={{
-                height: '32px', borderRadius: '6px',
-                background: selected ? t.doingAccent : (today ? t.bgAlt : 'transparent'),
-                color: selected ? '#fff' : (inMonth ? t.text : t.textDim),
-                border: today && !selected ? `1px solid ${t.borderStrong}` : 'none',
-                cursor: blocked ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit', fontSize: '0.78rem',
-                fontWeight: today && !selected ? 500 : 400,
-                opacity: blocked ? 0.3 : 1,
-                padding: 0,
-              }}
-            >
+            <button key={d.toISOString()} onClick={() => pick(d)} disabled={blocked} style={{
+              height: '32px', borderRadius: '7px',
+              background: selected ? t.doingAccent : (today ? t.bgAlt : 'transparent'),
+              color: selected ? '#fff' : (inMonth ? t.text : t.textDim),
+              border: today && !selected ? `1px solid ${t.borderStrong}` : 'none',
+              cursor: blocked ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', fontSize: '0.78rem',
+              fontWeight: today && !selected ? 500 : 400,
+              opacity: blocked ? 0.3 : (!inMonth ? 0.4 : 1),
+              padding: 0,
+            }}>
               {d.getDate()}
             </button>
           );
         })}
       </div>
 
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        marginTop: '0.6rem', borderTop: `1px solid ${t.border}`, paddingTop: '0.55rem',
-      }}>
-        <button onClick={() => pick(new Date())} style={textBtn(t)}>Today</button>
+      {/* Time picker row */}
+      {showTime && (
+        <div style={{ marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: `1px solid ${t.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+            <Clock size={12} strokeWidth={1.6} color={t.textDim} />
+            <span style={{ fontSize: '0.68rem', color: t.textDim, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Time</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <select value={timeState.hour} onChange={e => setTimeState(s => ({ ...s, hour: e.target.value }))} style={selStyle('3.8rem')}>
+              {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+            <span style={{ color: t.textMuted, fontSize: '0.9rem', fontWeight: 300 }}>:</span>
+            <select value={timeState.minute} onChange={e => setTimeState(s => ({ ...s, minute: e.target.value }))} style={selStyle('3.8rem')}>
+              {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <select value={timeState.period} onChange={e => setTimeState(s => ({ ...s, period: e.target.value as 'AM' | 'PM' }))} style={selStyle('4rem')}>
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+            {value && (
+              <button onClick={applyTime} style={{ marginLeft: 'auto', background: t.text, color: t.bg, border: 'none', borderRadius: '7px', padding: '0.28rem 0.65rem', fontSize: '0.75rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 500 }}>
+                Set
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.6rem', borderTop: `1px solid ${t.border}`, paddingTop: '0.55rem' }}>
+        <button onClick={() => pick(new Date())} style={textBtnStyle(t)}>Today</button>
         {allowClear && value != null && (
-          <button onClick={() => { onChange(null); setOpen(false); }} style={{ ...textBtn(t), color: t.alert }}>
+          <button onClick={() => { onChange(null); close(); }} style={{ ...textBtnStyle(t), color: t.alert }}>
             Clear
           </button>
         )}
@@ -189,43 +250,36 @@ export default function DatePicker({
         aria-expanded={open}
         style={{
           background: t.input, border: `1px solid ${open ? t.borderStrong : t.border}`,
-          borderRadius: '8px', padding: triggerPadding,
+          borderRadius: '8px', padding: triggerPad,
           color: value ? t.text : t.textDim,
-          fontSize: triggerFont, fontFamily: 'inherit',
+          fontSize: triggerFontSize, fontFamily: 'inherit',
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.5 : 1,
           display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-          transition: 'border-color 0.12s',
-          minWidth: 0,
+          transition: 'border-color 0.12s', minWidth: 0,
         }}
       >
         <Calendar size={13} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />
         <span style={{ whiteSpace: 'nowrap' }}>
-          {value ? format(new Date(value), 'd MMM yyyy') : placeholder}
+          {value
+            ? showTime
+              ? format(new Date(value), 'd MMM yyyy, h:mm a')
+              : format(new Date(value), 'd MMM yyyy')
+            : placeholder}
         </span>
-        {value != null && allowClear && (
-          <span
-            role="button"
-            tabIndex={0}
-            onClick={(e) => { e.stopPropagation(); onChange(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onChange(null); } }}
-            style={{ display: 'inline-flex', marginLeft: '0.15rem', color: t.textDim, cursor: 'pointer' }}
-          >
-            <X size={11} strokeWidth={1.6} />
-          </span>
-        )}
       </button>
       {popover && createPortal(popover, document.body)}
     </>
   );
 }
 
-const navBtn = (t: Theme): React.CSSProperties => ({
+const navBtnStyle = (t: Theme): React.CSSProperties => ({
   background: 'transparent', border: 'none', color: t.textMuted,
-  cursor: 'pointer', padding: '0.3rem', borderRadius: '5px',
+  cursor: 'pointer', padding: '0.3rem', borderRadius: '6px',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 });
-const textBtn = (t: Theme): React.CSSProperties => ({
+
+const textBtnStyle = (t: Theme): React.CSSProperties => ({
   background: 'transparent', border: 'none', color: t.textMuted,
   cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.74rem',
   padding: '0.25rem 0.5rem',

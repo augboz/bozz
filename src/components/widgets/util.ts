@@ -11,6 +11,22 @@ export interface DeadlineEntry {
 /** All non-done items that have a deadline, tagged with their section. */
 export function deadlineEntries(ctx: WidgetCtx): DeadlineEntry[] {
   const out: DeadlineEntry[] = [];
+
+  // Topic items (primary — what most users will have)
+  for (const topic of ctx.topics) {
+    const doneStageIds = new Set(topic.stages.filter(s => s.done).map(s => s.id));
+    for (const item of topic.items) {
+      if (item.deadline != null && !doneStageIds.has(item.stageId)) {
+        out.push({
+          item: { id: item.id, text: item.text, status: 'todo', completedAt: item.completedAt, deadline: item.deadline },
+          section: topic.id as SectionId,
+          accent: topic.color,
+        });
+      }
+    }
+  }
+
+  // Legacy list items (kept for backwards compatibility)
   const push = (items: ListItem[], section: SectionId) => {
     for (const it of items) {
       if (it.deadline != null && it.status !== 'done') {

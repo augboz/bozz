@@ -66,7 +66,9 @@ export class VoiceCapture {
       this.cbs.onPartial?.((this.finalText + interim).trim());
     };
     this.rec.onerror = (e) => {
-      this.cbs.onError?.(String(e.error ?? e.message ?? 'speech error'));
+      const msg = String(e.error ?? e.message ?? 'speech error');
+      console.error('[voice] SpeechRecognition error:', msg, e);
+      this.cbs.onError?.(msg);
     };
     this.rec.onend = () => {
       const text = this.finalText.trim();

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BookOpen, RefreshCw } from 'lucide-react';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { isTauri } from '../../lib/platform';
 import { getItem } from '../../lib/storage';
 import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
@@ -74,6 +73,11 @@ export default function NotionWidget({ ctx }: { ctx: WidgetCtx }) {
     for (const ref of cfg.pages) {
       const apiId = toUuid(ref.id);
       try {
+        if (!isTauri()) {
+          results.push({ id: ref.id, display: ref.label || `Page ${ref.id.slice(0, 8)}…`, url: `https://notion.so/${ref.id}` });
+          continue;
+        }
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
         const res = await tauriFetch(`https://api.notion.com/v1/pages/${apiId}`, {
           headers: { Authorization: `Bearer ${cfg.token}`, 'Notion-Version': NOTION_VERSION },
         });
@@ -148,7 +152,7 @@ export default function NotionWidget({ ctx }: { ctx: WidgetCtx }) {
           {pages.map(p => (
             <button
               key={p.id}
-              onClick={() => openUrl(p.url)}
+              onClick={() => { if (isTauri()) { void import('@tauri-apps/plugin-opener').then(m => m.openUrl(p.url)); } else { window.open(p.url, '_blank'); } }}
               title={p.url}
               style={{
                 textAlign: 'left', background: t.todoBg,

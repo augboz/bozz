@@ -5,15 +5,12 @@ import { getItem, setItem } from '../lib/storage';
 import { themes } from '../lib/themes';
 import { DEFAULT_APPEARANCE } from '../lib/appearance';
 import { routeVoice, describeRoute, type VoiceRoute } from '../lib/voiceRouter';
+import { parseVoiceTasks, cleanTaskText } from '../lib/taskParser';
 import VoiceButton from './shared/VoiceButton';
 import { DEFAULT_BUDGET } from '../lib/budget';
 import type {
-  BudgetData, InboxItem, ListItem, MoodId, TaskListKey, Theme,
+  BudgetData, InboxItem, MoodId, Topic, Theme,
 } from '../lib/types';
-
-const TASK_KEY: Record<TaskListKey, string> = {
-  music: 'musicItems', life: 'lifeItems', cv: 'cvItems', other: 'otherItems',
-};
 
 /**
  * Apply a routed voice transcript by writing directly to the relevant
@@ -25,12 +22,14 @@ async function applyRoute(route: VoiceRoute): Promise<void> {
     const list: InboxItem[] = r?.value ? JSON.parse(r.value) : [];
     list.push({ id: Date.now(), text: route.text, createdAt: Date.now() });
     await setItem('inbox', JSON.stringify(list));
-  } else if (route.kind === 'task') {
-    const key = TASK_KEY[route.list];
-    const r = await getItem(key);
-    const list: ListItem[] = r?.value ? JSON.parse(r.value) : [];
-    list.push(route.item);
-    await setItem(key, JSON.stringify(list));
+  } else if (route.kind === 'topic') {
+    const r = await getItem('topics');
+    const topics: Topic[] = r?.value ? JSON.parse(r.value) : [];
+    const updated = topics.map(tp => {
+      if (tp.id !== route.topicId) return tp;
+      return { ...tp, items: [...tp.items, route.item] };
+    });
+    await setItem('topics', JSON.stringify(updated));
   } else if (route.kind === 'budget') {
     const r = await getItem('budget');
     const b: BudgetData = r?.value ? JSON.parse(r.value) : { ...DEFAULT_BUDGET };
@@ -65,33 +64,70 @@ export default function QuickCapture() {
 
   const hide = () => { getCurrentWindow().hide(); };
 
+  const loadTopics = async (): Promise<Topic[]> => {
+    try {
+      const r = await getItem('topics');
+      return r?.value ? JSON.parse(r.value) as Topic[] : [];
+    } catch { return []; }
+  };
+
+  async function captureTranscript(value: string) {
+    const topics = await loadTopics();
+
+    // Budget signals route directly without multi-task splitting
+    const route = routeVoice(value, topics);
+    if (route.kind === 'budget') {
+      setStatus(describeRoute(route));
+      try { await applyRoute(route); } catch (e) { console.error('Quick capture error:', e); }
+      return;
+    }
+
+    // Split into individual tasks with topic + deadline predictions
+    const parsed = parseVoiceTasks(value, topics);
+    const now = Date.now();
+
+    try {
+      const r = await getItem('inbox');
+      const list: InboxItem[] = r?.value ? JSON.parse(r.value) : [];
+      if (parsed.length === 0) {
+        // Only fall back to raw text if there's actual content after stripping filler
+        const fallback = cleanTaskText(value.trim());
+        if (fallback.length >= 3) list.push({ id: now, text: fallback, createdAt: now });
+      } else {
+        parsed.forEach((task, i) => list.push({
+          id: now + i,
+          text: task.text,
+          createdAt: now + i,
+          suggestedTopicId: task.topicId ?? undefined,
+          deadline: task.deadline ?? undefined,
+          deadlineLabel: task.deadlineLabel ?? undefined,
+        }));
+      }
+      await setItem('inbox', JSON.stringify(list));
+      await emit('data:changed');
+    } catch (e) {
+      console.error('Quick capture error:', e);
+    }
+
+    const count = parsed.length;
+    setStatus(count > 1 ? `→ inbox (${count} tasks)` : '→ inbox');
+  }
+
   // Manual submission — also runs through the router so typed thoughts
   // can land in the right place without the user choosing.
   const submitText = async () => {
     const value = (text || partial).trim();
     if (!value) { hide(); return; }
-    const route = routeVoice(value);
-    setStatus(`→ ${describeRoute(route)}`);
-    try {
-      await applyRoute(route);
-    } catch (e) {
-      console.error('Quick capture error:', e);
-    }
+    await captureTranscript(value);
     setText(''); setPartial('');
     setTimeout(hide, 280);
   };
 
   const onVoiceTranscript = async (final: string) => {
-    const route = routeVoice(final);
     setText(final);
-    setStatus(`→ ${describeRoute(route)}`);
-    try {
-      await applyRoute(route);
-    } catch (e) {
-      console.error('Voice route error:', e);
-    }
-    setText(''); setPartial('');
-    setTimeout(hide, 380);
+    await captureTranscript(final);
+    setPartial('');
+    setTimeout(() => { setText(''); hide(); }, 1200);
   };
 
   const onVoicePartial = (s: string) => setPartial(s);
@@ -137,6 +173,7 @@ export default function QuickCapture() {
           t={theme}
           onTranscript={onVoiceTranscript}
           onPartial={onVoicePartial}
+          onError={(msg) => setStatus(`mic error: ${msg}`)}
           iconSize={17}
         />
       </div>

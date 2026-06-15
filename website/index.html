@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOZZ · One dashboard. Everything.</title>
+<meta name="description" content="BOZZ: one window for your tasks, calendar, budget, health, email and habits. Built by students, for students.">
+<meta name="theme-color" content="#0a0b0c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black: #0c0d10;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --border-bright: rgba(255,255,255,0.16);
+  --white: #f3f1ee;
+  --muted: #a8a6a2;
+  --muted2: #76746f;
+  --accent: #cdbfff;
+  --display: 'Geist', sans-serif;
+  --body: 'Inter', sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html { scroll-behavior: smooth; }
+::selection { background: rgba(205,191,255,0.3); }
+
+body {
+  font-family: var(--body);
+  background: var(--black);
+  color: var(--white);
+  overflow-x: hidden;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Background ──────────────────────────────────────────────────────── */
+.bg-mesh {
+  position: fixed; inset: -10% 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #2a2d33 0%, transparent 55%),
+    radial-gradient(90% 70% at 15% 110%, rgba(190,160,180,0.32) 0%, transparent 60%),
+    radial-gradient(90% 70% at 85% 115%, rgba(160,150,200,0.28) 0%, transparent 60%),
+    linear-gradient(180deg, #16181c 0%, #1c1a1e 45%, #34303a 100%);
+  will-change: transform;
+}
+.bg-grain {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Scroll progress hairline ─────────────────────────────────────────── */
+.progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 100%;
+  z-index: 200; pointer-events: none;
+  background: linear-gradient(90deg, var(--accent), #b3a3f0);
+  transform-origin: 0 50%; transform: scaleX(0);
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 2.5rem;
+  transition: padding 0.4s var(--ease), background 0.4s ease, backdrop-filter 0.4s ease, border-color 0.4s ease;
+  border-bottom: 1px solid transparent;
+}
+nav.scrolled {
+  padding: 0.65rem 2.5rem;
+  background: rgba(16,16,20,0.55);
+  backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  font-family: var(--display); font-size: 1.25rem; font-weight: 700;
+  letter-spacing: -0.02em; color: var(--white); text-decoration: none;
+}
+.nav-logo .mark {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: var(--accent); color: #16161a;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 0.95rem;
+  box-shadow: 0 4px 16px rgba(205,191,255,0.3);
+  transition: transform 0.4s var(--ease);
+}
+.nav-logo:hover .mark { transform: rotate(-8deg) scale(1.06); }
+.nav-links { display: flex; gap: 0.35rem; list-style: none; }
+.nav-links a {
+  position: relative;
+  font-size: 14px; color: var(--white); text-decoration: none;
+  opacity: 0.65; padding: 8px 16px; border-radius: 999px;
+  transition: opacity 0.25s, background 0.25s;
+}
+.nav-links a:hover { opacity: 1; background: rgba(255,255,255,0.07); }
+.nav-cta {
+  font-size: 14px; font-weight: 500;
+  background: rgba(255,255,255,0.10); color: var(--white);
+  border: 1px solid var(--border-bright); border-radius: 999px;
+  padding: 9px 22px; text-decoration: none;
+  backdrop-filter: blur(10px);
+  transition: background 0.3s, transform 0.3s var(--ease), box-shadow 0.3s;
+}
+.nav-cta:hover {
+  background: rgba(255,255,255,0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: 10.5rem 1.5rem 0;
+}
+.hero-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--white);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  padding: 7px 18px; border-radius: 999px;
+  margin-bottom: 2.2rem; backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(16px);
+  animation: rise 1s var(--ease) 0.15s forwards;
+}
+.hero-pill::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(205,191,255,0.5)} 50%{opacity:0.6; box-shadow:0 0 0 5px rgba(205,191,255,0)} }
+@keyframes rise { to { opacity: 1; transform: none; } }
+
+h1 {
+  font-family: var(--display);
+  font-size: clamp(2.9rem, 7.2vw, 5.8rem);
+  font-weight: 600; line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin-bottom: 1.75rem;
+}
+/* Masked line reveal — each line clips its inner span which slides up */
+.line { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.line > span {
+  display: inline-block;
+  transform: translateY(115%);
+  animation: lineUp 1.1s var(--ease) forwards;
+}
+.line:nth-child(1) > span { animation-delay: 0.25s; }
+.line:nth-child(2) > span { animation-delay: 0.38s; }
+@keyframes lineUp { to { transform: none; } }
+
+h1 .accent {
+  background: linear-gradient(110deg, #cdbfff, #e8e0ff, #b3a3f0, #cdbfff);
+  background-size: 220% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 7s linear infinite;
+}
+@keyframes shimmer { to { background-position: 220% center; } }
+
+.hero-sub {
+  font-size: 1.12rem; font-weight: 300; color: var(--white); opacity: 0;
+  max-width: 30rem; line-height: 1.65; margin-bottom: 2.4rem;
+  transform: translateY(16px);
+  animation: riseSub 1s var(--ease) 0.6s forwards;
+}
+@keyframes riseSub { to { opacity: 0.7; transform: none; } }
+
+.hero-cta-row {
+  display: flex; gap: 0.9rem; align-items: center;
+  opacity: 0; transform: translateY(16px);
+  animation: rise 1s var(--ease) 0.75s forwards;
+}
+.hero-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--display); font-size: 15px; font-weight: 600;
+  background: var(--white); color: #16161a;
+  border-radius: 999px; padding: 15px 34px;
+  text-decoration: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  transition: transform 0.35s var(--ease), box-shadow 0.35s;
+  will-change: transform;
+}
+.hero-cta:hover { box-shadow: 0 16px 44px rgba(0,0,0,0.45); }
+.hero-cta .arr { transition: transform 0.35s var(--ease); }
+.hero-cta:hover .arr { transform: translateX(4px); }
+.hero-ghost {
+  font-size: 14px; color: var(--muted); text-decoration: none;
+  padding: 15px 22px; border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  transition: color 0.25s, border-color 0.25s, background 0.25s;
+}
+.hero-ghost:hover { color: var(--white); border-color: rgba(255,255,255,0.32); background: rgba(255,255,255,0.04); }
+
+/* Product frame — tilts subtly toward the cursor */
+.hero-shot-wrap {
+  margin-top: 5.5rem; width: min(1100px, 92vw);
+  perspective: 1200px;
+  opacity: 0; transform: translateY(60px);
+  animation: rise 1.3s var(--ease) 0.9s forwards;
+}
+.hero-shot {
+  height: 520px; border-radius: 20px 20px 0 0;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid var(--border-bright); border-bottom: none;
+  box-shadow: 0 -10px 90px rgba(205,191,255,0.12), 0 -2px 40px rgba(0,0,0,0.5);
+  backdrop-filter: blur(14px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; color: var(--muted2);
+  font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease-out;
+  will-change: transform;
+}
+.hero-shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+.section { padding: 8rem 2.5rem; max-width: 1200px; margin: 0 auto; text-align: center; }
+.section-label {
+  font-size: 12px; font-weight: 500; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--accent); opacity: 0.9;
+  margin-bottom: 1.1rem;
+}
+h2 {
+  font-family: var(--display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600; letter-spacing: -0.03em; line-height: 1.12;
+  max-width: 20ch; margin: 0 auto 1.2rem;
+}
+.section-intro {
+  font-size: 1.05rem; color: var(--muted); max-width: 34rem;
+  margin: 0 auto 3.5rem; font-weight: 300;
+}
+
+/* Section divider that draws itself */
+.rule {
+  height: 1px; max-width: 1200px; margin: 0 auto;
+  background: var(--border-bright);
+  transform: scaleX(0); transform-origin: 0 50%;
+  transition: transform 1.4s var(--ease);
+}
+.rule.visible { transform: scaleX(1); }
+
+/* Scroll reveals — slightly translated + blurred until visible */
+.reveal {
+  opacity: 0; transform: translateY(36px);
+  filter: blur(6px);
+  transition: opacity 1s var(--ease), transform 1s var(--ease), filter 1s var(--ease);
+}
+.reveal.visible { opacity: 1; transform: none; filter: none; }
+
+.stagger > * {
+  opacity: 0; transform: translateY(26px);
+  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+}
+.stagger.visible > * { opacity: 1; transform: none; }
+.stagger.visible > *:nth-child(1){transition-delay:.05s}
+.stagger.visible > *:nth-child(2){transition-delay:.11s}
+.stagger.visible > *:nth-child(3){transition-delay:.17s}
+.stagger.visible > *:nth-child(4){transition-delay:.23s}
+.stagger.visible > *:nth-child(5){transition-delay:.29s}
+.stagger.visible > *:nth-child(6){transition-delay:.35s}
+.stagger.visible > *:nth-child(7){transition-delay:.41s}
+.stagger.visible > *:nth-child(8){transition-delay:.47s}
+.stagger.visible > *:nth-child(9){transition-delay:.53s}
+
+/* Glass card */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  backdrop-filter: blur(16px) saturate(130%);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ── Features ────────────────────────────────────────────────────────── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+  text-align: left;
+}
+.feature-card {
+  padding: 1.8rem; position: relative; overflow: hidden;
+  transition: transform 0.45s var(--ease), border-color 0.45s, background 0.45s;
+}
+.feature-card::after {
+  /* soft lilac glow that follows hover */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(205,191,255,0.08), transparent 65%);
+  opacity: 0; transition: opacity 0.4s;
+}
+.feature-card:hover { transform: translateY(-6px); border-color: var(--border-bright); background: rgba(255,255,255,0.055); }
+.feature-card:hover::after { opacity: 1; }
+.fi-mark {
+  width: 26px; height: 3px; border-radius: 2px;
+  background: var(--accent); opacity: 0.85; margin-bottom: 1.1rem;
+  transition: width 0.45s var(--ease);
+}
+.feature-card:hover .fi-mark { width: 44px; }
+.fi-title { font-family: var(--display); font-size: 15px; font-weight: 600; margin-bottom: 0.4rem; }
+.fi-desc { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+
+/* ── Shortcut demo ───────────────────────────────────────────────────── */
+.shortcut-demo { max-width: 560px; margin: 0 auto; padding: 2.6rem; text-align: left; }
+.kbd-row { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; justify-content: center; }
+kbd {
+  background: rgba(255,255,255,0.08); border: 1px solid var(--border-bright);
+  border-bottom: 2px solid rgba(255,255,255,0.18); border-radius: 7px;
+  padding: 7px 13px; font-family: var(--body); font-size: 13px; font-weight: 500; color: var(--white);
+  transition: transform 0.2s var(--ease), background 0.2s;
+}
+.shortcut-demo:hover kbd { background: rgba(205,191,255,0.12); transform: translateY(-2px); }
+.kbd-plus { color: var(--muted2); }
+.shortcut-input {
+  background: rgba(0,0,0,0.25); border: 1px solid var(--border-bright);
+  border-radius: 10px; padding: 15px 18px; font-size: 14px; color: var(--white);
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.shortcut-input .typing { border-right: 2px solid var(--accent); padding-right: 3px; white-space: nowrap; overflow: hidden; }
+.shortcut-input.faint { opacity: 0.4; }
+.voice-note { font-size: 13px; color: var(--muted); margin-top: 1rem; text-align: center; }
+
+/* ── Integrations marquee ────────────────────────────────────────────── */
+.marquee {
+  overflow: hidden; position: relative;
+  max-width: 900px; margin: 0 auto;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.marquee-track {
+  display: flex; gap: 12px; width: max-content;
+  animation: marquee 26s linear infinite;
+}
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.int-badge {
+  flex-shrink: 0;
+  font-size: 13.5px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 20px; border-radius: 999px; backdrop-filter: blur(10px);
+  transition: color 0.25s, border-color 0.25s;
+}
+.int-badge:hover { color: var(--white); border-color: var(--accent); }
+
+/* ── Download ────────────────────────────────────────────────────────── */
+.download-card { max-width: 760px; margin: 0 auto; padding: 4.2rem 3rem; text-align: center; }
+.dl-buttons { display: flex; flex-direction: column; gap: 12px; max-width: 380px; margin: 2rem auto 0; }
+.dl-btn {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(0,0,0,0.2); border: 1px solid var(--border-bright);
+  border-radius: 12px; padding: 15px; text-decoration: none; color: var(--white);
+  transition: border-color 0.3s, transform 0.35s var(--ease), background 0.3s;
+}
+.dl-btn::after {
+  content: ''; position: absolute; top: 0; left: -130%;
+  width: 60%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-18deg); transition: left 0.7s var(--ease);
+}
+.dl-btn:hover { border-color: var(--accent); transform: translateY(-3px); background: rgba(255,255,255,0.05); }
+.dl-btn:hover::after { left: 150%; }
+.dl-btn.primary { background: var(--white); color: #16161a; border-color: var(--white); }
+.dl-btn.primary::after { background: linear-gradient(100deg, transparent, rgba(0,0,0,0.06), transparent); }
+.dl-btn.primary:hover { opacity: 0.94; background: var(--white); }
+.dl-main { font-family: var(--display); font-size: 15px; font-weight: 600; }
+.dl-sub { font-size: 12px; opacity: 0.65; }
+.dl-note { font-size: 12px; color: var(--muted2); margin-top: 1.25rem; }
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2.5rem; display: flex; align-items: center; justify-content: space-between;
+  max-width: 1200px; margin: 4rem auto 0; flex-wrap: wrap; gap: 1.5rem;
+}
+.footer-logo { font-family: var(--display); font-weight: 700; letter-spacing: -0.02em; }
+.footer-links { display: flex; gap: 1.75rem; }
+.footer-links a {
+  font-size: 13px; color: var(--muted); text-decoration: none;
+  transition: color 0.25s;
+}
+.footer-links a:hover { color: var(--accent); }
+.footer-copy { font-size: 12px; color: var(--muted2); }
+
+@media (max-width: 860px) {
+  nav { padding: 1rem 1.25rem; }
+  .nav-links { display: none; }
+  .features-grid { grid-template-columns: 1fr; }
+  .hero { padding-top: 8rem; }
+  footer { flex-direction: column; text-align: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .reveal, .stagger > *, .line > span, .hero-pill, .hero-sub, .hero-cta-row, .hero-shot-wrap { opacity: 1 !important; transform: none !important; filter: none !important; }
+  .marquee-track { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-mesh" id="mesh"></div>
+<div class="bg-grain"></div>
+<div class="progress" id="progress"></div>
+
+<nav id="nav">
+  <a class="nav-logo" href="#"><span class="mark">B</span>BOZZ</a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#shortcut">Quick add</a></li>
+    <li><a href="#integrations">Integrations</a></li>
+    <li><a href="#download">Download</a></li>
+  </ul>
+  <a href="#download" class="nav-cta">Get started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-pill">A dashboard for your whole life</div>
+  <h1>
+    <span class="line"><span>One window for</span></span>
+    <span class="line"><span>your whole <span class="accent">life.</span></span></span>
+  </h1>
+  <p class="hero-sub">BOZZ brings your tasks, calendar, budget, health, email and habits into one calm, customisable home. Built by students, for students.</p>
+  <div class="hero-cta-row">
+    <a href="#download" class="hero-cta" data-magnetic>Download free <span class="arr">→</span></a>
+    <a href="#features" class="hero-ghost">Explore features</a>
+  </div>
+
+  <div class="hero-shot-wrap">
+    <div class="hero-shot" id="heroShot">
+      <span>Replace with hero screenshot of the BOZZ dashboard</span>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="reveal">
+    <div class="section-label">Everything included</div>
+    <h2>Built for real life, not productivity theatre.</h2>
+    <p class="section-intro">Every feature exists because we needed it ourselves. No bloat, no upsells, no premium walls.</p>
+  </div>
+  <div class="features-grid stagger">
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Quick capture</div><div class="fi-desc">Ctrl+B from anywhere. Type or speak. The task lands in your Quicks instantly.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Quicks inbox</div><div class="fi-desc">All captured tasks in one place. Sort, categorise and schedule from here.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Topics &amp; tasks</div><div class="fi-desc">Custom lists with your own stages. Job Hunt, Shopping, Side Projects. Anything goes.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Calendar</div><div class="fi-desc">Google and Apple Calendar synced. Monthly view, daily agenda, day notes.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Budget</div><div class="fi-desc">Track income, spending and savings goals. See your month at a glance.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Health</div><div class="fi-desc">Apple Health via Terra. Steps, sleep, heart rate, calories, no exports needed.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Email</div><div class="fi-desc">Gmail and Outlook. Triage your most important mail without leaving BOZZ.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Habits</div><div class="fi-desc">Daily habit tracking with a streak calendar and weekly overview.</div></div>
+    <div class="feature-card glass"><div class="fi-mark"></div><div class="fi-title">Spotify &amp; Notion</div><div class="fi-desc">Now playing and quick-open Notion pages, right on your dashboard.</div></div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- SHORTCUT -->
+<section class="section" id="shortcut">
+  <div class="reveal">
+    <div class="section-label">Capture anything, instantly</div>
+    <h2>A task in under a second.</h2>
+    <p class="section-intro">Hit the shortcut anywhere, type or speak, and BOZZ routes it for you. No app switching, no lost thoughts.</p>
+  </div>
+  <div class="shortcut-demo glass reveal">
+    <div class="kbd-row"><kbd>Ctrl</kbd><span class="kbd-plus">+</span><kbd>B</kbd></div>
+    <div class="shortcut-input"><span class="typing" id="typeDemo"></span><span style="font-size:11px;color:var(--muted2)">↵ add</span></div>
+    <div class="shortcut-input faint"><span>Pick up groceries after gym</span></div>
+    <p class="voice-note">Or speak it. Voice capture routes tasks automatically.</p>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- INTEGRATIONS -->
+<section class="section" id="integrations">
+  <div class="reveal">
+    <div class="section-label">Connects to everything</div>
+    <h2>All your apps. One place.</h2>
+  </div>
+  <div class="marquee reveal" style="margin-top:2.5rem">
+    <div class="marquee-track" id="marqueeTrack">
+      <div class="int-badge">Google Calendar</div>
+      <div class="int-badge">Apple Calendar</div>
+      <div class="int-badge">Gmail</div>
+      <div class="int-badge">Outlook</div>
+      <div class="int-badge">Spotify</div>
+      <div class="int-badge">Apple Health</div>
+      <div class="int-badge">Notion</div>
+      <div class="int-badge">WhatsApp</div>
+      <div class="int-badge">More soon</div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- DOWNLOAD -->
+<section class="section" id="download">
+  <div class="download-card glass reveal">
+    <div class="section-label">Get BOZZ</div>
+    <h2 style="margin-bottom:0.75rem">One window for everything.</h2>
+    <p class="section-intro" style="margin-bottom:0">Free to download. Your data stays on your device, cloud sync is optional.</p>
+    <div class="dl-buttons">
+      <a href="#" class="dl-btn primary"><span class="dl-main">Download for Mac</span><span class="dl-sub">macOS 12+ · Apple Silicon &amp; Intel</span></a>
+      <a href="#" class="dl-btn"><span class="dl-main">Download for Windows</span><span class="dl-sub">Windows 10 &amp; 11 · 64-bit</span></a>
+      <a href="http://localhost:5173" class="dl-btn"><span class="dl-main">Open in browser</span><span class="dl-sub">No install, try it instantly</span></a>
+    </div>
+    <p class="dl-note">Free, no account required.</p>
+  </div>
+</section>
+
+<footer>
+  <span class="footer-logo">BOZZ</span>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Contact</a>
+  </div>
+  <span class="footer-copy">© 2026 BOZZ. Made in London.</span>
+</footer>
+
+<script>
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ── Nav state + scroll progress + mesh parallax ─────────────────────────
+const nav = document.getElementById('nav');
+const progress = document.getElementById('progress');
+const mesh = document.getElementById('mesh');
+let ticking = false;
+function onScroll() {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    const y = window.scrollY;
+    nav.classList.toggle('scrolled', y > 24);
+    const max = document.documentElement.scrollHeight - innerHeight;
+    progress.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
+    if (!reduced) mesh.style.transform = `translateY(${y * 0.06}px)`;
+    ticking = false;
+  });
+}
+onScroll();
+addEventListener('scroll', onScroll, { passive: true });
+
+// ── Scroll reveals (sections, staggers, rules) ──────────────────────────
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('visible');
+    io.unobserve(e.target);
+  });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal, .stagger, .rule').forEach(el => io.observe(el));
+
+// ── Hero product frame: 3D tilt toward cursor ───────────────────────────
+const shot = document.getElementById('heroShot');
+if (shot && !reduced) {
+  const wrap = shot.parentElement;
+  wrap.addEventListener('mousemove', e => {
+    const r = wrap.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    shot.style.transform = `rotateX(${(-y * 4).toFixed(2)}deg) rotateY(${(x * 5).toFixed(2)}deg)`;
+  });
+  wrap.addEventListener('mouseleave', () => { shot.style.transform = ''; });
+}
+
+// ── Feature cards: glow follows the cursor ──────────────────────────────
+document.querySelectorAll('.feature-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    card.style.setProperty('--my', `${e.clientY - r.top}px`);
+  });
+});
+
+// ── Magnetic CTA ─────────────────────────────────────────────────────────
+document.querySelectorAll('[data-magnetic]').forEach(btn => {
+  if (reduced) return;
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    const x = e.clientX - r.left - r.width / 2;
+    const y = e.clientY - r.top - r.height / 2;
+    btn.style.transform = `translate(${x * 0.18}px, ${y * 0.3}px)`;
+  });
+  btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+});
+
+// ── Typing demo loop ─────────────────────────────────────────────────────
+const demo = document.getElementById('typeDemo');
+if (demo) {
+  const phrases = [
+    'Email Prof about deadline',
+    'Book dentist for Tuesday',
+    'Split rent with flatmates',
+    'Revise lecture 7 notes',
+  ];
+  let pi = 0, ci = 0, deleting = false;
+  (function tick() {
+    const cur = phrases[pi];
+    if (reduced) { demo.textContent = cur; return; }
+    demo.textContent = cur.slice(0, ci);
+    if (!deleting) {
+      ci++;
+      if (ci > cur.length) { deleting = true; setTimeout(tick, 1700); return; }
+      setTimeout(tick, 42 + Math.random() * 50);
+    } else {
+      ci--;
+      if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; }
+      setTimeout(tick, 22);
+    }
+  })();
+}
+
+// ── Marquee: duplicate track content for seamless loop ──────────────────
+const track = document.getElementById('marqueeTrack');
+if (track) track.innerHTML += track.innerHTML;
+</script>
+</body>
+</html>

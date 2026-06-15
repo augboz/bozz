@@ -1,5 +1,4 @@
-import { Wallet } from 'lucide-react';
-import { Widget, WidgetHeader } from '../shared/Widget';
+import { Widget } from '../shared/Widget';
 import { sectionAccents } from '../../lib/themes';
 import { monthTotals, goalProgress, formatMoney } from '../../lib/budget';
 import type { WidgetCtx } from './context';
@@ -13,8 +12,7 @@ export default function BudgetWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={accent} onClick={() => setActiveSection('budget')}>
-      <WidgetHeader label="Budget" accent={accent} t={t} icon={Wallet} />
-      <div style={{ marginTop: '0.85rem' }}>
+      <div>
         <div style={{ fontSize: '0.7rem', color: t.textMuted, letterSpacing: '0.05em' }}>this month · net</div>
         <div style={{ fontSize: '2rem', fontWeight: 200, color: net >= 0 ? t.doneAccent : t.alert, lineHeight: 1.1 }}>
           {formatMoney(net, budget.currency)}

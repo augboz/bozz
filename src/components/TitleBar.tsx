@@ -112,15 +112,16 @@ export default function TitleBar({ theme: t }: Props) {
           flex: 1,
           // macOS: leave room for native traffic-light buttons
           paddingLeft: onMac ? '80px' : '14px',
-          fontSize: '0.7rem',
-          fontWeight: 500,
-          letterSpacing: '0.09em',
-          textTransform: 'uppercase',
-          color: t.textDim,
+          fontSize: '0.82rem',
+          fontWeight: 600,
+          fontStyle: 'normal',
+          fontFamily: 'var(--app-font)',
+          letterSpacing: '-0.01em',
+          color: t.textMuted,
           pointerEvents: 'none',
         }}
       >
-        Life Bozz
+        BOZZ
       </span>
 
       {/* Window controls — hidden on macOS (traffic lights handle this) */}

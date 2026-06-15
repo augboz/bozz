@@ -1,5 +1,4 @@
-import { Briefcase } from 'lucide-react';
-import { Widget, WidgetHeader, Stat } from '../shared/Widget';
+import { Widget, Stat } from '../shared/Widget';
 import { sectionAccents } from '../../lib/themes';
 import type { WidgetCtx } from './context';
 
@@ -12,8 +11,7 @@ export default function ApplicationsWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={sectionAccents.applications} onClick={() => setActiveSection('applications')}>
-      <WidgetHeader label="Applications" accent={sectionAccents.applications} t={t} icon={Briefcase} />
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '0.25rem' }}>
         <div>
           <div style={{ fontSize: '3.25rem', fontWeight: 200, color: t.text, lineHeight: 1, letterSpacing: '-0.02em' }}>
             {openApps}

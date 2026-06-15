@@ -1,0 +1,139 @@
+/**
+ * Generic Google OAuth PKCE helper — used for Google Calendar and Google Fit.
+ * Returns { accessToken, email } on success. Does NOT store tokens (caller's job).
+ */
+
+import { platformFetch } from '../http';
+import { isTauri } from '../platform';
+import { pkceChallenge, randomString } from './pkce';
+import { secretSet } from './keyring';
+
+export interface GoogleTokenResult {
+  accessToken: string;
+  refreshToken: string | null;
+  email: string;
+}
+
+export async function connectGoogle(
+  clientId: string,
+  clientSecret: string,
+  scopes: string[],
+  storageKey: string,   // e.g. 'gcal:access' — used to persist tokens in keyring
+): Promise<GoogleTokenResult> {
+  const verifier  = randomString(64);
+  const challenge = await pkceChallenge(verifier);
+  const state     = randomString(24);
+
+  const buildAuthUrl = (redirectUri: string) =>
+    'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: [...scopes, 'https://www.googleapis.com/auth/userinfo.email'].join(' '),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      access_type: 'offline',
+      prompt: 'consent',
+    }).toString();
+
+  let params: Record<string, string>;
+  let redirectUri: string;
+
+  if (isTauri()) {
+    // ── Desktop (Tauri): Rust spins up a local HTTP server ─────────────────
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+
+    const portPromise = new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('OAuth listener never started')), 5000);
+      let unlisten: (() => void) | null = null;
+      listen<number>('oauth:port', e => {
+        clearTimeout(timer);
+        if (unlisten) unlisten();
+        resolve(e.payload);
+      }).then(fn => { unlisten = fn; });
+    });
+
+    const runPromise = invoke<Record<string, string>>('oauth_run');
+    const port = await portPromise;
+    redirectUri = `http://127.0.0.1:${port}`;
+
+    await openUrl(buildAuthUrl(redirectUri));
+    params = await runPromise;
+
+  } else {
+    // ── Browser: popup window + postMessage from /callback ─────────────────
+    const port = window.location.port || '80';
+    redirectUri = `http://127.0.0.1:${port}/callback`;
+
+    params = await new Promise<Record<string, string>>((resolve, reject) => {
+      const popup = window.open(buildAuthUrl(redirectUri), 'google_oauth', 'width=520,height=660,left=200,top=100');
+      if (!popup) {
+        reject(new Error('Popup was blocked — please allow popups for this page and try again.'));
+        return;
+      }
+      let done = false;
+      const onMessage = (e: MessageEvent) => {
+        const allowed = new Set([window.location.origin, `http://127.0.0.1:${port}`]);
+        if (!allowed.has(e.origin)) return;
+        if (e.data?.type !== 'oauth_callback') return;
+        done = true;
+        window.removeEventListener('message', onMessage);
+        clearInterval(closedPoll);
+        resolve(e.data.params as Record<string, string>);
+      };
+      window.addEventListener('message', onMessage);
+      const closedPoll = setInterval(() => {
+        if (popup.closed && !done) {
+          clearInterval(closedPoll);
+          window.removeEventListener('message', onMessage);
+          reject(new Error('OAuth popup was closed before completing sign-in.'));
+        }
+      }, 500);
+      setTimeout(() => {
+        if (done) return;
+        clearInterval(closedPoll);
+        window.removeEventListener('message', onMessage);
+        if (!popup.closed) popup.close();
+        reject(new Error('OAuth timed out — no response after 5 minutes.'));
+      }, 5 * 60 * 1000);
+    });
+  }
+
+  if (params.error) throw new Error(`Google OAuth error: ${params.error}`);
+  if (!params.code) throw new Error('Google returned no code');
+  if (params.state !== state) throw new Error('State mismatch');
+
+  // Exchange code → tokens
+  const body = new URLSearchParams({
+    code: params.code,
+    client_id: clientId,
+    client_secret: clientSecret,
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code',
+    code_verifier: verifier,
+  });
+  const tokenRes = await platformFetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  if (!tokenRes.ok) throw new Error(`Token exchange failed: ${tokenRes.status}`);
+  const json = (await tokenRes.json()) as { access_token?: string; refresh_token?: string };
+  if (!json.access_token) throw new Error('No access_token in response');
+
+  // Fetch profile email
+  const profileRes = await platformFetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: `Bearer ${json.access_token}` },
+  });
+  const profile = (await profileRes.json()) as { email?: string };
+  const email = profile.email ?? 'unknown';
+
+  // Persist tokens
+  await secretSet(storageKey + ':access', json.access_token);
+  if (json.refresh_token) await secretSet(storageKey + ':refresh', json.refresh_token);
+
+  return { accessToken: json.access_token, refreshToken: json.refresh_token ?? null, email };
+}

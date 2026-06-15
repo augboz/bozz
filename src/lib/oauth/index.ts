@@ -1,7 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { platformFetch } from '../http';
+import { isTauri } from '../platform';
 import type { EmailProvider, OAuthAccount } from '../types';
 import { pkceChallenge, randomString } from './pkce';
 import { secretSet, tokenKey } from './keyring';
@@ -27,6 +25,69 @@ interface TokenResponse {
   scope?: string;
 }
 
+/**
+ * Browser-based OAuth via popup + postMessage.
+ * The popup redirects to /callback, main.tsx forwards params via postMessage and
+ * closes itself — React never mounts in the popup.
+ * redirect_uri to register: <origin>/callback  e.g. http://localhost:5173/callback
+ */
+/**
+ * Build the loopback redirect URI using 127.0.0.1 (not localhost).
+ * Spotify (and other providers following IETF rules) ban "localhost" and
+ * require an explicit IPv4/IPv6 loopback literal.
+ */
+function loopbackRedirectUri(): string {
+  const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+  return `http://127.0.0.1:${port}/callback`;
+}
+
+async function browserOAuthFlow(
+  authUrl: string,
+): Promise<{ params: Record<string, string>; redirectUri: string }> {
+  const redirectUri = loopbackRedirectUri();
+
+  return new Promise((resolve, reject) => {
+    const popup = window.open(authUrl, 'oauth_popup', 'width=520,height=660,left=200,top=100');
+    if (!popup) {
+      reject(new Error('Popup was blocked — please allow popups for this page and try again.'));
+      return;
+    }
+
+    let done = false;
+
+    const onMessage = (e: MessageEvent) => {
+      // Accept messages from our own origin or from the 127.0.0.1 loopback
+      // variant (Spotify requires 127.0.0.1; opener may still be localhost).
+      const port = window.location.port || '80';
+      const allowed = new Set([window.location.origin, `http://127.0.0.1:${port}`]);
+      if (!allowed.has(e.origin)) return;
+      if (e.data?.type !== 'oauth_callback') return;
+      done = true;
+      window.removeEventListener('message', onMessage);
+      clearInterval(closedPoll);
+      resolve({ params: e.data.params as Record<string, string>, redirectUri });
+    };
+    window.addEventListener('message', onMessage);
+
+    // Also watch for the user closing the popup manually
+    const closedPoll = setInterval(() => {
+      if (popup.closed && !done) {
+        clearInterval(closedPoll);
+        window.removeEventListener('message', onMessage);
+        reject(new Error('OAuth popup was closed before completing sign-in.'));
+      }
+    }, 500);
+
+    setTimeout(() => {
+      if (done) return;
+      clearInterval(closedPoll);
+      window.removeEventListener('message', onMessage);
+      if (!popup.closed) popup.close();
+      reject(new Error('OAuth timed out — no response after 5 minutes.'));
+    }, 5 * 60 * 1000);
+  });
+}
+
 /** Run a full PKCE OAuth flow and persist tokens. Returns the new account. */
 export async function connectProvider(
   cfg: ProviderConfig,
@@ -37,36 +98,66 @@ export async function connectProvider(
   const challenge = await pkceChallenge(verifier);
   const state = randomString(24);
 
-  // Wait for Rust to bind a port and emit it.
-  const portPromise = new Promise<number>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('OAuth listener never reported a port')), 5000);
-    let unlisten: (() => void) | null = null;
-    listen<number>('oauth:port', (e) => {
-      clearTimeout(timer);
-      if (unlisten) unlisten();
-      resolve(e.payload);
-    }).then(fn => { unlisten = fn; });
-  });
+  let params: Record<string, string>;
+  let redirectUri: string;
 
-  const runPromise = invoke<Record<string, string>>('oauth_run');
-  const port = await portPromise;
-  const redirectUri = `http://127.0.0.1:${port}`;
+  if (isTauri()) {
+    // ── Desktop (Tauri): Rust spins up a local HTTP server ─────────────────
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
 
-  // Build auth URL.
-  const authParams = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: cfg.scopes.join(' '),
-    state,
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-    ...(cfg.extraAuthParams ?? {}),
-  });
-  await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
+    const portPromise = new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('OAuth listener never reported a port')), 5000);
+      let unlisten: (() => void) | null = null;
+      listen<number>('oauth:port', (e) => {
+        clearTimeout(timer);
+        if (unlisten) unlisten();
+        resolve(e.payload);
+      }).then(fn => { unlisten = fn; });
+    });
 
-  // Wait for the redirect.
-  const params = await runPromise;
+    const runPromise = invoke<Record<string, string>>('oauth_run');
+    const port = await portPromise;
+    redirectUri = `http://127.0.0.1:${port}`;
+
+    const authParams = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: cfg.scopes.join(' '),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      ...(cfg.extraAuthParams ?? {}),
+    });
+    await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
+    params = await runPromise;
+
+  } else {
+    // ── Browser: popup window polls for the redirect ────────────────────────
+    // redirect_uri = current origin (e.g. http://localhost:5173).
+    // You must add this as an authorised redirect URI in your provider's
+    // developer console (Google Cloud Console / Azure / etc.).
+    const previewRedirectUri = window.location.origin;
+    const authParams = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: previewRedirectUri,
+      response_type: 'code',
+      scope: cfg.scopes.join(' '),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      ...(cfg.extraAuthParams ?? {}),
+    });
+
+    const result = await browserOAuthFlow(
+      `${cfg.authUrl}?${authParams.toString()}`,
+    );
+    params = result.params;
+    redirectUri = result.redirectUri;
+  }
+
   if (params.error) throw new Error(`OAuth error: ${params.error} ${params.error_description ?? ''}`);
   if (!params.code) throw new Error('OAuth returned no code');
   if (params.state !== state) throw new Error('OAuth state mismatch');
@@ -80,7 +171,7 @@ export async function connectProvider(
     code_verifier: verifier,
     ...(cfg.usesClientSecret ? { client_secret: clientSecret } : {}),
   });
-  const tokenRes = await tauriFetch(cfg.tokenUrl, {
+  const tokenRes = await platformFetch(cfg.tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: tokenBody.toString(),
@@ -117,7 +208,7 @@ export async function refreshAccessToken(
     client_id: account.clientId,
     ...(cfg.usesClientSecret ? { client_secret: account.clientSecret } : {}),
   });
-  const res = await tauriFetch(cfg.tokenUrl, {
+  const res = await platformFetch(cfg.tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
