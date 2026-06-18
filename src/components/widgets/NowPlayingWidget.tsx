@@ -38,7 +38,12 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
       setAccount(updated);
       return accessToken;
     } catch (refreshErr) {
-      // Refresh failed transiently — fall back to stored access token if available
+      // invalid_grant (400) — refresh token is dead. Don't mask it by falling
+      // back to a stale access token; let it propagate so the caller can
+      // discard the account and prompt reconnect.
+      const statusCode = (refreshErr as Error & { status?: number }).status;
+      if (statusCode === 400) throw refreshErr;
+      // Otherwise (network blip, 5xx) — fall back to stored access token if available
       const stored = await secretGet(tokenKey('spotify', acc.userId, 'access'));
       if (stored) return stored;
       throw refreshErr;

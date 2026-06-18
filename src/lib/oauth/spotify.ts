@@ -231,7 +231,11 @@ export async function getCurrentlyPlaying(accessToken: string): Promise<SpotifyT
   });
   // 204 = no active device / nothing playing; 202 = loading
   if (res.status === 204 || res.status === 202) return null;
-  if (!res.ok) throw new Error(`Spotify player API failed: ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(`Spotify player API failed: ${res.status}`);
+    (err as Error & { status: number }).status = res.status;
+    throw err;
+  }
 
   const text = await res.text();
   if (!text) return null;
