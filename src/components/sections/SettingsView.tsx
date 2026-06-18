@@ -387,7 +387,7 @@ export default function SettingsView({
     const hidden = appearance.hiddenSections.includes(id)
       ? appearance.hiddenSections.filter(s => s !== id)
       : [...appearance.hiddenSections, id];
-    const defaultSection = hidden.includes(appearance.defaultSection) ? 'home' : appearance.defaultSection;
+    const defaultSection = (hidden as string[]).includes(appearance.defaultSection) ? 'home' : appearance.defaultSection;
     patchAppearance({ hiddenSections: hidden, defaultSection });
   };
 
@@ -395,7 +395,8 @@ export default function SettingsView({
     const next = hiddenTopicIds.includes(id)
       ? hiddenTopicIds.filter(x => x !== id)
       : [...hiddenTopicIds, id];
-    patchAppearance({ hiddenTopicIds: next });
+    const defaultSection = next.includes(appearance.defaultSection) ? 'home' : appearance.defaultSection;
+    patchAppearance({ hiddenTopicIds: next, defaultSection });
   };
 
   return (
@@ -460,18 +461,27 @@ export default function SettingsView({
         <Field label="Default section" hint="Where the app opens on launch" t={t}>
           <select
             value={appearance.defaultSection}
-            onChange={(e) => patchAppearance({ defaultSection: e.target.value as SectionId })}
+            onChange={(e) => patchAppearance({ defaultSection: e.target.value })}
             style={{
               background: t.input, border: `1px solid ${t.border}`, borderRadius: '8px',
               padding: '0.4rem 0.6rem', color: t.text, fontSize: '0.8rem',
               fontFamily: 'inherit', outline: 'none',
             }}
           >
-            {[
-              { id: 'home' as SectionId, label: 'Home' },
-              { id: 'inbox' as SectionId, label: 'Inbox' },
-              ...sections.filter(s => !appearance.hiddenSections.includes(s.id)),
-            ].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            <optgroup label="Sections">
+              {[
+                { id: 'home' as SectionId, label: 'Home' },
+                { id: 'inbox' as SectionId, label: 'Inbox' },
+                ...sections.filter(s => !appearance.hiddenSections.includes(s.id)),
+              ].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </optgroup>
+            {topics.filter(top => !hiddenTopicIds.includes(top.id)).length > 0 && (
+              <optgroup label="Topics">
+                {topics
+                  .filter(top => !hiddenTopicIds.includes(top.id))
+                  .map(top => <option key={top.id} value={top.id}>{top.name || '(unnamed)'}</option>)}
+              </optgroup>
+            )}
           </select>
         </Field>
 

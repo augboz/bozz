@@ -241,7 +241,7 @@ export default function TopicsBlock({ t, topics, setTopics, topicFolders, setTop
       id: genId(),
       name: '',
       order: topicFolders.length,
-      collapsed: false,
+      collapsed: true,
     };
     setTopicFolders([...topicFolders, folder]);
   };

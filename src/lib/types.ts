@@ -371,8 +371,8 @@ export interface AppearancePrefs {
   hiddenSections: SectionId[];
   /** Topic IDs hidden from the nav. */
   hiddenTopicIds: string[];
-  /** Section the app opens to on launch. */
-  defaultSection: SectionId;
+  /** Section the app opens to on launch. Can also be a topic id. */
+  defaultSection: SectionId | string;
   /** Corner radius preset for home widgets. */
   widgetShape: WidgetShape;
   /** Border style preset for home widgets. */

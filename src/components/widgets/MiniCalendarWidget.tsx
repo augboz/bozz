@@ -10,7 +10,7 @@ import type { WidgetCtx } from './context';
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function MiniCalendarWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t } = ctx;
+  const { t, setActiveSection } = ctx;
   const now = new Date();
   const first = startOfMonth(now);
   const days = eachDayOfInterval({ start: first, end: endOfMonth(now) });
@@ -27,7 +27,7 @@ export default function MiniCalendarWidget({ ctx }: { ctx: WidgetCtx }) {
   };
 
   return (
-    <Widget t={t} accent={sectionAccents.home}>
+    <Widget t={t} accent={sectionAccents.home} onClick={() => setActiveSection('calendar')}>
       <WidgetHeader label={format(now, 'MMMM yyyy')} accent={sectionAccents.home} t={t} icon={CalendarDays} />
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',

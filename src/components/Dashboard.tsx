@@ -277,7 +277,7 @@ export default function Dashboard() {
       if (loadedTopics) setTopics(loadedTopics);
 
       setAppearance(appr);
-      if (appr.defaultSection !== 'settings' && appr.hiddenSections.includes(appr.defaultSection)) {
+      if (appr.defaultSection !== 'settings' && (appr.hiddenSections as string[]).includes(appr.defaultSection)) {
         setActiveSection('home');
       } else {
         setActiveSection(appr.defaultSection);
@@ -437,6 +437,7 @@ export default function Dashboard() {
       };
       await Promise.all([
         reload<InboxItem[]>('inbox', setInbox),
+        reload<Topic[]>('topics', setTopics),
         reload<ListItem[]>('musicItems', setMusicItems),
         reload<ListItem[]>('lifeItems', setLifeItems),
         reload<ListItem[]>('cvItems', setCvItems),
@@ -992,31 +993,29 @@ export default function Dashboard() {
         {/* Quick add + Edit row — compact, side by side */}
         {!sidebarCollapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.1rem 0' }}>
-            {!isTauri() && (
-              <button
-                onClick={() => setQuickAddOpen(true)}
-                title="Quick add (Ctrl+B)"
-                aria-label="Quick add"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  flexShrink: 0,
-                  background: 'transparent',
-                  border: `1px solid ${sT.border}`,
-                  color: sT.textMuted,
-                  cursor: 'pointer', borderRadius: '6px',
-                  padding: '0.28rem 0.6rem',
-                  fontSize: '0.75rem', fontWeight: 500,
-                  fontFamily: 'inherit',
-                  transition: 'background 0.15s, color 0.15s',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
-              >
-                <Zap size={10} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Quick add</span>
-              </button>
-            )}
+            <button
+              onClick={() => setQuickAddOpen(true)}
+              title="Quick add"
+              aria-label="Quick add"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                flexShrink: 0,
+                background: 'transparent',
+                border: `1px solid ${sT.border}`,
+                color: sT.textMuted,
+                cursor: 'pointer', borderRadius: '6px',
+                padding: '0.28rem 0.6rem',
+                fontSize: '0.75rem', fontWeight: 500,
+                fontFamily: 'inherit',
+                transition: 'background 0.15s, color 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
+            >
+              <Zap size={10} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Quick add</span>
+            </button>
             <button
               onClick={() => setSidebarEditing(e => !e)}
               style={{
