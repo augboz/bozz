@@ -17,12 +17,19 @@ interface TauriStoreAPI {
   get<T>(key: string): Promise<T | null | undefined>;
   set(key: string, value: unknown): Promise<void>;
   delete(key: string): Promise<void>;
+  save(): Promise<void>;
 }
 
 async function getTauriStore(): Promise<TauriStoreAPI> {
   if (!_tauriStorePromise) {
     _tauriStorePromise = (async () => {
       const mod = await import('@tauri-apps/plugin-store');
+      // autoSave is a debounced background flush — it's a backstop, not the
+      // primary persistence path. Every write below calls save() explicitly
+      // so a write survives even if the app exits/crashes within the
+      // debounce window (this previously caused saved OAuth tokens to
+      // outlive their account metadata, since the metadata write landed in
+      // a debounce window that never got to flush).
       const store = await mod.load('dashboard.json', { defaults: {}, autoSave: 500 });
       return store as unknown as TauriStoreAPI;
     })();
@@ -121,6 +128,7 @@ export async function setItem(key: string, value: string): Promise<void> {
     if (isTauri()) {
       const s = await getTauriStore();
       await s.set(key, value);
+      await s.save();
     } else {
       await idbSet(key, value);
     }
@@ -153,6 +161,7 @@ export async function deleteItem(key: string): Promise<void> {
     if (isTauri()) {
       const s = await getTauriStore();
       await s.delete(key);
+      await s.save();
     } else {
       await idbDelete(key);
     }
