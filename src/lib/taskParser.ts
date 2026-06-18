@@ -210,7 +210,13 @@ function topicScore(text: string, topic: Topic): number {
   return score;
 }
 
-function predictTopic(text: string, topics: Topic[]): Topic | null {
+/**
+ * Predicts the best-matching topic for a piece of text, scored against
+ * whatever topics currently exist. Always re-run this against the live
+ * topics list rather than caching the result — a topic created after a
+ * Quicks item was captured should still be predictable for it.
+ */
+export function predictTopic(text: string, topics: Topic[]): Topic | null {
   if (topics.length === 0) return null;
   let best: Topic | null = null;
   let bestScore = 1; // minimum threshold

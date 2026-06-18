@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, ArrowRight, Sparkles, Pencil, Check, Zap, Command } from 'lucide-react';
 import type { InboxItem, Theme, Topic } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import ChoicePicker, { type Choice } from '../shared/ChoicePicker';
 import DatePicker from '../shared/DatePicker';
 import { isTauri } from '../../lib/platform';
+import { predictTopic } from '../../lib/taskParser';
 
 interface InboxViewProps {
   t: Theme;
@@ -15,25 +16,36 @@ interface InboxViewProps {
   onAssign: (text: string, topicId: string, deadline: number | null) => void;
 }
 
-function InboxRow({ item, t, dests, onAssign, onDelete, onRename }: {
+function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
   item: InboxItem; t: Theme;
   dests: Choice[];
+  topics: Topic[];
   onAssign: (topicId: string, deadline: number | null) => void;
   onDelete: () => void;
   onRename: (text: string) => void;
 }) {
-  const hasSuggestion = Boolean(item.suggestedTopicId);
-  const [dest, setDest] = useState<string>(
-    item.suggestedTopicId && dests.some(d => d.id === item.suggestedTopicId)
-      ? item.suggestedTopicId
-      : dests[0]?.id ?? '',
-  );
+  // Re-predicted on every render against the CURRENT topic list — never
+  // cached — so a topic created after this item was captured still gets
+  // picked up without the user having to do anything.
+  const predicted = predictTopic(item.text, topics);
+  const predictedId = predicted && dests.some(d => d.id === predicted.id) ? predicted.id : null;
+  const hasSuggestion = Boolean(predictedId);
+  const suggestedColor = dests.find(d => d.id === predictedId)?.color;
+
+  const [dest, setDest] = useState<string>(predictedId ?? dests[0]?.id ?? '');
+  const touchedRef = useRef(false);
+
+  // Keep the dropdown synced to the live prediction until the user
+  // explicitly picks something themselves.
+  useEffect(() => {
+    if (!touchedRef.current && predictedId && predictedId !== dest) setDest(predictedId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [predictedId]);
+
   const [deadline, setDeadline] = useState<number | null>(item.deadline ?? null);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const editRef = useRef<HTMLInputElement>(null);
-
-  const suggestedColor = dests.find(d => d.id === item.suggestedTopicId)?.color;
 
   const startEdit = () => { setEditText(item.text); setEditing(true); setTimeout(() => editRef.current?.select(), 0); };
   const commitEdit = () => { const v = editText.trim(); if (v) onRename(v); setEditing(false); };
@@ -79,7 +91,7 @@ function InboxRow({ item, t, dests, onAssign, onDelete, onRename }: {
         <ChoicePicker
           t={t}
           value={dest}
-          onChange={(v) => setDest(v)}
+          onChange={(v) => { touchedRef.current = true; setDest(v); }}
           options={dests}
           size="sm"
           minWidth={132}
@@ -154,6 +166,7 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign }: Inbo
             item={item}
             t={t}
             dests={dests}
+            topics={topics}
             onAssign={(topicId, deadline) => assign(item, topicId, deadline)}
             onDelete={() => remove(item.id)}
             onRename={(text) => rename(item.id, text)}
