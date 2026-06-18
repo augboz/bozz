@@ -1329,7 +1329,6 @@ export default function Dashboard() {
           topics={topics}
           onClose={() => setQuickAddOpen(false)}
           onAddInbox={(items) => setInbox(prev => [...prev, ...items])}
-          onAddTopicItem={(topicId, text, deadline) => addTopicItem(topicId, text, deadline)}
           onAddBudget={(transaction) => setBudget(b => ({ ...b, transactions: [...b.transactions, transaction] }))}
         />
       )}

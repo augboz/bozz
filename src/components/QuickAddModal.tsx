@@ -14,12 +14,11 @@ interface QuickAddModalProps {
   topics: Topic[];
   onClose: () => void;
   onAddInbox: (items: InboxItem[]) => void;
-  onAddTopicItem: (topicId: string, text: string, deadline: number | null) => void;
   onAddBudget: (transaction: BudgetData['transactions'][number]) => void;
 }
 
 export default function QuickAddModal({
-  t, topics, onClose, onAddInbox, onAddTopicItem, onAddBudget,
+  t, topics, onClose, onAddInbox, onAddBudget,
 }: QuickAddModalProps) {
   const [text, setText] = useState('');
   const [partial, setPartial] = useState('');
@@ -32,20 +31,18 @@ export default function QuickAddModal({
     const value = raw.trim();
     if (!value) { onClose(); return; }
 
-    // Budget signals route directly.
+    // Budget signals route directly — unambiguous, no topic guesswork involved.
     const route = routeVoice(value, topics);
     if (route.kind === 'budget') {
       onAddBudget(route.transaction);
       setStatus(describeRoute(route));
       return;
     }
-    if (route.kind === 'topic') {
-      onAddTopicItem(route.topicId, route.item.text, route.item.deadline ?? null);
-      setStatus(describeRoute(route));
-      return;
-    }
 
-    // Otherwise split into inbox tasks with topic + deadline predictions.
+    // Everything else lands in Quicks (with a suggested topic attached, if
+    // one matches) rather than being silently filed straight into a topic —
+    // a keyword match here used to commit the item directly, so it could
+    // vanish from Quicks without the user ever seeing or confirming it.
     const parsed = parseVoiceTasks(value, topics);
     const now = Date.now();
     const items: InboxItem[] = [];
