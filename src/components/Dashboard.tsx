@@ -747,16 +747,24 @@ export default function Dashboard() {
             style={{
               background: 'transparent', border: 'none',
               color: sT.text, cursor: 'pointer', fontFamily: 'inherit',
+              display: sidebarCollapsed ? 'none' : 'flex', alignItems: 'center', gap: '0.5rem',
               fontSize: '1.02rem', fontWeight: 700, letterSpacing: '-0.01em',
               padding: '0.1rem 0.05rem', textAlign: 'left',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               flex: 1, minWidth: 0,
               opacity: sidebarCollapsed ? 0 : 1,
               pointerEvents: sidebarCollapsed ? 'none' : 'auto',
-              display: sidebarCollapsed ? 'none' : 'block',
               transition: 'opacity 0.18s ease',
             }}
-          >BOZZ</button>
+          >
+            <span style={{
+              width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0,
+              background: sectionAccents.home, color: '#16161a',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.78rem', fontWeight: 800,
+            }}>B</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>BOZZ</span>
+          </button>
 
           {/* Chevron — collapses when expanded, expands when collapsed. */}
           <button

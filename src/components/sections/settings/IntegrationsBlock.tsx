@@ -106,10 +106,11 @@ const inp = (t: Theme): React.CSSProperties => ({
 function ServiceIcon({ color, letter }: { color: string; letter: string }) {
   return (
     <div style={{
-      width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0,
+      width: '40px', height: '40px', borderRadius: '11px', flexShrink: 0,
       background: color, color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: '1.05rem', fontWeight: 700, userSelect: 'none',
+      boxShadow: `0 4px 14px ${color}40`,
     }}>
       {letter}
     </div>
@@ -198,15 +199,22 @@ function Card({
   status?: React.ReactNode; action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const [hover, setHover] = React.useState(false);
   return (
-    <div style={{
-      border: `1px solid ${t.border}`, borderRadius: '12px',
-      padding: '0.9rem 1rem', marginBottom: '0.65rem',
-    }}>
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        border: `1px solid ${hover ? t.borderStrong : t.border}`, borderRadius: '14px',
+        padding: '0.9rem 1rem', marginBottom: '0.65rem',
+        background: hover ? t.bgAlt : 'transparent',
+        transform: hover ? 'translateY(-1px)' : 'none',
+        transition: 'border-color 0.25s, background 0.25s, transform 0.25s',
+      }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <ServiceIcon color={color} letter={letter} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.9rem', color: t.text, fontWeight: 500 }}>{name}</div>
+          <div style={{ fontSize: '0.9rem', color: t.text, fontWeight: 600 }}>{name}</div>
           {status && (
             <div style={{ fontSize: '0.73rem', color: t.textMuted, marginTop: '0.1rem' }}>
               {status}
@@ -228,9 +236,9 @@ function ConnectBtn({ t, label = 'Connect', busy, onClick, disabled }: {
       onClick={onClick}
       disabled={busy || disabled}
       style={{
-        background: t.text, color: t.bg, border: 'none', borderRadius: '8px',
+        background: t.text, color: t.bg, border: 'none', borderRadius: '999px',
         padding: '0.5rem 1.15rem', fontSize: '0.82rem', fontFamily: 'inherit',
-        cursor: busy || disabled ? 'wait' : 'pointer', fontWeight: 500,
+        cursor: busy || disabled ? 'wait' : 'pointer', fontWeight: 600,
         opacity: busy || disabled ? 0.55 : 1, flexShrink: 0,
         transition: 'opacity 0.15s',
       }}
@@ -246,7 +254,7 @@ function DisconnectBtn({ t, onClick }: { t: Theme; onClick: () => void }) {
       onClick={onClick}
       style={{
         background: 'transparent', border: `1px solid ${t.alertBorder}`,
-        borderRadius: '8px', padding: '0.45rem 0.85rem',
+        borderRadius: '999px', padding: '0.45rem 0.85rem',
         fontSize: '0.78rem', fontFamily: 'inherit',
         cursor: 'pointer', color: t.alert, flexShrink: 0,
       }}
