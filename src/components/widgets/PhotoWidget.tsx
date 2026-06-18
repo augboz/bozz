@@ -3,6 +3,8 @@ import { ImageIcon, RotateCcw } from 'lucide-react';
 import type { WidgetCtx } from './context';
 import { Widget } from '../shared/Widget';
 import { getItem, setItem } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
+import { schedulePush } from '../../lib/sync';
 
 interface PhotoData {
   url: string;
@@ -40,6 +42,14 @@ async function loadPhoto(widgetId: string): Promise<PhotoData | null> {
 
 async function savePhoto(widgetId: string, photo: PhotoData | null): Promise<void> {
   await setItem(photoKey(widgetId), JSON.stringify(photo));
+  // Photo widgets aren't wired through Dashboard's central save() effect (they
+  // persist straight to storage by widget id), so trigger the cloud push here
+  // too — otherwise drag/zoom edits stay local-only until something else
+  // happens to trigger a sync. getSession() reads the cached session (no
+  // network round trip), which matters here since this can fire on every
+  // pointer-move while dragging to reposition.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) schedulePush(session.user.id);
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -146,11 +156,18 @@ export function PhotoWidgetConfig({ config: _config, onConfig: _onConfig, t, wid
     loadPhoto(widgetId).then(setPhoto);
   }, [widgetId]);
 
+  // Drag/zoom fire on every pointer-move — update the on-screen preview
+  // instantly but debounce the actual persist so we're not writing to disk
+  // (and pinging Supabase) dozens of times a second while dragging.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const update = (patch: Partial<PhotoData>) => {
     setPhoto(prev => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };
-      if (widgetId) void savePhoto(widgetId, next);
+      if (widgetId) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => { void savePhoto(widgetId, next); }, 200);
+      }
       return next;
     });
   };

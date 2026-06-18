@@ -107,6 +107,17 @@ export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
     }));
   } catch { /* ignore */ }
 
+  // Sync per-widget photos (photo__* keys — one per Photo widget instance).
+  try {
+    const photoKeys = await listKeysByPrefix('photo__');
+    await Promise.all(photoKeys.map(async key => {
+      try {
+        const r = await getItem(key);
+        if (r?.value) out[key] = JSON.parse(r.value);
+      } catch { /* ignore */ }
+    }));
+  } catch { /* ignore */ }
+
   return out;
 }
 
@@ -135,6 +146,10 @@ export async function clearLocalSnapshot(): Promise<void> {
   try {
     const tokenKeys = await listKeysByPrefix('__tok__');
     tokenKeys.forEach(k => deletes.push(deleteItem(k)));
+  } catch { /* ignore */ }
+  try {
+    const photoKeys = await listKeysByPrefix('photo__');
+    photoKeys.forEach(k => deletes.push(deleteItem(k)));
   } catch { /* ignore */ }
   await Promise.all(deletes);
 }
