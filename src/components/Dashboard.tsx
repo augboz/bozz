@@ -6,13 +6,14 @@ import {
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
+import { predictTopic } from '../lib/taskParser';
 import VoiceButton from './shared/VoiceButton';
 import { isMobileViewport, isTauri } from '../lib/platform';
 import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
 import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
 import { iconForTopic } from './sections/settings/TopicsBlock';
 import { useSession } from './AuthGate';
-import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush } from '../lib/sync';
+import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush, hasLocalData } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
@@ -29,7 +30,7 @@ import { outlookConfig } from '../lib/oauth/outlook';
 import { archive as archiveEmail, deleteEmail, disconnectAccount, markRead as markEmailRead, syncAllAccounts } from '../lib/email';
 import type {
   ListItem, Application, Status, SectionId, SortMode, TaskListKey, AppearancePrefs, HomeWidgetItem,
-  CalendarFeed, CalendarCache, CalendarEvent, CalendarConnection, BudgetData, InboxItem,
+  CalendarFeed, CalendarCache, CalendarEvent, CalendarConnection, CalendarNote, BudgetData, InboxItem,
   WeeklyReview, ReviewSettings, OAuthAccount, EmailMessage, EmailProvider,
   Topic, TopicFolder,
 } from '../lib/types';
@@ -40,6 +41,7 @@ import TopicView from './sections/TopicView';
 import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
 import CalendarView from './sections/calendar/CalendarView';
+import { deadlineEvents, topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
 import DailyPlannerView from './sections/DailyPlannerView';
 import HabitsView from './sections/HabitsView';
 import HealthView from './sections/HealthView';
@@ -101,6 +103,7 @@ export default function Dashboard() {
 
   // Exit edit mode automatically when the user navigates away or collapses the sidebar
   useEffect(() => { setSidebarEditing(false); }, [activeSection, sidebarCollapsed]);
+  const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
   const [dailyPlan, setDailyPlan] = useState<import('../lib/types').DailyPlan>({});
   const [habits, setHabits] = useState<import('../lib/types').Habit[]>([]);
   const [healthDays, setHealthDays] = useState<import('../lib/types').HealthDay[]>([]);
@@ -145,9 +148,15 @@ export default function Dashboard() {
     }
 
     async function loadData() {
-      // Pull cloud snapshot first (overwrites local). If no session or first
-      // sign-in, nothing is overwritten.
-      if (userId) await pullSnapshot(userId);
+      if (userId) {
+        // If there's local data that was never pushed (e.g. push failed on sign-out,
+        // or app was force-closed), push it first before pulling — otherwise the
+        // pull would overwrite it with the older Supabase snapshot.
+        if (await hasLocalData()) {
+          await pushSnapshot(userId);
+        }
+        await pullSnapshot(userId);
+      }
 
       const keys = [
         'musicItems', 'tracks', 'applications', 'lifeItems', 'cvItems', 'otherItems',
@@ -155,13 +164,15 @@ export default function Dashboard() {
         'calendarFeeds', 'calendarCache', 'calendarConnections', 'budget', 'inbox', 'recentSearches',
         'reviews', 'reviewSettings', 'oauthAccounts', 'emailsCache', 'sidebarCollapsed',
         'topics', 'topicFolders',
-        'dailyPlan', 'habits', 'healthDays',
+        'calendarNotes', 'dailyPlan', 'habits', 'healthDays',
       ];
       let musicLoaded = false;
       let appr: AppearancePrefs = { ...DEFAULT_APPEARANCE };
       let appearanceLoaded = false;
       let legacyDark: boolean | undefined;
       let loadedTopics: Topic[] | null = null;
+      let loadedHomeItems: HomeWidgetItem[] | null = null;
+      let gridV = 2; // assume new format unless we see an old-style array
 
       for (const key of keys) {
         try {
@@ -199,11 +210,21 @@ export default function Dashboard() {
               legacyDark = val as boolean;
             } else if (key === 'taskSortPrefs' && val && typeof val === 'object') {
               setTaskSortPrefs(prev => ({ ...prev, ...(val as Partial<Record<TaskListKey, SortMode>>) }));
-            } else if (key === 'homeLayout' && Array.isArray(val)) {
-              const valid = (val as HomeWidgetItem[]).filter(
-                w => w && typeof w.i === 'string' && w.type in WIDGET_REGISTRY,
-              );
-              if (valid.length > 0) setHomeItems(valid);
+            } else if (key === 'homeLayout') {
+              if (Array.isArray(val)) {
+                // v1 format: plain array (ROW_H=64) — migrate by doubling h and y.
+                const valid = (val as HomeWidgetItem[]).filter(
+                  w => w && typeof w.i === 'string' && w.type in WIDGET_REGISTRY,
+                );
+                if (valid.length > 0) { loadedHomeItems = valid; gridV = 1; }
+              } else if (val && typeof val === 'object' && (val as Record<string, unknown>).v === 2) {
+                // v2 format: { v: 2, items: [...] } — load directly, no migration.
+                const items = (val as { v: 2; items: HomeWidgetItem[] }).items;
+                if (Array.isArray(items)) {
+                  const valid = items.filter(w => w && typeof w.i === 'string' && w.type in WIDGET_REGISTRY);
+                  if (valid.length > 0) loadedHomeItems = valid;
+                }
+              }
             } else if (key === 'calendarFeeds' && Array.isArray(val)) {
               setCalendarFeeds(val as CalendarFeed[]);
             } else if (key === 'calendarCache' && val && typeof val === 'object') {
@@ -253,7 +274,9 @@ export default function Dashboard() {
             } else if (key === 'topics' && Array.isArray(val)) {
               loadedTopics = val as Topic[];
             } else if (key === 'topicFolders' && Array.isArray(val)) {
-              setTopicFolders(val as TopicFolder[]);
+              setTopicFolders((val as TopicFolder[]).map(f => ({ ...f, collapsed: true })));
+            } else if (key === 'calendarNotes' && Array.isArray(val)) {
+              setCalendarNotes(val as CalendarNote[]);
             } else if (key === 'dailyPlan' && val && typeof val === 'object') {
               setDailyPlan(val as import('../lib/types').DailyPlan);
             } else if (key === 'habits' && Array.isArray(val)) {
@@ -273,8 +296,46 @@ export default function Dashboard() {
       // Migrate any old mood names to valid values
       if (appr.mood !== 'dark' && appr.mood !== 'light' && appr.mood !== 'warm') appr.mood = 'dark';
 
-      // No seeding — user starts with zero topics and creates their own.
-      if (loadedTopics) setTopics(loadedTopics);
+      // Migrate v1 grid layouts (ROW_H=64) → v2 (ROW_H=32): double h and y.
+      if (gridV === 1) {
+        if (loadedHomeItems) {
+          loadedHomeItems = loadedHomeItems.map(it => ({ ...it, h: it.h * 2, y: it.y * 2 }));
+        }
+        if (loadedTopics) {
+          loadedTopics = loadedTopics.map(tp => ({
+            ...tp,
+            widgetLayout: tp.widgetLayout?.map(it => ({ ...it, h: it.h * 2, y: it.y * 2 })),
+          }));
+        }
+      }
+      if (loadedHomeItems) setHomeItems(loadedHomeItems);
+
+      // Seed a default General topic for brand-new users so they have something
+      // to explore. Only injected when the account has no topics at all.
+      const DEFAULT_GENERAL_TOPIC: Topic = {
+        id: 'topic-general-default',
+        name: 'General',
+        color: '#7da7d9',
+        keywords: [],
+        order: 0,
+        stages: [
+          { id: 'stg-todo',  label: 'To do',  color: '#7da7d9', done: false },
+          { id: 'stg-doing', label: 'Doing',  color: '#e0a16b', done: false },
+          { id: 'stg-done',  label: 'Done',   color: '#7fc8a9', done: true  },
+        ],
+        items: [
+          { id: 1, text: 'Add your first task here', stageId: 'stg-todo', completedAt: null, deadline: null },
+          { id: 2, text: 'Move tasks between stages with the pill button', stageId: 'stg-doing', completedAt: null, deadline: null },
+        ],
+        sortMode: 'manual',
+      };
+      if (loadedTopics && loadedTopics.length > 0) {
+        setTopics(loadedTopics);
+      } else {
+        // No topics stored (new account or empty array) → seed default so the
+        // user has something to explore. They can delete it if they want.
+        setTopics([DEFAULT_GENERAL_TOPIC]);
+      }
 
       setAppearance(appr);
       if (appr.defaultSection !== 'settings' && (appr.hiddenSections as string[]).includes(appr.defaultSection)) {
@@ -306,7 +367,7 @@ export default function Dashboard() {
   useEffect(() => { if (!loading) save('cvItems', cvItems); }, [cvItems, loading]);
   useEffect(() => { if (!loading) save('otherItems', otherItems); }, [otherItems, loading]);
   useEffect(() => { if (!loading) save('taskSortPrefs', taskSortPrefs); }, [taskSortPrefs, loading]);
-  useEffect(() => { if (!loading) save('homeLayout', homeItems); }, [homeItems, loading]);
+  useEffect(() => { if (!loading) save('homeLayout', { v: 2, items: homeItems }); }, [homeItems, loading]);
   useEffect(() => { if (!loading) save('calendarFeeds', calendarFeeds); }, [calendarFeeds, loading]);
   useEffect(() => { if (!loading) save('calendarCache', calendarCache); }, [calendarCache, loading]);
   useEffect(() => { if (!loading) save('calendarConnections', calendarConnections); }, [calendarConnections, loading]);
@@ -320,6 +381,7 @@ export default function Dashboard() {
   useEffect(() => { if (!loading) save('sidebarCollapsed', sidebarCollapsed); }, [sidebarCollapsed, loading]);
   useEffect(() => { if (!loading) save('topics', topics); }, [topics, loading]);
   useEffect(() => { if (!loading) save('topicFolders', topicFolders); }, [topicFolders, loading]);
+  useEffect(() => { if (!loading) save('calendarNotes', calendarNotes); }, [calendarNotes, loading]);
   useEffect(() => { if (!loading) save('dailyPlan', dailyPlan); }, [dailyPlan, loading]);
   useEffect(() => { if (!loading) save('habits', habits); }, [habits, loading]);
   useEffect(() => { if (!loading) save('healthDays', healthDays); }, [healthDays, loading]);
@@ -536,6 +598,14 @@ export default function Dashboard() {
     }));
   };
 
+  const addToInbox = (text: string, deadline: number | null) => {
+    const suggested = predictTopic(text, topics);
+    setInbox(prev => [...prev, {
+      id: Date.now(), text, createdAt: Date.now(),
+      suggestedTopicId: suggested?.id, deadline: deadline ?? undefined,
+    }]);
+  };
+
   const onAdvanceStage = (topicId: string, itemId: number) => {
     setTopics(prev => prev.map(top => {
       if (top.id !== topicId) return top;
@@ -590,6 +660,16 @@ export default function Dashboard() {
     // Merge in Google Calendar events from enabled connections.
     return [...icsEvents, ...gcalEvents];
   }, [calendarFeeds, calendarCache, gcalEvents]);
+
+  const todayEvents = useMemo(() => {
+    const allEvents = [
+      ...deadlineEvents({ music: musicItems, life: lifeItems, cv: cvItems, other: otherItems }),
+      ...topicDeadlineEvents(topics),
+      ...feedEvents,
+      ...noteEvents(calendarNotes),
+    ];
+    return eventsOnDay(allEvents, new Date());
+  }, [musicItems, lifeItems, cvItems, otherItems, topics, feedEvents, calendarNotes]);
 
   // Fetch Google Calendar events whenever there's an enabled connection.
   const gcalConn = useMemo(
@@ -1135,9 +1215,10 @@ export default function Dashboard() {
               ctx={{
                 t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails,
                 setActiveSection, addTask: addTaskToList,
-                topics, addTopicItem, dailyPlan, onDailyPlanChange: setDailyPlan,
+                topics, addTopicItem, addToInbox, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
+                todayEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
               }}
             />
@@ -1172,10 +1253,22 @@ export default function Dashboard() {
               feedEvents={feedEvents}
               lists={{ music: musicItems, life: lifeItems, cv: cvItems, other: otherItems }}
               onAddTask={addTaskWithDeadline}
+              topics={topics}
+              onAddTopicItem={(topicId, text, deadline) => {
+                setTopics(prev => prev.map(tp =>
+                  tp.id !== topicId ? tp : {
+                    ...tp,
+                    items: [...tp.items, { id: Date.now(), text, stageId: tp.stages[0]?.id ?? '', completedAt: null, deadline }],
+                  }
+                ));
+              }}
+              calendarNotes={calendarNotes}
+              onCalendarNotesChange={setCalendarNotes}
               calendarConnections={calendarConnections}
               onCalendarConnectionsChange={setCalendarConnections}
               gcalError={gcalError ?? undefined}
               colorBank={appearance.colorBank ?? []}
+              tbOffset={tbOffset}
             />
           )}
           {activeSection === 'dailyPlanner' && (
@@ -1265,9 +1358,10 @@ export default function Dashboard() {
                   ctx={{
                     t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails,
                     setActiveSection, addTask: addTaskToList,
-                    topics, addTopicItem, dailyPlan, onDailyPlanChange: setDailyPlan,
+                    topics, addTopicItem, addToInbox, dailyPlan, onDailyPlanChange: setDailyPlan,
                     onAdvanceStage, colorBank: appearance.colorBank ?? [],
                     habits, onHabitsChange: setHabits,
+                    todayEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                     widgetConfig: {}, onWidgetConfig: () => {},
                     currentTopicId: activeTopic.id,
                     onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
@@ -1296,9 +1390,14 @@ export default function Dashboard() {
               accountEmail={session?.user.email ?? null}
               onSignOut={async () => {
                 cancelPendingPush();
-                // Best-effort flush + wipe — never let these block the sign-out.
-                try { if (userId) await pushSnapshot(userId); } catch { /* ignore */ }
-                try { await clearLocalSnapshot(); } catch { /* ignore */ }
+                // Push all local data to Supabase before wiping.
+                // Only clear local storage if push succeeds — if it fails the data
+                // stays locally and gets pushed again on next sign-in (recovery path).
+                let pushOk = !userId; // no userId = nothing to push, treat as ok
+                try { if (userId) pushOk = await pushSnapshot(userId); } catch { /* ignore */ }
+                if (pushOk) {
+                  try { await clearLocalSnapshot(); } catch { /* ignore */ }
+                }
                 // scope:'local' clears the session without needing a network call.
                 // onAuthStateChange SIGNED_OUT fires → AuthGate shows login screen.
                 try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* ignore */ }

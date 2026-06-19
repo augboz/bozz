@@ -22,6 +22,8 @@ export interface WidgetCtx {
   topics: Topic[];
   /** Add an item to a topic's first non-done stage (or the specified stageId). */
   addTopicItem: (topicId: string, text: string, deadline: number | null, stageId?: string) => void;
+  /** Add a captured item to Quicks (inbox), with a suggested topic attached if one matches. */
+  addToInbox: (text: string, deadline: number | null) => void;
   /** Today's daily plan — maps dateKey → TopicItem id strings. */
   dailyPlan: DailyPlan;
   /** Update the daily plan. */
