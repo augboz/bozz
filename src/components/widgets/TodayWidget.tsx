@@ -255,7 +255,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
         </span>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: hasBoth ? '0.75rem' : '0' }}>
           {showEvents && (
             <div>

@@ -182,8 +182,13 @@ export async function initBackup(): Promise<void> {
     const today = new Date().toISOString().slice(0, 10);
     const result = await getItem('_last_backup_date');
     if (result?.value !== today) {
-      await invoke('create_backup', { date: today });
-      await setItem('_last_backup_date', today);
+      // Returns true if a backup file was actually written; false if the store
+      // file didn't exist yet (first launch). Only mark done when written so
+      // a subsequent launch on the same day will back up real data.
+      const created = await invoke<boolean>('create_backup', { date: today });
+      if (created) {
+        await setItem('_last_backup_date', today);
+      }
     }
   } catch (e) {
     console.error('Backup error:', e);

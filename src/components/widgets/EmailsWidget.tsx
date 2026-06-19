@@ -19,14 +19,14 @@ function getDisplayEmails(emails: EmailMessage[], widgetConfig: Record<string, u
 
   if (!filters || filters.length === 0) {
     return [...emails]
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .sort((a, b) => b.date - a.date)
       .slice(0, cap);
   }
 
   const perAccount = filters.flatMap(f =>
     [...emails]
       .filter(m => m.accountEmail === f.accountEmail)
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .sort((a, b) => b.date - a.date)
       .slice(0, Math.min(f.count, cap)),
   );
   return perAccount.slice(0, cap);

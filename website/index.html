@@ -89,6 +89,9 @@ nav.scrolled {
   backdrop-filter: blur(20px) saturate(130%);
   border-bottom-color: var(--lead);
 }
+[data-theme="light"] nav.scrolled {
+  background: rgba(247,247,249,0.88);
+}
 .nav-logo {
   font-family: var(--display); font-size: 1.05rem; font-weight: 600;
   letter-spacing: -0.01em; color: var(--starlight); text-decoration: none;
@@ -237,16 +240,31 @@ h1 {
   animation: fade-up 900ms var(--ease-out) 860ms both;
   will-change: transform, opacity;
 }
-.hero-shot {
-  height: 480px; border-radius: 20px 20px 0 0;
-  background: #12121c;
-  border: 1px solid rgba(255,255,255,0.07); border-bottom: none;
-  box-shadow: 0 -12px 80px rgba(82,102,235,0.10), 0 -2px 30px rgba(0,0,0,0.65);
-  overflow: hidden;
+/* Laptop bezel — the dark "case" framing the screen. Gets the tilt
+   transform + glow shadow so the whole device feels lifted off the page. */
+.laptop-bezel {
+  background: linear-gradient(165deg, #2c2c38, #121218);
+  border-radius: 16px;
+  padding: 12px 12px 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 -10px 70px rgba(82,102,235,0.10),
+    0 40px 90px rgba(0,0,0,0.55);
   position: relative;
-  /* Emil: transform only for tilt — GPU composited */
   transition: transform 250ms var(--ease-out);
   will-change: transform;
+}
+.laptop-bezel::before {
+  /* camera dot */
+  content: ''; position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+}
+.hero-shot {
+  height: 460px; border-radius: 6px;
+  background: #12121c;
+  overflow: hidden;
+  position: relative;
 }
 /* Real product screenshots, light and dark, cross-fade on theme toggle. */
 .hero-img {
@@ -258,6 +276,22 @@ h1 {
 .hero-img-dark  { opacity: 1; }
 [data-theme="light"] .hero-img-light { opacity: 1; }
 [data-theme="light"] .hero-img-dark  { opacity: 0; }
+
+/* Laptop base — the "deck" the screen hinges from, with a small lip
+   notch where you'd lift the lid. */
+.laptop-base {
+  height: 14px; margin: 0 -8px;
+  background: linear-gradient(to bottom, #38383f, #17171c);
+  border-radius: 0 0 9px 9px;
+  position: relative;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+}
+.laptop-notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 110px; height: 5px;
+  background: #0c0c10;
+  border-radius: 0 0 6px 6px;
+}
 
 /* ── Divider ─────────────────────────────────────────────────────── */
 .divider {
@@ -562,10 +596,13 @@ footer {
   </div>
 
   <div class="hero-shot-wrap">
-    <div class="hero-shot" id="heroShot">
-      <img class="hero-img hero-img-light" src="assets/hero-light.png" alt="Bozz dashboard in light mode" width="3190" height="1975">
-      <img class="hero-img hero-img-dark" src="assets/hero-dark.png" alt="Bozz dashboard in dark mode" width="3230" height="1980">
+    <div class="laptop-bezel">
+      <div class="hero-shot" id="heroShot">
+        <img class="hero-img hero-img-light" src="assets/hero-light.png" alt="Bozz dashboard in light mode" width="3190" height="1975">
+        <img class="hero-img hero-img-dark" src="assets/hero-dark.png" alt="Bozz dashboard in dark mode" width="3230" height="1980">
+      </div>
     </div>
+    <div class="laptop-base"><div class="laptop-notch"></div></div>
   </div>
 </section>
 
@@ -770,11 +807,10 @@ document.querySelectorAll('.feature-card').forEach((el, i) => {
   el.style.transitionDelay = `${i * 36}ms`;
 });
 
-// ── Hero 3D tilt — GPU transform only ─────────────────────────────
+// ── Hero 3D tilt — rotate the whole laptop as a unit ──────────────
 const shot = document.getElementById('heroShot');
 if (shot && !reduced) {
-  const wrap = shot.parentElement;
-  wrap.style.transformStyle = 'preserve-3d';
+  const wrap = shot.closest('.hero-shot-wrap');
   let lerpX = 0, lerpY = 0, targetX = 0, targetY = 0, raf;
 
   wrap.addEventListener('mousemove', e => {
@@ -792,7 +828,7 @@ if (shot && !reduced) {
   function tiltLoop() {
     lerpX += (targetX - lerpX) * 0.10;
     lerpY += (targetY - lerpY) * 0.10;
-    shot.style.transform = `rotateX(${lerpY.toFixed(3)}deg) rotateY(${lerpX.toFixed(3)}deg)`;
+    wrap.style.transform = `rotateX(${lerpY.toFixed(3)}deg) rotateY(${lerpX.toFixed(3)}deg)`;
     const done = Math.abs(targetX - lerpX) < 0.01 && Math.abs(targetY - lerpY) < 0.01;
     raf = done ? null : requestAnimationFrame(tiltLoop);
   }

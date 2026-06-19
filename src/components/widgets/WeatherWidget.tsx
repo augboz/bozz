@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Cloud } from 'lucide-react';
 import { platformFetch as httpFetch } from '../../lib/http';
 import { getItem, setItem } from '../../lib/storage';
-import { Widget, EmptyWidget } from '../shared/Widget';
+import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
 
 const ACCENT = '#a1bdc7';
@@ -199,6 +199,7 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={ACCENT}>
+      <WidgetHeader label="Weather" accent={ACCENT} t={t} icon={Cloud} />
 
       {(status === 'loading' || status === 'locating') && (
         <EmptyWidget text={status === 'locating' ? 'Detecting location…' : 'Loading weather…'} t={t} />

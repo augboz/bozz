@@ -159,7 +159,7 @@ const DOMAIN_KEYWORDS: Record<string, string[]> = {
   music:     ['guitar', 'piano', 'bass', 'drum', 'song', 'chord', 'scale', 'gig', 'rehearsal', 'band', 'track', 'album', 'studio', 'record'],
   work:      ['meeting', 'deadline', 'project', 'client', 'office', 'presentation', 'report', 'colleague', 'manager', 'email', 'call', 'zoom', 'contract', 'invoice'],
   fitness:   ['gym', 'workout', 'exercise', 'run', 'lift', 'weights', 'cardio', 'training', 'class', 'yoga', 'pilates', 'swim'],
-  travel:    ['hotel', 'flight', 'book', 'trip', 'holiday', 'vacation', 'airbnb', 'hostel', 'train', 'passport', 'visa', 'pack', 'luggage', 'airport'],
+  travel:    ['hotel', 'flight', 'trip', 'holiday', 'vacation', 'airbnb', 'hostel', 'train', 'passport', 'visa', 'pack', 'luggage', 'airport'],
   social:    ['meet', 'dinner', 'lunch', 'coffee', 'drinks', 'catch', 'call', 'friend', 'birthday', 'party', 'invite', 'visit', 'see'],
   finance:   ['pay', 'bill', 'transfer', 'bank', 'money', 'rent', 'insurance', 'tax', 'invoice', 'refund', 'subscription'],
   health:    ['doctor', 'dentist', 'appointment', 'prescription', 'medication', 'hospital', 'physio', 'therapist', 'checkup'],
@@ -188,6 +188,17 @@ function topicScore(text: string, topic: Topic): number {
   // User-defined manual keywords (strongest signal)
   for (const kw of userKeywords) {
     if (text.toLowerCase().includes(kw)) score += 6;
+  }
+
+  // Description-derived keywords (comma/semicolon-separated terms user wrote)
+  if (topic.description) {
+    const descTerms = topic.description
+      .split(/[,;]/)
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t.length > 2);
+    for (const term of descTerms) {
+      if (text.toLowerCase().includes(term)) score += 3;
+    }
   }
 
   // Semantic domain expansion

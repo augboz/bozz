@@ -241,7 +241,7 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
       )}
 
       {/* Items — scrollable area */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         <DndContext sensors={sensors} collisionDetection={closestCenter}
           onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
           <SortableContext items={displayed.map(i => i.id)} strategy={verticalListSortingStrategy}>

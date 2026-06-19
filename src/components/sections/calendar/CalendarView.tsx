@@ -562,6 +562,7 @@ function DayPanel({ t, day, events, onClose, onAddTask, topics, onAddTopicItem, 
       background: t.panel, borderLeft: `1px solid ${t.border}`,
       padding: '1.5rem', overflowY: 'auto', boxShadow: '-8px 0 24px rgba(0,0,0,0.18)',
       display: 'flex', flexDirection: 'column', gap: '1rem',
+      animation: 'bozz-slide-in 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
     }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -773,6 +774,7 @@ export default function CalendarView({
 
   return (
     <div style={{ position: 'relative' }}>
+      <style>{`@keyframes bozz-slide-in{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
       <SectionHeader
         title="Calendar"
         t={t}
@@ -948,6 +950,7 @@ export default function CalendarView({
           position: 'fixed', top: tbOffset, right: 0, bottom: 0, width: '340px', zIndex: 50,
           background: t.panel, borderLeft: `1px solid ${t.border}`,
           padding: '1.5rem', overflowY: 'auto', boxShadow: '-8px 0 24px rgba(0,0,0,0.18)',
+          animation: 'bozz-slide-in 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
         }}>
           <CreateEventForm
             t={t}

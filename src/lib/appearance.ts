@@ -5,12 +5,12 @@ import type {
 } from './types';
 
 export const DEFAULT_COLOR_BANK: string[] = [
-  '#c8645a', // terracotta
-  '#7fc8a9', // sage green
-  '#e0a16b', // amber
-  '#7fa8e0', // dusty blue
-  '#c87e5a', // warm orange
-  '#a08090', // muted rose
+  '#6ba8d4', // cornflower blue
+  '#7dbf9a', // sage green
+  '#d4c860', // warm yellow
+  '#d4a86a', // warm amber
+  '#d47a7a', // soft coral
+  '#6abfbf', // teal
 ];
 
 export const DEFAULT_APPEARANCE: AppearancePrefs = {

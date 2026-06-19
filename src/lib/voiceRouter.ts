@@ -99,7 +99,7 @@ function nameWords(name: string): string[] {
  * Derive the full keyword set for a topic automatically from its name,
  * then supplement with any manual keywords the user added.
  */
-export function expandTopicKeywords(topic: Pick<Topic, 'name' | 'keywords'>): string[] {
+export function expandTopicKeywords(topic: Pick<Topic, 'name' | 'keywords' | 'description'>): string[] {
   const words = nameWords(topic.name);
   const expanded = new Set<string>([
     ...words,
@@ -108,6 +108,13 @@ export function expandTopicKeywords(topic: Pick<Topic, 'name' | 'keywords'>): st
   for (const w of words) {
     const extra = DOMAIN_KEYWORDS[w];
     if (extra) extra.forEach(k => expanded.add(k));
+  }
+  if (topic.description) {
+    topic.description
+      .split(/[,;]/)
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t.length > 2)
+      .forEach(term => expanded.add(term));
   }
   return Array.from(expanded);
 }

@@ -82,6 +82,17 @@ export default function PhotoWidget({ ctx }: { ctx: WidgetCtx }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widgetId]);
 
+  // Listen for live updates from the config panel (drag/zoom).
+  useEffect(() => {
+    if (!widgetId) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ widgetId: string; photo: PhotoData }>).detail;
+      if (detail.widgetId === widgetId) setPhoto(detail.photo);
+    };
+    window.addEventListener('photo-update', handler);
+    return () => window.removeEventListener('photo-update', handler);
+  }, [widgetId]);
+
   const handleFile = (file: File) => {
     readFileAsDataUrl(file).then(url => {
       const next: PhotoData = { url, ...DEFAULT_FRAME };
@@ -165,6 +176,8 @@ export function PhotoWidgetConfig({ config: _config, onConfig: _onConfig, t, wid
       if (!prev) return prev;
       const next = { ...prev, ...patch };
       if (widgetId) {
+        // Notify the live widget immediately so it re-renders without waiting for storage.
+        window.dispatchEvent(new CustomEvent('photo-update', { detail: { widgetId, photo: next } }));
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => { void savePhoto(widgetId, next); }, 200);
       }

@@ -15,7 +15,7 @@ import { PhotoWidgetConfig } from '../widgets/PhotoWidget';
 
 const Grid = WidthProvider(GridLayout);
 const COLS = 12;
-const ROW_H = 64;
+const ROW_H = 32;
 
 interface HomeViewProps {
   items: HomeWidgetItem[];

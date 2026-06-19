@@ -7,7 +7,7 @@
  */
 
 import type { WidgetCtx } from './context';
-import { Widget } from '../shared/Widget';
+import { Widget, WidgetHeader } from '../shared/Widget';
 import { Flame, ExternalLink, Check } from 'lucide-react';
 
 const ACCENT = '#a8c4a0';
@@ -80,6 +80,7 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
   return (
     <Widget t={t} accent={ACCENT}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <WidgetHeader label="Habits for Today" accent={ACCENT} t={t} icon={Flame} />
         {todayHabits.length > 0 && (
           <span style={{
             fontSize: '0.65rem', color: t.textMuted,

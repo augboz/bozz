@@ -16,10 +16,10 @@ import { deleteItem } from '../../lib/storage';
 
 const Grid = WidthProvider(GridLayout);
 const COLS = 12;
-const ROW_H = 64;
+const ROW_H = 32;
 
 const DEFAULT_TOPIC_LAYOUT: HomeWidgetItem[] = [
-  { i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 12, h: 8 },
+  { i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 12, h: 16 },
 ];
 
 interface Props {

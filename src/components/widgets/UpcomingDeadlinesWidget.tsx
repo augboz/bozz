@@ -1,4 +1,5 @@
-import { Widget, EmptyWidget } from '../shared/Widget';
+import { CalendarClock } from 'lucide-react';
+import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
 import { sectionAccents } from '../../lib/themes';
 import { deadlineLabel, isOverdue } from '../../lib/dates';
 import { deadlineEntries } from './util';
@@ -21,7 +22,8 @@ export default function UpcomingDeadlinesWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={sectionAccents.home}>
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <WidgetHeader label="Next 7 Days" accent={sectionAccents.home} t={t} icon={CalendarClock} />
+      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, marginTop: '0.75rem' }}>
         {upcoming.length === 0
           ? <EmptyWidget text="nothing due in the next 7 days" t={t} />
           : (

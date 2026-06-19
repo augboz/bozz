@@ -101,29 +101,44 @@ input::placeholder {
 }
 
 /* ── Scrollbars ───────────────────────────────────────────────────────────
-   Themed, neutral grey — no warm/brown tones from the underlying webview
-   default. Tracks pick up the active mood, thumbs use the border colour. */
+   Thin, discreet overlay-style scrollbars. Thumb is nearly invisible at
+   rest and brightens on hover; track is always transparent. */
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 *::-webkit-scrollbar-track {
-  background: var(--app-bg);
+  background: transparent;
 }
 *::-webkit-scrollbar-thumb {
   background: var(--app-border-strong);
   border-radius: 999px;
-  border: 2px solid var(--app-bg);
 }
 *::-webkit-scrollbar-thumb:hover {
   background: var(--app-text-dim);
 }
 *::-webkit-scrollbar-corner {
-  background: var(--app-bg);
+  background: transparent;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+/* Thin scrollbar utility class — hides native scrollbar entirely and
+   uses a 3px pseudo-overlay via padding trick. Attach to any overflow div. */
+.thin-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 /* Firefox fallback */
 * {
-  scrollbar-color: var(--app-border-strong) var(--app-bg);
+  scrollbar-color: var(--app-border-strong) transparent;
   scrollbar-width: thin;
 }
 

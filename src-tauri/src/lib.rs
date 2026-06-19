@@ -179,7 +179,8 @@ fn decode_imap_bytes(bytes: &[u8]) -> String {
 }
 
 #[tauri::command]
-async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<(), String> {
+// Returns true if a backup was created, false if skipped (no store file yet).
+async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<bool, String> {
     use std::fs;
 
     let app_data = app_handle
@@ -189,7 +190,7 @@ async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<(),
 
     let store_path = app_data.join("dashboard.json");
     if !store_path.exists() {
-        return Ok(());
+        return Ok(false);
     }
 
     let backup_dir = app_data.join("backups");
@@ -209,7 +210,7 @@ async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<(),
         let _ = fs::remove_file(backups.remove(0).path());
     }
 
-    Ok(())
+    Ok(true)
 }
 
 /// Show the small floating quick-capture window, creating it on first use.

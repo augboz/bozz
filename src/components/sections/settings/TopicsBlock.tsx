@@ -614,6 +614,23 @@ function TopicCard({ t, topic, expanded, isNew, onToggle, onChange, onDelete, on
             </div>
           </div>
 
+          {/* Description */}
+          <div>
+            <label style={lbl(t)}>
+              Description
+              <span style={{ color: t.textDim, fontWeight: 400, marginLeft: '0.4rem' }}>
+                — helps Bozz predict the right topic in Quick Add
+              </span>
+            </label>
+            <textarea
+              value={topic.description ?? ''}
+              onChange={(e) => onChange({ description: e.target.value })}
+              placeholder="e.g. tennis, squash, court bookings, sports matches, gym sessions"
+              rows={2}
+              style={{ ...inp, width: '100%', resize: 'vertical', lineHeight: 1.45, boxSizing: 'border-box' }}
+            />
+          </div>
+
           {/* Stages — draggable */}
           <div>
             <label style={lbl(t)}>

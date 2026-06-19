@@ -121,8 +121,8 @@ export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
   return out;
 }
 
-/** Upload the current local snapshot to Supabase. */
-export async function pushSnapshot(userId: string): Promise<void> {
+/** Upload the current local snapshot to Supabase. Returns true on success. */
+export async function pushSnapshot(userId: string): Promise<boolean> {
   try {
     const snapshot = await readLocalSnapshot();
     const { error } = await supabase
@@ -131,9 +131,24 @@ export async function pushSnapshot(userId: string): Promise<void> {
         { user_id: userId, data: snapshot, updated_at: new Date().toISOString() },
         { onConflict: 'user_id' },
       );
-    if (error) console.error('[sync] push error:', error);
+    if (error) {
+      console.error('[sync] push error:', error);
+      return false;
+    }
+    return true;
   } catch (e) {
     console.error('[sync] push failed:', e);
+    return false;
+  }
+}
+
+/** Returns true if local storage has meaningful synced data (i.e. an unsync'd session exists). */
+export async function hasLocalData(): Promise<boolean> {
+  try {
+    const snap = await readLocalSnapshot();
+    return Object.keys(snap).length > 0;
+  } catch {
+    return false;
   }
 }
 

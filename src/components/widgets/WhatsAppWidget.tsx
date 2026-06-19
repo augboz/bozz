@@ -99,7 +99,7 @@ export default function WhatsAppWidget({ ctx }: { ctx: WidgetCtx }) {
   return (
     <Shell t={t} phone={phone} connected>
       {error && <div style={{ fontSize: '0.68rem', color: t.alert, marginBottom: '0.3rem', flexShrink: 0 }}>{error}</div>}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {chats.length === 0 && (
           <div style={{ fontSize: '0.76rem', color: t.textMuted, textAlign: 'center', padding: '1rem 0', fontStyle: 'italic' }}>
             Messages will appear here
