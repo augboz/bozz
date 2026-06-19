@@ -1,6 +1,6 @@
 {
   "buildCommand": "",
-  "outputDirectory": "public",
+  "outputDirectory": "website",
   "functions": {
     "api/notion-redirect.js":  { "memory": 128, "maxDuration": 10 },
     "api/terra-widget.js":     { "memory": 128, "maxDuration": 10 },
