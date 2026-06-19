@@ -1,0 +1,14 @@
+node_modules
+dist
+src-tauri/target
+src-tauri/.cargo
+src
+public
+/index.html
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+package.json
+package-lock.json
+graphify-out
+README.md
