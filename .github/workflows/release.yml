@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  release-windows:
     runs-on: windows-latest
     permissions:
       contents: write
@@ -38,7 +38,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Bozz ${{ github.ref_name }}
           releaseBody: |
-            Download the `.exe` below to install or update Bozz.
+            Download the installer for your platform below.
             If you already have Bozz installed, it will update itself automatically on next launch.
           releaseDraft: false
           prerelease: false
@@ -50,5 +50,66 @@ jobs:
           $exe = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Where-Object { $_.Name -notlike "*.sig" } | Select-Object -First 1
           Copy-Item $exe.FullName "src-tauri/target/release/bundle/nsis/Bozz-setup.exe"
           gh release upload ${{ github.ref_name }} "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-mac:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS (Apple Silicon)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Bozz ${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: false
+          args: --target aarch64-apple-darwin
+
+      - name: Build macOS (Intel)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Bozz ${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: false
+          args: --target x86_64-apple-darwin
+
+      - name: Upload fixed-name DMGs
+        run: |
+          ARM=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          INTEL=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          cp "$ARM"   src-tauri/target/Bozz-mac-arm.dmg
+          cp "$INTEL" src-tauri/target/Bozz-mac-intel.dmg
+          gh release upload ${{ github.ref_name }} src-tauri/target/Bozz-mac-arm.dmg --clobber
+          gh release upload ${{ github.ref_name }} src-tauri/target/Bozz-mac-intel.dmg --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

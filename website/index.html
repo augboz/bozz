@@ -728,8 +728,28 @@ footer {
         <span class="dl-main">Download for Windows</span>
         <span class="dl-sub">Windows 10 &amp; 11 · 64-bit · Free</span>
       </a>
+      <a href="https://github.com/augboz/bozz/releases/latest/download/Bozz-mac-arm.dmg" class="dl-btn" id="macBtn">
+        <span class="dl-main">Download for Mac</span>
+        <span class="dl-sub" id="macSub">Apple Silicon · Free</span>
+      </a>
     </div>
     <p class="dl-note">No account required. Your data stays on your device.</p>
+    <script>
+      // Auto-detect Intel Mac and swap to the right DMG
+      (function() {
+        var btn = document.getElementById('macBtn');
+        var sub = document.getElementById('macSub');
+        if (!btn) return;
+        var canvas = document.createElement('canvas');
+        var gl = canvas.getContext('webgl');
+        var info = gl && gl.getExtension('WEBGL_debug_renderer_info');
+        var renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
+        if (renderer && !renderer.match(/Apple/i)) {
+          btn.href = 'https://github.com/augboz/bozz/releases/latest/download/Bozz-mac-intel.dmg';
+          sub.textContent = 'Intel · Free';
+        }
+      })();
+    </script>
   </div>
 </section>
 
