@@ -382,18 +382,30 @@ kbd:active { transform: scale(0.94); opacity: 0.75; }
           mask-image:  linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
 .marquee-track {
-  display: flex; gap: 0; width: max-content;
+  display: flex; gap: 12px; width: max-content;
   animation: marquee 32s linear infinite;
   will-change: transform;
 }
 .marquee:hover .marquee-track { animation-play-state: paused; }
 @keyframes marquee { to { transform: translateX(-50%); } }
 .int-badge {
-  flex-shrink: 0; font-size: 14px; color: var(--silver);
-  padding: 10px 28px; border-right: 1px solid var(--lead);
-  transition: color 150ms var(--ease-out);
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 400; color: var(--silver);
+  padding: 8px 20px 8px 10px; border-radius: 999px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
+  transition: color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), transform 200ms var(--spring);
 }
-.int-badge:hover { color: var(--starlight); }
+.int-logo {
+  width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+  display: grid; place-items: center; overflow: hidden;
+}
+.int-logo svg { width: 24px; height: 24px; display: block; }
+.int-badge.more {
+  background: transparent; padding: 8px 20px;
+  box-shadow: inset 0 0 0 1px var(--lead);
+  color: var(--muted);
+}
 
 /* ── Download ────────────────────────────────────────────────────── */
 .download-wrap { max-width: 640px; margin: 0 auto; text-align: center; }
@@ -440,7 +452,8 @@ footer {
   .feature-card:hover .fi-icon { background: rgba(82,102,235,0.18); transform: scale(1.08); border-color: rgba(82,102,235,0.4); }
   .dl-btn:hover { border-color: var(--starlight); transform: translateY(-2px); }
   .dl-btn.primary:hover { opacity: 0.9; transform: translateY(-2px) scale(1.02); }
-  .int-badge:hover { color: var(--starlight); }
+  .int-badge:hover { color: var(--starlight); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); transform: translateY(-2px); }
+  .int-badge.more:hover { box-shadow: inset 0 0 0 1px var(--starlight); }
   .footer-links a:hover { color: var(--starlight); }
 }
 
@@ -704,15 +717,15 @@ footer {
   </div>
   <div class="marquee reveal" style="transition-delay:100ms" aria-hidden="true">
     <div class="marquee-track" id="marqueeTrack">
-      <div class="int-badge">Google Calendar</div>
-      <div class="int-badge">Apple Calendar</div>
-      <div class="int-badge">Gmail</div>
-      <div class="int-badge">Outlook</div>
-      <div class="int-badge">Spotify</div>
-      <div class="int-badge">Apple Health</div>
-      <div class="int-badge">Notion</div>
-      <div class="int-badge">WhatsApp</div>
-      <div class="int-badge">More soon</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="2" y="3" width="20" height="19" rx="3" fill="#fff"/><rect x="2" y="3" width="20" height="6" rx="3" fill="#1a73e8"/><rect x="14" y="13" width="4" height="3" rx="0.6" fill="#1a73e8"/><rect x="8.5" y="13" width="4" height="3" rx="0.6" fill="#fbbc04"/><rect x="14" y="17" width="4" height="3" rx="0.6" fill="#34a853"/><rect x="8.5" y="17" width="4" height="3" rx="0.6" fill="#ea4335"/></svg></span>Google Calendar</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="5" fill="#fff"/><rect x="2" y="2" width="20" height="6" rx="5" fill="#e8453c"/><rect x="7" y="11" width="10" height="8" rx="1.2" fill="#f4f4f4" stroke="#c5c5c5" stroke-width="0.6"/><line x1="7" y1="14.3" x2="17" y2="14.3" stroke="#c5c5c5" stroke-width="0.6"/><line x1="11" y1="11" x2="11" y2="19" stroke="#c5c5c5" stroke-width="0.6"/></svg></span>Apple Calendar</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="1" y="4" width="22" height="16" rx="2" fill="#fff"/><path d="M1 6 1 18.5 8 18.5 8 10.5z" fill="#ea4335"/><path d="M23 6 23 18.5 16 18.5 16 10.5z" fill="#ea4335"/><path d="M1 6.5 12 14 23 6.5" stroke="#ea4335" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Gmail</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="1" y="2" width="22" height="20" rx="3" fill="#0364b8"/><circle cx="7.5" cy="12" r="4.4" fill="#fff"/><circle cx="7.5" cy="12" r="2.6" fill="#0364b8"/><rect x="13" y="6" width="10" height="12" rx="1.5" fill="#28a8ea"/><path d="M13 7l5 3.8 5-3.8" stroke="#fff" stroke-width="1.2" fill="none"/></svg></span>Outlook</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="11" fill="#1ED760"/><path d="M6.5 9.5c3.5-1 8-0.6 11 1.1" stroke="#0b0b0b" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M7 13c3-0.8 6.8-0.4 9.2 1" stroke="#0b0b0b" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M7.5 16.2c2.3-0.6 5-0.3 7 0.7" stroke="#0b0b0b" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg></span>Spotify</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="5" fill="#fff"/><path d="M12 18s-6.5-4-6.5-8.6c0-2.4 1.9-4.1 4-4.1 1.2 0 2 .5 2.5 1.2.5-.7 1.3-1.2 2.5-1.2 2.1 0 4 1.7 4 4.1C18.5 14 12 18 12 18z" fill="#fa114f"/></svg></span>Apple Health</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="4" fill="#000"/><path d="M7 7v10l2-0.2V9.6L15 17l2-0.2V7l-2 0.2v7.1L9 7z" fill="#fff"/></svg></span>Notion</div>
+      <div class="int-badge"><span class="int-logo"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="11" fill="#25D366"/><path d="M16.6 13.4c-.3-.15-1.6-.8-1.85-.9-.25-.1-.4-.15-.6.15-.15.25-.6.8-.8 1-.15.15-.3.2-.55.05-.7-.3-1.5-.85-2.2-1.6-.65-.7-1-1.4-1.2-1.8-.1-.2 0-.35.1-.5.15-.15.3-.35.45-.5.15-.15.2-.3.05-.55-.1-.2-.6-1.4-.8-1.85-.15-.4-.35-.35-.5-.35-.5 0-.85.3-1.1.7-.4.6-.4 1.5.1 2.5.6 1.2 1.6 2.5 3 3.6 1.5 1.2 2.5 1.5 3.3 1.6.65.1 1.3-.2 1.6-.7.2-.3.2-.7.1-.9z" fill="#fff"/></svg></span>WhatsApp</div>
+      <div class="int-badge more">More soon</div>
     </div>
   </div>
 </section>
