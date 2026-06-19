@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Music } from 'lucide-react';
 import { getItem, setItem, deleteItem } from '../../lib/storage';
-import { Widget, EmptyWidget } from '../shared/Widget';
+import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
 import { getCurrentlyPlaying, refreshSpotifyToken } from '../../lib/oauth/spotify';
 import { secretGet, tokenKey } from '../../lib/oauth/keyring';
 import type { WidgetCtx } from './context';
@@ -119,7 +119,8 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={ACCENT}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <WidgetHeader label="Now Playing" accent={ACCENT} t={t} icon={Music} />
         <button onClick={reload} aria-label="Reload" title="Reload"
           style={{ background: 'transparent', border: 'none', color: t.textDim, cursor: 'pointer', padding: '0.15rem', display: 'flex' }}>
           <RefreshCw size={11} strokeWidth={1.5} />
@@ -146,46 +147,84 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
       )}
 
       {status === 'ready' && track && (
-        <div style={{ marginTop: '0.85rem', display: 'flex', gap: '0.8rem', alignItems: 'flex-start' }}>
-          {track.albumArt && (
-            <img
-              src={track.albumArt}
-              alt="Album art"
-              style={{ width: '48px', height: '48px', borderRadius: '5px', flexShrink: 0, objectFit: 'cover' }}
-            />
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <>
+          <style>{`
+            @keyframes bozz-wave {
+              0%, 100% { transform: scaleY(var(--bar-min)); }
+              50% { transform: scaleY(1); }
+            }
+          `}</style>
+          <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
             <div style={{
-              fontSize: '0.85rem', color: t.text, fontWeight: 400,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              width: '64px', height: '64px', flexShrink: 0, borderRadius: '14px',
+              position: 'relative',
+              boxShadow: track.isPlaying
+                ? `0 0 22px ${ACCENT}66, 0 0 44px ${ACCENT}33`
+                : `0 0 14px ${ACCENT}33`,
+              transition: 'box-shadow 0.4s ease',
             }}>
-              {track.name}
+              {track.albumArt
+                ? (
+                  <img
+                    src={track.albumArt}
+                    alt="Album art"
+                    style={{ width: '100%', height: '100%', borderRadius: '14px', objectFit: 'cover', display: 'block' }}
+                  />
+                )
+                : (
+                  <div style={{
+                    width: '100%', height: '100%', borderRadius: '14px',
+                    background: `radial-gradient(circle at 50% 45%, ${ACCENT}55, ${t.bgAlt} 72%)`,
+                    border: `1px solid ${t.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Music size={24} strokeWidth={1} color={t.textDim} />
+                  </div>
+                )
+              }
             </div>
-            <div style={{
-              fontSize: '0.72rem', color: t.textMuted, marginTop: '0.15rem',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {track.artist}
-            </div>
-            <div style={{
-              height: '2px', background: t.bgAlt, borderRadius: '999px',
-              overflow: 'hidden', marginTop: '0.5rem',
-            }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
-                width: `${track.durationMs > 0 ? (track.progressMs / track.durationMs) * 100 : 0}%`,
-                height: '100%',
-                background: ACCENT,
-              }} />
-            </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              marginTop: '0.2rem', fontSize: '0.62rem', color: t.textDim,
-            }}>
-              <span>{msToTime(track.progressMs)}</span>
-              <span>{msToTime(track.durationMs)}</span>
+                fontSize: '1rem', color: t.text, fontWeight: 600,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {track.name}
+              </div>
+              <div style={{
+                fontSize: '0.72rem', color: t.textMuted, marginTop: '0.1rem',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {track.artist}{track.durationMs > 0 ? ` • ${msToTime(track.durationMs)}` : ''}
+              </div>
+              {/* Waveform */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '2px',
+                marginTop: '0.55rem', height: '20px',
+              }}>
+                {[0.35,0.65,0.45,0.9,0.55,0.8,0.4,1,0.7,0.5,0.85,0.6,0.38,0.72,0.88,0.48,0.62,0.78,0.42,0.68,0.3,0.58,0.5,0.75,0.45].map((h, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: '2px',
+                      height: '20px',
+                      background: t.text,
+                      borderRadius: '999px',
+                      transformOrigin: 'center',
+                      opacity: 0.85,
+                      ...(track.isPlaying
+                        ? {
+                            '--bar-min': String(h * 0.3 + 0.1),
+                            animation: `bozz-wave ${0.7 + (i % 5) * 0.12}s ease-in-out ${i * 0.04}s infinite`,
+                            transform: `scaleY(${h})`,
+                          } as React.CSSProperties
+                        : { transform: `scaleY(${h * 0.5 + 0.1})` }),
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {status === 'error' && (
