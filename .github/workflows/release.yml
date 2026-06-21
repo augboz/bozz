@@ -52,34 +52,35 @@ jobs:
           prerelease: false
 
       - name: Upload fixed-name installer and updater files
-        shell: pwsh
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          $tag = "${{ github.ref_name }}"
-          $version = $tag.TrimStart('v')
+          set -e
+          tag="${{ github.ref_name }}"
+          version="${tag#v}"
 
           # Fixed-name installer for easy download
-          $exe = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Where-Object { $_.Name -notlike "*.sig" } | Select-Object -First 1
-          Copy-Item $exe.FullName "src-tauri/target/release/bundle/nsis/Bozz-setup.exe"
-          gh release upload $tag "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
+          exe=$(find src-tauri/target/release/bundle/nsis -name "*.exe" ! -name "*.sig" | head -1)
+          cp "$exe" src-tauri/target/release/bundle/nsis/Bozz-setup.exe
+          gh release upload "$tag" "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
 
-          # Upload NSIS zip and sig for updater (tauri build creates these when signing works)
-          $nsisZip = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip"
-          $nsisSig = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip.sig"
+          nsisZip="src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip"
+          nsisSig="src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip.sig"
 
           # If tauri build didn't create the NSIS zip+sig, create and sign manually
-          if (-not (Test-Path $nsisZip)) {
-            $setupExe = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.exe"
-            Compress-Archive -Path $setupExe -DestinationPath $nsisZip
-            $env:TAURI_SIGNING_PRIVATE_KEY = $env:TAURI_SIGNING_PRIVATE_KEY
-            npx tauri signer sign $nsisZip -k $env:TAURI_SIGNING_PRIVATE_KEY -p "$($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)"
-          }
+          if [ ! -f "$nsisZip" ]; then
+            setupExe="src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.exe"
+            cd src-tauri/target/release/bundle/nsis
+            7z a -tzip "Bozz_${version}_x64-setup.nsis.zip" "Bozz_${version}_x64-setup.exe"
+            cd - > /dev/null
+            npx tauri signer sign "$nsisZip" -k "$TAURI_SIGNING_PRIVATE_KEY" -p "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
+          fi
 
-          gh release upload $tag $nsisZip --clobber
-          gh release upload $tag $nsisSig --clobber
+          gh release upload "$tag" "$nsisZip" --clobber
+          gh release upload "$tag" "$nsisSig" --clobber
 
   release-mac:
     runs-on: macos-latest
