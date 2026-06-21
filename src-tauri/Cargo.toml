@@ -1,6 +1,6 @@
 [package]
 name = "bozz"
-version = "0.1.8"
+version = "0.1.9"
 description = "Bozz — personal life dashboard"
 authors = ["you"]
 edition = "2021"
@@ -23,6 +23,7 @@ tauri-plugin-http = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-deep-link = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 keyring = "3"

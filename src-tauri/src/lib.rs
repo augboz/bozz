@@ -302,7 +302,21 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            // Forward deep links (bozz://) as oauth:deep-link events so the
+            // JS OAuth flow can receive the redirect without a local TCP server.
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        let _ = handle.emit("oauth:deep-link", url.to_string());
+                    }
+                });
+            }
+
             let show = MenuItem::with_id(app, "show", "Show Bozz", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;

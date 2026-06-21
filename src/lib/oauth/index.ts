@@ -7,7 +7,6 @@ import { secretSet, tokenKey } from './keyring';
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
   ?? 'https://life-bozz.vercel.app';
 
-const GOOGLE_LOCAL_PORT = 14987;
 
 export interface ProviderConfig {
   provider: EmailProvider;
@@ -107,24 +106,35 @@ export async function connectProvider(
   let redirectUri: string;
 
   if (isTauri()) {
-    // ── Desktop (Tauri): Rust spins up a local HTTP server ─────────────────
-    const { invoke } = await import('@tauri-apps/api/core');
+    // ── Desktop (Tauri): OS routes bozz:// deep link back to the app ───────
     const { listen } = await import('@tauri-apps/api/event');
     const { openUrl } = await import('@tauri-apps/plugin-opener');
 
-    const portPromise = new Promise<number>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('OAuth listener never reported a port')), 5000);
-      let unlisten: (() => void) | null = null;
-      listen<number>('oauth:port', (e) => {
-        clearTimeout(timer);
-        if (unlisten) unlisten();
-        resolve(e.payload);
-      }).then(fn => { unlisten = fn; });
+    redirectUri = 'bozz://oauth/callback';
+
+    let deepLinkResolve: ((p: Record<string, string>) => void) | null = null;
+    let deepLinkReject: ((e: Error) => void) | null = null;
+
+    const paramsPromise = new Promise<Record<string, string>>((res, rej) => {
+      deepLinkResolve = res;
+      deepLinkReject = rej;
     });
 
-    const runPromise = invoke<Record<string, string>>('oauth_run', { port: GOOGLE_LOCAL_PORT });
-    await portPromise;
-    redirectUri = `http://127.0.0.1:${GOOGLE_LOCAL_PORT}`;
+    const unlisten = await listen<string>('oauth:deep-link', (e) => {
+      try {
+        const url = new URL(e.payload);
+        const p: Record<string, string> = {};
+        url.searchParams.forEach((v, k) => { p[k] = v; });
+        deepLinkResolve?.(p);
+      } catch (err) {
+        deepLinkReject?.(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+
+    const timeout = setTimeout(
+      () => deepLinkReject?.(new Error('OAuth timed out — no redirect received')),
+      300_000,
+    );
 
     const authParams = new URLSearchParams({
       client_id: clientId,
@@ -136,8 +146,14 @@ export async function connectProvider(
       code_challenge_method: 'S256',
       ...(cfg.extraAuthParams ?? {}),
     });
-    await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
-    params = await runPromise;
+
+    try {
+      await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
+      params = await paramsPromise;
+    } finally {
+      clearTimeout(timeout);
+      unlisten();
+    }
 
   } else {
     // ── Browser: popup window polls for the redirect ────────────────────────
