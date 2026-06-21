@@ -106,33 +106,33 @@ export async function connectProvider(
   let redirectUri: string;
 
   if (isTauri()) {
-    // ── Desktop (Tauri): OS routes bozz:// deep link back to the app ───────
+    // ── Desktop (Tauri): open auth in a popup Tauri window ─────────────────
+    const { invoke } = await import('@tauri-apps/api/core');
     const { listen } = await import('@tauri-apps/api/event');
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
 
-    redirectUri = 'bozz://oauth/callback';
+    redirectUri = 'http://127.0.0.1:14987';
 
-    let deepLinkResolve: ((p: Record<string, string>) => void) | null = null;
-    let deepLinkReject: ((e: Error) => void) | null = null;
+    let deepResolve: ((p: Record<string, string>) => void) | null = null;
+    let deepReject: ((e: Error) => void) | null = null;
 
     const paramsPromise = new Promise<Record<string, string>>((res, rej) => {
-      deepLinkResolve = res;
-      deepLinkReject = rej;
+      deepResolve = res;
+      deepReject = rej;
     });
 
-    const unlisten = await listen<string>('oauth:deep-link', (e) => {
+    const unlisten = await listen<string>('oauth:callback', (e) => {
       try {
         const url = new URL(e.payload);
         const p: Record<string, string> = {};
         url.searchParams.forEach((v, k) => { p[k] = v; });
-        deepLinkResolve?.(p);
+        deepResolve?.(p);
       } catch (err) {
-        deepLinkReject?.(err instanceof Error ? err : new Error(String(err)));
+        deepReject?.(err instanceof Error ? err : new Error(String(err)));
       }
     });
 
     const timeout = setTimeout(
-      () => deepLinkReject?.(new Error('OAuth timed out — no redirect received')),
+      () => deepReject?.(new Error('Sign in timed out')),
       300_000,
     );
 
@@ -148,11 +148,19 @@ export async function connectProvider(
     });
 
     try {
-      await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
+      await invoke('open_oauth_window', {
+        url: `${cfg.authUrl}?${authParams.toString()}`,
+        redirectPrefix: redirectUri,
+      });
       params = await paramsPromise;
     } finally {
       clearTimeout(timeout);
       unlisten();
+      try {
+        const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+        const win = await WebviewWindow.getByLabel('oauth');
+        if (win) win.close();
+      } catch { /* already closed */ }
     }
 
   } else {

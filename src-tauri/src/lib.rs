@@ -34,6 +34,52 @@ fn secret_delete(account: String) -> Result<(), String> {
     }
 }
 
+/// Opens a popup WebviewWindow for OAuth sign-in.
+///
+/// Instead of relying on the system browser + a local TCP server, we open
+/// Google's auth URL inside a Tauri window. The `on_navigation` hook fires
+/// before the webview makes any network connection, so we can intercept the
+/// redirect to `http://127.0.0.1:14987?code=…`, emit the URL as an event,
+/// and cancel the navigation — no TCP server required.
+#[tauri::command]
+fn open_oauth_window(
+    app: tauri::AppHandle,
+    url: String,
+    redirect_prefix: String,
+) -> Result<(), String> {
+    let handle = app.clone();
+    let prefix = redirect_prefix.clone();
+
+    // Close any previous OAuth window that was left open.
+    if let Some(prev) = app.get_webview_window("oauth") {
+        let _ = prev.close();
+    }
+
+    WebviewWindowBuilder::new(
+        &app,
+        "oauth",
+        WebviewUrl::External(url.parse::<url::Url>().map_err(|e| e.to_string())?),
+    )
+    .title("Sign in")
+    .inner_size(520.0, 700.0)
+    .center()
+    .always_on_top(true)
+    // Use an Edge-compatible UA so Google doesn't detect WebView2.
+    .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0")
+    .on_navigation(move |nav_url| {
+        if nav_url.as_str().starts_with(prefix.as_str()) {
+            let _ = handle.emit("oauth:callback", nav_url.to_string());
+            false // cancel — we have what we need
+        } else {
+            true // allow all other navigation (Google's login pages, etc.)
+        }
+    })
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 /// Loopback OAuth listener.
 ///
 /// Binds 127.0.0.1 on the given port (or a random port when None), emits
@@ -302,21 +348,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
-            // Forward deep links (bozz://) as oauth:deep-link events so the
-            // JS OAuth flow can receive the redirect without a local TCP server.
-            #[cfg(desktop)]
-            {
-                use tauri_plugin_deep_link::DeepLinkExt;
-                let handle = app.handle().clone();
-                app.deep_link().on_open_url(move |event| {
-                    for url in event.urls() {
-                        let _ = handle.emit("oauth:deep-link", url.to_string());
-                    }
-                });
-            }
-
             let show = MenuItem::with_id(app, "show", "Show Bozz", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
@@ -380,7 +412,8 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            create_backup, secret_set, secret_get, secret_delete, oauth_run, imap_fetch
+            create_backup, secret_set, secret_get, secret_delete,
+            oauth_run, open_oauth_window, imap_fetch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
