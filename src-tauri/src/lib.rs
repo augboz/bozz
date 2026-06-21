@@ -34,13 +34,56 @@ fn secret_delete(account: String) -> Result<(), String> {
     }
 }
 
+/// Start a one-shot TCP server on the given port.
+///
+/// Runs in a background thread.  When the OAuth provider's redirect lands
+/// (e.g. Edge navigating to http://127.0.0.1:14987?code=…), we parse the
+/// URL and emit `oauth:callback` exactly like `open_oauth_window` does via
+/// `on_navigation`.  This handles the case where Google detects WebView2 and
+/// opens the sign-in completion in the default system browser instead of the
+/// in-app popup.
+#[tauri::command]
+fn start_oauth_server(app: tauri::AppHandle, port: u16) -> Result<(), String> {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    let addr = format!("127.0.0.1:{port}");
+    let listener = TcpListener::bind(&addr).map_err(|e| format!("bind {addr}: {e}"))?;
+
+    std::thread::spawn(move || {
+        if let Ok((mut stream, _)) = listener.accept() {
+            let mut buf = [0u8; 4096];
+            let n = stream.read(&mut buf).unwrap_or(0);
+            let raw = std::str::from_utf8(&buf[..n]).unwrap_or("");
+            let path = raw
+                .lines()
+                .next()
+                .and_then(|l| l.split_whitespace().nth(1))
+                .unwrap_or("/");
+
+            let _ = stream.write_all(
+                b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
+                  Connection: close\r\n\r\n\
+                  <html><body style=\"font-family:system-ui;padding:40px\">\
+                  <h2>Connected!</h2><p>You can close this tab and return to Bozz.</p>\
+                  </body></html>",
+            );
+
+            let query = path.splitn(2, '?').nth(1).unwrap_or("");
+            let callback_url = format!("http://127.0.0.1:{port}?{query}");
+            let _ = app.emit("oauth:callback", callback_url);
+        }
+    });
+
+    Ok(())
+}
+
 /// Opens a popup WebviewWindow for OAuth sign-in.
 ///
-/// Instead of relying on the system browser + a local TCP server, we open
-/// Google's auth URL inside a Tauri window. The `on_navigation` hook fires
-/// before the webview makes any network connection, so we can intercept the
-/// redirect to `http://127.0.0.1:14987?code=…`, emit the URL as an event,
-/// and cancel the navigation — no TCP server required.
+/// `on_navigation` intercepts the redirect to the loopback URI before any TCP
+/// connection, emitting `oauth:callback`.  Call `start_oauth_server` first so
+/// that if Google detects WebView2 and opens Edge, the system-browser redirect
+/// is also caught.
 #[tauri::command]
 fn open_oauth_window(
     app: tauri::AppHandle,
@@ -413,7 +456,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             create_backup, secret_set, secret_get, secret_delete,
-            oauth_run, open_oauth_window, imap_fetch
+            oauth_run, open_oauth_window, start_oauth_server, imap_fetch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

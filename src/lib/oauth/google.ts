@@ -77,6 +77,8 @@ export async function connectGoogle(
     );
 
     try {
+      // Start TCP server first — catches the redirect if Google opens Edge.
+      await invoke('start_oauth_server', { port: 14987 }).catch(() => {/* port busy, popup-only */});
       await invoke('open_oauth_window', {
         url: buildAuthUrl(redirectUri),
         redirectPrefix: redirectUri,

@@ -136,6 +136,9 @@ export async function connectProvider(
       300_000,
     );
 
+    // Start TCP server first — catches the redirect if Google opens Edge instead of the popup.
+    await invoke('start_oauth_server', { port: 14987 }).catch(() => {/* port busy, popup-only */});
+
     const authParams = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
