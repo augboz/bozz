@@ -50,6 +50,7 @@ async fn oauth_run(app: tauri::AppHandle, port: Option<u16>) -> Result<std::coll
     let server = Server::http(addr).map_err(|e| e.to_string())?;
     let port = match server.server_addr() {
         tiny_http::ListenAddr::IP(a) => a.port(),
+        _ => return Err("Unexpected non-IP listener".into()),
     };
     app.emit("oauth:port", port).map_err(|e| e.to_string())?;
 
