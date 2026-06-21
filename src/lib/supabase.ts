@@ -9,13 +9,17 @@ if (!url || !key) {
   console.warn('Supabase env vars missing — cloud sync disabled.');
 }
 
-export const supabase = createClient(url ?? '', key ?? '', {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true, // handles ?code= from magic-link / OAuth callbacks
+export const supabase = createClient(
+  url || 'https://placeholder.supabase.co',
+  key || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   },
-});
+);
 
 export const isSupabaseConfigured = (): boolean => Boolean(url && key);
 
