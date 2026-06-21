@@ -37,14 +37,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
           VITE_GMAIL_CLIENT_ID: ${{ secrets.VITE_GMAIL_CLIENT_ID }}
-          VITE_GMAIL_CLIENT_SECRET: ${{ secrets.VITE_GMAIL_CLIENT_SECRET }}
           VITE_GCAL_CLIENT_ID: ${{ secrets.VITE_GCAL_CLIENT_ID }}
-          VITE_GCAL_CLIENT_SECRET: ${{ secrets.VITE_GCAL_CLIENT_SECRET }}
           VITE_GFIT_CLIENT_ID: ${{ secrets.VITE_GFIT_CLIENT_ID }}
-          VITE_GFIT_CLIENT_SECRET: ${{ secrets.VITE_GFIT_CLIENT_SECRET }}
           VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
           VITE_NOTION_CLIENT_ID: ${{ secrets.VITE_NOTION_CLIENT_ID }}
-          VITE_NOTION_CLIENT_SECRET: ${{ secrets.VITE_NOTION_CLIENT_SECRET }}
           VITE_NOTION_REDIRECT_URL: ${{ secrets.VITE_NOTION_REDIRECT_URL }}
         with:
           tagName: ${{ github.ref_name }}
@@ -98,14 +94,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
           VITE_GMAIL_CLIENT_ID: ${{ secrets.VITE_GMAIL_CLIENT_ID }}
-          VITE_GMAIL_CLIENT_SECRET: ${{ secrets.VITE_GMAIL_CLIENT_SECRET }}
           VITE_GCAL_CLIENT_ID: ${{ secrets.VITE_GCAL_CLIENT_ID }}
-          VITE_GCAL_CLIENT_SECRET: ${{ secrets.VITE_GCAL_CLIENT_SECRET }}
           VITE_GFIT_CLIENT_ID: ${{ secrets.VITE_GFIT_CLIENT_ID }}
-          VITE_GFIT_CLIENT_SECRET: ${{ secrets.VITE_GFIT_CLIENT_SECRET }}
           VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
           VITE_NOTION_CLIENT_ID: ${{ secrets.VITE_NOTION_CLIENT_ID }}
-          VITE_NOTION_CLIENT_SECRET: ${{ secrets.VITE_NOTION_CLIENT_SECRET }}
           VITE_NOTION_REDIRECT_URL: ${{ secrets.VITE_NOTION_REDIRECT_URL }}
         with:
           tagName: ${{ github.ref_name }}
@@ -123,14 +115,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
           VITE_GMAIL_CLIENT_ID: ${{ secrets.VITE_GMAIL_CLIENT_ID }}
-          VITE_GMAIL_CLIENT_SECRET: ${{ secrets.VITE_GMAIL_CLIENT_SECRET }}
           VITE_GCAL_CLIENT_ID: ${{ secrets.VITE_GCAL_CLIENT_ID }}
-          VITE_GCAL_CLIENT_SECRET: ${{ secrets.VITE_GCAL_CLIENT_SECRET }}
           VITE_GFIT_CLIENT_ID: ${{ secrets.VITE_GFIT_CLIENT_ID }}
-          VITE_GFIT_CLIENT_SECRET: ${{ secrets.VITE_GFIT_CLIENT_SECRET }}
           VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
           VITE_NOTION_CLIENT_ID: ${{ secrets.VITE_NOTION_CLIENT_ID }}
-          VITE_NOTION_CLIENT_SECRET: ${{ secrets.VITE_NOTION_CLIENT_SECRET }}
           VITE_NOTION_REDIRECT_URL: ${{ secrets.VITE_NOTION_REDIRECT_URL }}
         with:
           tagName: ${{ github.ref_name }}

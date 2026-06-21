@@ -60,19 +60,17 @@ async function saveAndSync(key: string, value: unknown): Promise<void> {
 
 // ── Env vars (set once in .env.local) ────────────────────────────────────────
 
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://life-bozz.vercel.app';
+
 const ENV = {
   gmailClientId:        import.meta.env.VITE_GMAIL_CLIENT_ID       as string | undefined,
-  gmailClientSecret:    import.meta.env.VITE_GMAIL_CLIENT_SECRET    as string | undefined,
   outlookClientId:      import.meta.env.VITE_OUTLOOK_CLIENT_ID      as string | undefined,
   spotifyClientId:      import.meta.env.VITE_SPOTIFY_CLIENT_ID      as string | undefined,
   notionClientId:       import.meta.env.VITE_NOTION_CLIENT_ID       as string | undefined,
-  notionClientSecret:   import.meta.env.VITE_NOTION_CLIENT_SECRET   as string | undefined,
   /** Base URL of the deployed Vercel redirect proxy, e.g. https://life-bozz.vercel.app */
   notionRedirectBase:   import.meta.env.VITE_NOTION_REDIRECT_URL    as string | undefined,
   gcalClientId:         import.meta.env.VITE_GCAL_CLIENT_ID         as string | undefined,
-  gcalClientSecret:     import.meta.env.VITE_GCAL_CLIENT_SECRET     as string | undefined,
   gfitClientId:         import.meta.env.VITE_GFIT_CLIENT_ID         as string | undefined,
-  gfitClientSecret:     import.meta.env.VITE_GFIT_CLIENT_SECRET     as string | undefined,
   /** Base URL of the self-hosted WhatsApp bridge, e.g. https://wa.yourserver.com */
   waBackendUrl:         import.meta.env.VITE_WA_BACKEND_URL         as string | undefined,
   waBackendKey:         import.meta.env.VITE_WA_BACKEND_KEY         as string | undefined,
@@ -85,7 +83,7 @@ export interface IntegrationsProps {
   colorBank?: string[];
   oauthAccounts: OAuthAccount[];
   emailSyncErrors: Array<{ account: string; error: string }>;
-  onConnectAccount:    (provider: EmailProvider, clientId: string, clientSecret: string) => Promise<void>;
+  onConnectAccount:    (provider: EmailProvider, clientId: string) => Promise<void>;
   onDisconnectAccount: (provider: EmailProvider, email: string) => Promise<void>;
   calendarConnections: CalendarConnection[];
   onCalendarConnectionsChange: (next: CalendarConnection[]) => void;
@@ -287,19 +285,19 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
   t: Theme;
   accounts: OAuthAccount[];
   syncErrors: Array<{ account: string; error: string }>;
-  onConnect: (cid: string, cs: string) => Promise<void>;
+  onConnect: (cid: string) => Promise<void>;
   onDisconnect: (email: string) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const connected = accounts.filter(a => a.provider === 'gmail');
-  const configured = Boolean(ENV.gmailClientId && ENV.gmailClientSecret);
+  const configured = Boolean(ENV.gmailClientId);
 
   const connect = async () => {
-    if (!ENV.gmailClientId || !ENV.gmailClientSecret) return;
+    if (!ENV.gmailClientId) return;
     setBusy(true); setError(null);
     try {
-      await onConnect(ENV.gmailClientId, ENV.gmailClientSecret);
+      await onConnect(ENV.gmailClientId);
     } catch (e) { setError(String(e)); }
     setBusy(false);
   };
@@ -323,13 +321,13 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
             onDisconnect={() => onDisconnect(a.email)}
             onReauth={needsReauth && configured ? async () => {
               setBusy(true);
-              try { await onConnect(ENV.gmailClientId!, ENV.gmailClientSecret!); } catch { /* ignore */ }
+              try { await onConnect(ENV.gmailClientId!); } catch { /* ignore */ }
               setBusy(false);
             } : undefined}
           />
         );
       })}
-      {!configured && <DevNote t={t} vars={['VITE_GMAIL_CLIENT_ID', 'VITE_GMAIL_CLIENT_SECRET']} />}
+      {!configured && <DevNote t={t} vars={['VITE_GMAIL_CLIENT_ID']} />}
       {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
     </Card>
   );
@@ -521,7 +519,6 @@ async function releaseNotionPort(): Promise<void> {
  */
 async function connectNotionOAuth(
   clientId: string,
-  clientSecret: string,
   redirectBase: string,
 ): Promise<string> {
   const redirectUri = `${redirectBase.replace(/\/$/, '')}/api/notion-redirect`;
@@ -582,19 +579,11 @@ async function connectNotionOAuth(
   if (!params.code) throw new Error('Notion returned no code');
   if (params.state !== state) throw new Error('State mismatch — possible CSRF');
 
-  // Notion uses HTTP Basic auth for token exchange (not PKCE body params).
-  const credentials = btoa(`${clientId}:${clientSecret}`);
-  const tokenRes = await platformFetch('https://api.notion.com/v1/oauth/token', {
+  // Token exchange via server proxy — Notion client secret stays server-side
+  const tokenRes = await platformFetch(`${API_BASE}/api/notion-token`, {
     method: 'POST',
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      grant_type: 'authorization_code',
-      code: params.code,
-      redirect_uri: redirectUri,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: params.code, redirect_uri: redirectUri }),
   });
   if (!tokenRes.ok) {
     throw new Error(`Notion token exchange failed: ${tokenRes.status} ${await tokenRes.text()}`);
@@ -649,7 +638,7 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  const oauthReady = Boolean(ENV.notionClientId && ENV.notionClientSecret && ENV.notionRedirectBase);
+  const oauthReady = Boolean(ENV.notionClientId && ENV.notionRedirectBase);
 
   const persist = useCallback(async (cfg: NotionConfig) => {
     await saveAndSync('notionWidget', cfg);
@@ -696,11 +685,11 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   };
 
   const connectOAuth = async (releaseFirst = false) => {
-    if (!ENV.notionClientId || !ENV.notionClientSecret || !ENV.notionRedirectBase) return;
+    if (!ENV.notionClientId || !ENV.notionRedirectBase) return;
     setBusy(true); setError(null);
     try {
       if (releaseFirst) await releaseNotionPort();
-      const token = await connectNotionOAuth(ENV.notionClientId, ENV.notionClientSecret, ENV.notionRedirectBase);
+      const token = await connectNotionOAuth(ENV.notionClientId, ENV.notionRedirectBase);
       await afterConnect(token);
     } catch (e) { setError(String(e)); }
     setBusy(false);
@@ -1166,15 +1155,15 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const connected = connections.filter(c => c.provider === 'googleCalendar');
-  const configured = Boolean(ENV.gcalClientId && ENV.gcalClientSecret);
+  const configured = Boolean(ENV.gcalClientId);
 
   const connect = async () => {
-    if (!ENV.gcalClientId || !ENV.gcalClientSecret) return;
+    if (!ENV.gcalClientId) return;
     setBusy(true); setError(null);
     try {
       const { connectGoogle } = await import('../../../lib/oauth/google');
       const result = await connectGoogle(
-        ENV.gcalClientId, ENV.gcalClientSecret,
+        ENV.gcalClientId,
         ['https://www.googleapis.com/auth/calendar.readonly'],
         `gcal:${ENV.gcalClientId}`,
       );
@@ -1210,7 +1199,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
           bank={bank}
         />
       ))}
-      {!configured && <DevNote t={t} vars={['VITE_GCAL_CLIENT_ID', 'VITE_GCAL_CLIENT_SECRET']} />}
+      {!configured && <DevNote t={t} vars={['VITE_GCAL_CLIENT_ID']} />}
       {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
     </Card>
   );
@@ -1313,15 +1302,15 @@ function GoogleFitCard({ t, connections, onChange }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const connected = connections.filter(c => c.provider === 'googleFit');
-  const configured = Boolean(ENV.gfitClientId && ENV.gfitClientSecret);
+  const configured = Boolean(ENV.gfitClientId);
 
   const connect = async () => {
-    if (!ENV.gfitClientId || !ENV.gfitClientSecret) return;
+    if (!ENV.gfitClientId) return;
     setBusy(true); setError(null);
     try {
       const { connectGoogle } = await import('../../../lib/oauth/google');
       await connectGoogle(
-        ENV.gfitClientId, ENV.gfitClientSecret,
+        ENV.gfitClientId,
         ['https://www.googleapis.com/auth/fitness.activity.read', 'https://www.googleapis.com/auth/fitness.sleep.read'],
         `gfit:${ENV.gfitClientId}`,
       );
@@ -1343,7 +1332,7 @@ function GoogleFitCard({ t, connections, onChange }: {
           ? <ConnectBtn t={t} busy={busy} onClick={connect} />
           : undefined}
     >
-      {!configured && <DevNote t={t} vars={['VITE_GFIT_CLIENT_ID', 'VITE_GFIT_CLIENT_SECRET']} />}
+      {!configured && <DevNote t={t} vars={['VITE_GFIT_CLIENT_ID']} />}
       {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
     </Card>
   );
@@ -1554,14 +1543,14 @@ export default function IntegrationsBlock({
   const gmailCard = (
     <GmailCard
       key="gmail" t={t} accounts={oauthAccounts} syncErrors={emailSyncErrors}
-      onConnect={(cid, cs) => onConnectAccount('gmail', cid, cs)}
+      onConnect={cid => onConnectAccount('gmail', cid)}
       onDisconnect={email => onDisconnectAccount('gmail', email)}
     />
   );
   const outlookCard = (
     <OutlookCard
       key="outlook" t={t} accounts={oauthAccounts} syncErrors={emailSyncErrors}
-      onConnect={cid => onConnectAccount('outlook', cid, '')}
+      onConnect={cid => onConnectAccount('outlook', cid)}
       onDisconnect={email => onDisconnectAccount('outlook', email)}
     />
   );

@@ -4,6 +4,9 @@ import type { EmailProvider, OAuthAccount } from '../types';
 import { pkceChallenge, randomString } from './pkce';
 import { secretSet, tokenKey } from './keyring';
 
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
+  ?? 'https://life-bozz.vercel.app';
+
 export interface ProviderConfig {
   provider: EmailProvider;
   authUrl: string;
@@ -92,7 +95,7 @@ async function browserOAuthFlow(
 export async function connectProvider(
   cfg: ProviderConfig,
   clientId: string,
-  clientSecret: string,    // empty string for public clients
+  clientSecret = '',    // kept for non-Google public clients (e.g. Outlook); Google uses server proxy
 ): Promise<OAuthAccount> {
   const verifier = randomString(64);
   const challenge = await pkceChallenge(verifier);
@@ -163,19 +166,36 @@ export async function connectProvider(
   if (params.state !== state) throw new Error('OAuth state mismatch');
 
   // Exchange code for tokens.
-  const tokenBody = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: params.code,
-    redirect_uri: redirectUri,
-    client_id: clientId,
-    code_verifier: verifier,
-    ...(cfg.usesClientSecret ? { client_secret: clientSecret } : {}),
-  });
-  const tokenRes = await platformFetch(cfg.tokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: tokenBody.toString(),
-  });
+  // Google uses the server-side proxy so the client secret never leaves the server.
+  // Other providers (e.g. Outlook public clients) call the token URL directly.
+  let tokenRes: Response;
+  if (cfg.usesClientSecret && cfg.tokenUrl.includes('google')) {
+    tokenRes = await platformFetch(`${API_BASE}/api/google-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'exchange',
+        code: params.code,
+        client_id: clientId,
+        code_verifier: verifier,
+        redirect_uri: redirectUri,
+      }),
+    });
+  } else {
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: params.code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      code_verifier: verifier,
+      ...(cfg.usesClientSecret ? { client_secret: clientSecret } : {}),
+    });
+    tokenRes = await platformFetch(cfg.tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: tokenBody.toString(),
+    });
+  }
   if (!tokenRes.ok) throw new Error(`Token swap failed: HTTP ${tokenRes.status} ${await tokenRes.text()}`);
   const tokens = (await tokenRes.json()) as TokenResponse;
   if (!tokens.refresh_token) throw new Error('Provider did not return a refresh token. Ensure offline access scope is requested.');
@@ -190,7 +210,7 @@ export async function connectProvider(
     provider: cfg.provider,
     email,
     clientId,
-    clientSecret,
+    clientSecret: '',   // never stored — secret lives server-side
     expiresAt,
     lastSync: null,
   };
@@ -202,17 +222,30 @@ export async function refreshAccessToken(
   account: OAuthAccount,
   refreshToken: string,
 ): Promise<{ accessToken: string; expiresAt: number; newRefreshToken?: string }> {
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    client_id: account.clientId,
-    ...(cfg.usesClientSecret ? { client_secret: account.clientSecret } : {}),
-  });
-  const res = await platformFetch(cfg.tokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
+  let res: Response;
+  if (cfg.usesClientSecret && cfg.tokenUrl.includes('google')) {
+    res = await platformFetch(`${API_BASE}/api/google-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'refresh',
+        refresh_token: refreshToken,
+        client_id: account.clientId,
+      }),
+    });
+  } else {
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: account.clientId,
+      ...(cfg.usesClientSecret ? { client_secret: account.clientSecret } : {}),
+    });
+    res = await platformFetch(cfg.tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+  }
   if (!res.ok) throw new Error(`Refresh failed: HTTP ${res.status} ${await res.text()}`);
   const json = (await res.json()) as TokenResponse;
   const expiresAt = Date.now() + (json.expires_in - 30) * 1000;

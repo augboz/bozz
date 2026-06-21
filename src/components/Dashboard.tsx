@@ -423,8 +423,8 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [loading, syncEmails]);
 
-  const connectAccount = async (provider: EmailProvider, clientId: string, clientSecret: string) => {
-    const account = await connectProvider(PROVIDER_CFG[provider], clientId, clientSecret);
+  const connectAccount = async (provider: EmailProvider, clientId: string) => {
+    const account = await connectProvider(PROVIDER_CFG[provider], clientId);
     const next = [
       ...oauthAccounts.filter(a => !(a.provider === provider && a.email === account.email)),
       account,

@@ -1,12 +1,16 @@
 /**
  * Generic Google OAuth PKCE helper — used for Google Calendar and Google Fit.
- * Returns { accessToken, email } on success. Does NOT store tokens (caller's job).
+ * Token exchange is proxied through /api/google-token (server-side) so the
+ * Google client secret never lives in the app binary.
  */
 
 import { platformFetch } from '../http';
 import { isTauri } from '../platform';
 import { pkceChallenge, randomString } from './pkce';
 import { secretSet } from './keyring';
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
+  ?? 'https://life-bozz.vercel.app';
 
 export interface GoogleTokenResult {
   accessToken: string;
@@ -16,7 +20,6 @@ export interface GoogleTokenResult {
 
 export async function connectGoogle(
   clientId: string,
-  clientSecret: string,
   scopes: string[],
   storageKey: string,   // e.g. 'gcal:access' — used to persist tokens in keyring
 ): Promise<GoogleTokenResult> {
@@ -106,19 +109,17 @@ export async function connectGoogle(
   if (!params.code) throw new Error('Google returned no code');
   if (params.state !== state) throw new Error('State mismatch');
 
-  // Exchange code → tokens
-  const body = new URLSearchParams({
-    code: params.code,
-    client_id: clientId,
-    client_secret: clientSecret,
-    redirect_uri: redirectUri,
-    grant_type: 'authorization_code',
-    code_verifier: verifier,
-  });
-  const tokenRes = await platformFetch('https://oauth2.googleapis.com/token', {
+  // Exchange code → tokens via server proxy (secret stays server-side)
+  const tokenRes = await platformFetch(`${API_BASE}/api/google-token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'exchange',
+      code: params.code,
+      client_id: clientId,
+      code_verifier: verifier,
+      redirect_uri: redirectUri,
+    }),
   });
   if (!tokenRes.ok) throw new Error(`Token exchange failed: ${tokenRes.status}`);
   const json = (await tokenRes.json()) as { access_token?: string; refresh_token?: string };

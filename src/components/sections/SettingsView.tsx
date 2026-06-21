@@ -28,7 +28,7 @@ interface SettingsViewProps {
   onReviewSettingsChange: (s: ReviewSettings) => void;
   oauthAccounts: OAuthAccount[];
   emailSyncErrors: Array<{ account: string; error: string }>;
-  onConnectAccount: (provider: EmailProvider, clientId: string, clientSecret: string) => Promise<void>;
+  onConnectAccount: (provider: EmailProvider, clientId: string) => Promise<void>;
   onDisconnectAccount: (provider: EmailProvider, email: string) => Promise<void>;
   calendarConnections?: CalendarConnection[];
   onCalendarConnectionsChange?: (next: CalendarConnection[]) => void;

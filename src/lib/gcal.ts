@@ -9,8 +9,8 @@ import { platformFetch } from './http';
 import { secretGet, secretSet } from './oauth/keyring';
 import type { CalendarEvent } from './types';
 
-const CLIENT_ID     = import.meta.env.VITE_GCAL_CLIENT_ID     as string | undefined;
-const CLIENT_SECRET = import.meta.env.VITE_GCAL_CLIENT_SECRET as string | undefined;
+const CLIENT_ID = import.meta.env.VITE_GCAL_CLIENT_ID as string | undefined;
+const API_BASE  = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://life-bozz.vercel.app';
 
 // These must match the keys written by connectGoogle() in src/lib/oauth/google.ts
 function storageKey(suffix: 'access' | 'refresh'): string {
@@ -24,20 +24,15 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-  if (!CLIENT_ID || !CLIENT_SECRET) return null;
+  if (!CLIENT_ID) return null;
   try {
     const refresh = await secretGet(storageKey('refresh'));
     if (!refresh) return null;
 
-    const res = await platformFetch('https://oauth2.googleapis.com/token', {
+    const res = await platformFetch(`${API_BASE}/api/google-token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        refresh_token: refresh,
-        grant_type: 'refresh_token',
-      }).toString(),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'refresh', refresh_token: refresh, client_id: CLIENT_ID }),
     });
     if (!res.ok) return null;
 
