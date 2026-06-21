@@ -166,7 +166,7 @@ export default function AuthGate({ children }: Props) {
       fontFamily: 'var(--app-font)',
       paddingTop: tbOffset,
       position: 'relative',
-      backgroundImage: `url('/auth-bg.jpeg')`,
+      backgroundImage: `url('/auth-bg.jpg')`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }}>
