@@ -36,44 +36,89 @@ fn secret_delete(account: String) -> Result<(), String> {
 
 /// Loopback OAuth listener.
 ///
-/// Binds a localhost port (random when `port` is `None`, fixed otherwise),
-/// emits `oauth:port` so the webview can build the redirect URI, then blocks
-/// (with timeout) waiting for the provider to redirect back.
-/// Returns the parsed query string.
+/// Binds 127.0.0.1 on the given port (or a random port when None), emits
+/// `oauth:port`, then waits (up to 5 min) for the OAuth provider to redirect
+/// back. Returns the parsed query parameters.
+///
+/// Uses only std::net — no third-party HTTP crate required.
 #[tauri::command]
 async fn oauth_run(app: tauri::AppHandle, port: Option<u16>) -> Result<std::collections::HashMap<String, String>, String> {
     use std::collections::HashMap;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
     use std::time::Duration;
-    use tiny_http::{Header, Response, Server};
 
     let addr = format!("127.0.0.1:{}", port.unwrap_or(0));
-    let server = Server::http(addr).map_err(|e| e.to_string())?;
-    let port = match server.server_addr() {
-        tiny_http::ListenAddr::IP(a) => a.port(),
-        _ => return Err("Unexpected non-IP listener".into()),
-    };
-    app.emit("oauth:port", port).map_err(|e| e.to_string())?;
+    let listener = TcpListener::bind(&addr).map_err(|e| format!("bind {addr}: {e}"))?;
+    listener.set_nonblocking(false).ok();
 
-    let req = server
+    let bound_port = listener.local_addr().map_err(|e| e.to_string())?.port();
+    app.emit("oauth:port", bound_port).map_err(|e| e.to_string())?;
+
+    // Accept one connection within 5 minutes.
+    listener
+        .set_nonblocking(false)
+        .map_err(|e| e.to_string())?;
+    // Use a background thread so we can honour the timeout without blocking Tokio.
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let result = listener.accept();
+        let _ = tx.send(result);
+    });
+
+    let (mut stream, _) = rx
         .recv_timeout(Duration::from_secs(300))
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "OAuth timed out".to_string())?;
+        .map_err(|_| "OAuth timed out — no redirect received".to_string())?
+        .map_err(|e| e.to_string())?;
 
-    let url = req.url().to_string();
-    let html = "<html><body style=\"font-family:system-ui;padding:40px;color:#333\">\
-                <h2>Connected.</h2><p>You can close this tab and return to Bozz.</p>\
-                </body></html>";
-    let _ = req.respond(
-        Response::from_string(html)
-            .with_header(Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap()),
-    );
+    // Read just enough to grab the request line.
+    let mut buf = [0u8; 4096];
+    let n = stream.read(&mut buf).unwrap_or(0);
+    let raw = std::str::from_utf8(&buf[..n]).unwrap_or("");
+    // First line: "GET /path?query HTTP/1.1"
+    let path = raw
+        .lines()
+        .next()
+        .and_then(|l| l.split_whitespace().nth(1))
+        .unwrap_or("/");
 
-    let parsed = url::Url::parse(&format!("http://127.0.0.1{url}")).map_err(|e| e.to_string())?;
-    let mut out: HashMap<String, String> = HashMap::new();
-    for (k, v) in parsed.query_pairs() {
-        out.insert(k.into_owned(), v.into_owned());
+    let html = b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n\
+        <html><body style=\"font-family:system-ui;padding:40px;color:#333\">\
+        <h2>Connected!</h2><p>You can close this tab and return to Bozz.</p>\
+        </body></html>";
+    let _ = stream.write_all(html);
+
+    // Parse query string from the path.
+    let query = path.splitn(2, '?').nth(1).unwrap_or("");
+    let mut out = HashMap::new();
+    for pair in query.split('&').filter(|s| !s.is_empty()) {
+        let mut parts = pair.splitn(2, '=');
+        let k = parts.next().unwrap_or("").replace('+', " ");
+        let v = parts.next().unwrap_or("").replace('+', " ");
+        let k = urlencoding_decode(&k);
+        let v = urlencoding_decode(&v);
+        out.insert(k, v);
     }
     Ok(out)
+}
+
+fn urlencoding_decode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '%' {
+            let h: String = chars.by_ref().take(2).collect();
+            if let Ok(b) = u8::from_str_radix(&h, 16) {
+                out.push(b as char);
+            } else {
+                out.push('%');
+                out.push_str(&h);
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// Fetch the most recent inbox messages over IMAP/TLS.
