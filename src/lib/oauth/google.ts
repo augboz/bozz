@@ -12,6 +12,8 @@ import { secretSet } from './keyring';
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
   ?? 'https://life-bozz.vercel.app';
 
+const GOOGLE_LOCAL_PORT = 14987;
+
 export interface GoogleTokenResult {
   accessToken: string;
   refreshToken: string | null;
@@ -59,9 +61,9 @@ export async function connectGoogle(
       }).then(fn => { unlisten = fn; });
     });
 
-    const runPromise = invoke<Record<string, string>>('oauth_run');
-    const port = await portPromise;
-    redirectUri = `http://127.0.0.1:${port}`;
+    const runPromise = invoke<Record<string, string>>('oauth_run', { port: GOOGLE_LOCAL_PORT });
+    await portPromise;
+    redirectUri = `http://127.0.0.1:${GOOGLE_LOCAL_PORT}`;
 
     await openUrl(buildAuthUrl(redirectUri));
     params = await runPromise;
