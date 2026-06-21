@@ -50,14 +50,23 @@ jobs:
             If you already have Bozz installed, it will update itself automatically on next launch.
           releaseDraft: false
           prerelease: false
-          updaterJsonKeepUniversal: true
 
-      - name: Upload fixed-name installer
+      - name: Upload fixed-name installer and updater files
         shell: pwsh
         run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+
+          # Fixed-name installer for easy download
           $exe = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Where-Object { $_.Name -notlike "*.sig" } | Select-Object -First 1
           Copy-Item $exe.FullName "src-tauri/target/release/bundle/nsis/Bozz-setup.exe"
-          gh release upload ${{ github.ref_name }} "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
+          gh release upload $tag "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
+
+          # Upload NSIS zip and sig for updater
+          $nsisZip = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip"
+          $nsisSig = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip.sig"
+          gh release upload $tag $nsisZip --clobber
+          gh release upload $tag $nsisSig --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -127,13 +136,72 @@ jobs:
           prerelease: false
           args: --target x86_64-apple-darwin
 
-      - name: Upload fixed-name DMGs
+      - name: Upload fixed-name DMGs and updater sig files
         run: |
-          ARM=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
-          INTEL=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
-          cp "$ARM"   src-tauri/target/Bozz-mac-arm.dmg
-          cp "$INTEL" src-tauri/target/Bozz-mac-intel.dmg
-          gh release upload ${{ github.ref_name }} src-tauri/target/Bozz-mac-arm.dmg --clobber
-          gh release upload ${{ github.ref_name }} src-tauri/target/Bozz-mac-intel.dmg --clobber
+          TAG="${{ github.ref_name }}"
+
+          ARM_DMG=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          INTEL_DMG=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          cp "$ARM_DMG"   src-tauri/target/Bozz-mac-arm.dmg
+          cp "$INTEL_DMG" src-tauri/target/Bozz-mac-intel.dmg
+          gh release upload "$TAG" src-tauri/target/Bozz-mac-arm.dmg --clobber
+          gh release upload "$TAG" src-tauri/target/Bozz-mac-intel.dmg --clobber
+
+          # Upload sig files for updater JSON generation
+          cp src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Bozz.app.tar.gz.sig \
+             src-tauri/target/Bozz-arm64.app.tar.gz.sig
+          cp src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Bozz.app.tar.gz.sig \
+             src-tauri/target/Bozz-x64.app.tar.gz.sig
+          gh release upload "$TAG" src-tauri/target/Bozz-arm64.app.tar.gz.sig --clobber
+          gh release upload "$TAG" src-tauri/target/Bozz-x64.app.tar.gz.sig --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-updater:
+    needs: [release-windows, release-mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Generate and upload latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          REPO="augboz/bozz"
+
+          mkdir /tmp/sigs
+          gh release download "$TAG" --repo "$REPO" \
+            --pattern "*.nsis.zip.sig" \
+            --pattern "Bozz-arm64.app.tar.gz.sig" \
+            --pattern "Bozz-x64.app.tar.gz.sig" \
+            --dir /tmp/sigs
+
+          WIN_SIG=$(cat "/tmp/sigs/Bozz_${VERSION}_x64-setup.nsis.zip.sig")
+          ARM_SIG=$(cat "/tmp/sigs/Bozz-arm64.app.tar.gz.sig")
+          INTEL_SIG=$(cat "/tmp/sigs/Bozz-x64.app.tar.gz.sig")
+          PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$PUB_DATE" \
+            --arg win_sig "$WIN_SIG" \
+            --arg win_url "https://github.com/${REPO}/releases/download/${TAG}/Bozz_${VERSION}_x64-setup.nsis.zip" \
+            --arg arm_sig "$ARM_SIG" \
+            --arg arm_url "https://github.com/${REPO}/releases/download/${TAG}/Bozz_aarch64.app.tar.gz" \
+            --arg intel_sig "$INTEL_SIG" \
+            --arg intel_url "https://github.com/${REPO}/releases/download/${TAG}/Bozz_x64.app.tar.gz" \
+            '{
+              version: $version,
+              notes: "See the GitHub release for details.",
+              pub_date: $pub_date,
+              platforms: {
+                "windows-x86_64": { signature: $win_sig, url: $win_url },
+                "darwin-aarch64": { signature: $arm_sig, url: $arm_url },
+                "darwin-x86_64": { signature: $intel_sig, url: $intel_url }
+              }
+            }' > /tmp/latest.json
+
+          gh release upload "$TAG" /tmp/latest.json --repo "$REPO" --clobber
