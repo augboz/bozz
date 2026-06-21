@@ -53,6 +53,10 @@ jobs:
 
       - name: Upload fixed-name installer and updater files
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           $tag = "${{ github.ref_name }}"
           $version = $tag.TrimStart('v')
@@ -62,13 +66,20 @@ jobs:
           Copy-Item $exe.FullName "src-tauri/target/release/bundle/nsis/Bozz-setup.exe"
           gh release upload $tag "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
 
-          # Upload NSIS zip and sig for updater
+          # Upload NSIS zip and sig for updater (tauri build creates these when signing works)
           $nsisZip = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip"
           $nsisSig = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip.sig"
+
+          # If tauri build didn't create the NSIS zip+sig, create and sign manually
+          if (-not (Test-Path $nsisZip)) {
+            $setupExe = "src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.exe"
+            Compress-Archive -Path $setupExe -DestinationPath $nsisZip
+            $env:TAURI_SIGNING_PRIVATE_KEY = $env:TAURI_SIGNING_PRIVATE_KEY
+            npx tauri signer sign $nsisZip -k $env:TAURI_SIGNING_PRIVATE_KEY -p "$($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)"
+          }
+
           gh release upload $tag $nsisZip --clobber
           gh release upload $tag $nsisSig --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-mac:
     runs-on: macos-latest
@@ -136,8 +147,13 @@ jobs:
           prerelease: false
           args: --target x86_64-apple-darwin
 
-      - name: Upload fixed-name DMGs and updater sig files
+      - name: Upload fixed-name DMGs and sign updater tarballs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
+          set -e
           TAG="${{ github.ref_name }}"
 
           ARM_DMG=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
@@ -147,15 +163,25 @@ jobs:
           gh release upload "$TAG" src-tauri/target/Bozz-mac-arm.dmg --clobber
           gh release upload "$TAG" src-tauri/target/Bozz-mac-intel.dmg --clobber
 
-          # Upload sig files for updater JSON generation
-          cp src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Bozz.app.tar.gz.sig \
-             src-tauri/target/Bozz-arm64.app.tar.gz.sig
-          cp src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Bozz.app.tar.gz.sig \
-             src-tauri/target/Bozz-x64.app.tar.gz.sig
+          # tauri-action creates tar.gz from .app; sign it ourselves
+          ARM_TGZ="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Bozz.app.tar.gz"
+          INTEL_TGZ="src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Bozz.app.tar.gz"
+
+          # Create tar.gz if tauri-action didn't (signing may have been skipped)
+          if [ ! -f "$ARM_TGZ" ]; then
+            tar czf "$ARM_TGZ" -C "$(dirname "$ARM_TGZ")" Bozz.app
+          fi
+          if [ ! -f "$INTEL_TGZ" ]; then
+            tar czf "$INTEL_TGZ" -C "$(dirname "$INTEL_TGZ")" Bozz.app
+          fi
+
+          npx tauri signer sign "$ARM_TGZ" -k "$TAURI_SIGNING_PRIVATE_KEY" -p "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
+          npx tauri signer sign "$INTEL_TGZ" -k "$TAURI_SIGNING_PRIVATE_KEY" -p "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
+
+          cp "${ARM_TGZ}.sig"   src-tauri/target/Bozz-arm64.app.tar.gz.sig
+          cp "${INTEL_TGZ}.sig" src-tauri/target/Bozz-x64.app.tar.gz.sig
           gh release upload "$TAG" src-tauri/target/Bozz-arm64.app.tar.gz.sig --clobber
           gh release upload "$TAG" src-tauri/target/Bozz-x64.app.tar.gz.sig --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-updater:
     needs: [release-windows, release-mac]
