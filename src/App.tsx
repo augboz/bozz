@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { Update } from '@tauri-apps/plugin-updater';
 import './index.css';
 import Dashboard from './components/Dashboard';
 import QuickCapture from './components/QuickCapture';
 import AuthGate, { useSession } from './components/AuthGate';
+import UpdatePrompt from './components/UpdatePrompt';
 import { isTauri } from './lib/platform';
 
 function DashboardKeyed() {
@@ -39,23 +41,19 @@ function OAuthCallbackPage() {
 }
 
 export default function App() {
+  const [update, setUpdate] = useState<Update | null>(null);
+
   useEffect(() => {
     if (!isTauri()) return;
     const timer = setTimeout(async () => {
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
-        const update = await check();
-        if (update) {
-          const yes = window.confirm(
-            `Bozz v${update.version} is available.\n\nInstall and restart now?`
-          );
-          if (yes) {
-            await update.downloadAndInstall();
-            const { relaunch } = await import('@tauri-apps/plugin-process');
-            await relaunch();
-          }
-        }
-      } catch { /* silent on network/update errors */ }
+        const found = await check();
+        // Show the themed prompt instead of the native confirm() dialog. The
+        // install + relaunch is handled inside UpdatePrompt, which surfaces any
+        // error instead of silently swallowing it.
+        if (found) setUpdate(found);
+      } catch (err) { console.warn('[updater]', err); }
     }, 5000);
     return () => clearTimeout(timer);
   }, []);
@@ -65,8 +63,11 @@ export default function App() {
   // OAuth callback: provider redirected back with code= or error=
   if (sp.has('code') || sp.has('error')) return <OAuthCallbackPage />;
   return (
-    <AuthGate>
-      <DashboardKeyed />
-    </AuthGate>
+    <>
+      <AuthGate>
+        <DashboardKeyed />
+      </AuthGate>
+      {update && <UpdatePrompt update={update} onClose={() => setUpdate(null)} />}
+    </>
   );
 }
