@@ -1,6 +1,6 @@
 [package]
 name = "bozz"
-version = "0.1.28"
+version = "0.1.29"
 description = "Bozz — personal life dashboard"
 authors = ["you"]
 edition = "2021"
@@ -23,6 +23,11 @@ tauri-plugin-http = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+# tauri-plugin-updater pulls in `zip` without a deflate decoder, so its in-app
+# updater can only extract STORED zips and fails on Deflate ones with
+# "Compression method not supported". Enabling the `deflate` feature here unifies
+# onto the same `zip` instance so the updater can read compressed archives too.
+zip = { version = "4", default-features = false, features = ["deflate"] }
 url = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

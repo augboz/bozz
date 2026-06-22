@@ -115,17 +115,22 @@ jobs:
           cp "$exe" src-tauri/target/release/bundle/nsis/Bozz-setup.exe
           gh release upload "$tag" "src-tauri/target/release/bundle/nsis/Bozz-setup.exe" --clobber
 
-          nsisZip="src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip"
-          nsisSig="src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.nsis.zip.sig"
+          nsisDir="src-tauri/target/release/bundle/nsis"
+          nsisZip="$nsisDir/Bozz_${version}_x64-setup.nsis.zip"
+          nsisSig="$nsisZip.sig"
+          setupExe="Bozz_${version}_x64-setup.exe"
 
-          # If tauri build didn't create the NSIS zip+sig, create and sign manually
-          if [ ! -f "$nsisZip" ]; then
-            setupExe="src-tauri/target/release/bundle/nsis/Bozz_${version}_x64-setup.exe"
-            cd src-tauri/target/release/bundle/nsis
-            7z a -tzip "Bozz_${version}_x64-setup.nsis.zip" "Bozz_${version}_x64-setup.exe"
-            cd - > /dev/null
-            npx tauri signer sign "$nsisZip" -k "$TAURI_SIGNING_PRIVATE_KEY" -p "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
-          fi
+          # The in-app updater (tauri-plugin-updater) links the `zip` crate WITHOUT a
+          # deflate decoder, so it can ONLY extract STORED (uncompressed) zips. Tauri's
+          # NSIS bundler writes the updater zip with Deflate, which installed clients
+          # reject at install time with "unsupported Zip archive: Compression method not
+          # supported". Always repack the updater zip with no compression (-mx0) and
+          # re-sign it, so the archive is extractable regardless of what the bundler
+          # produced. Repacking from Bozz_${version}_x64-setup.exe also picks up the
+          # SignPath-signed installer when signing ran above.
+          rm -f "$nsisZip" "$nsisSig"
+          ( cd "$nsisDir" && 7z a -tzip -mx0 "Bozz_${version}_x64-setup.nsis.zip" "$setupExe" )
+          npx tauri signer sign "$nsisZip" -k "$TAURI_SIGNING_PRIVATE_KEY" -p "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
 
           gh release upload "$tag" "$nsisZip" --clobber
           gh release upload "$tag" "$nsisSig" --clobber
