@@ -5,6 +5,13 @@ on:
     tags:
       - 'v*'
 
+env:
+  # Make cargo resilient to transient crates.io download hiccups. v0.1.25's
+  # release failed with "download of regex failed: curl failed" — a flaky
+  # network error, not a code problem. Retry downloads and use the git CLI.
+  CARGO_NET_RETRY: "10"
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
 jobs:
   release-windows:
     runs-on: windows-latest
