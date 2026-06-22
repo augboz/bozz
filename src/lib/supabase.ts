@@ -1,4 +1,6 @@
 import { createClient, type Session } from '@supabase/supabase-js';
+import { platformFetch } from './http';
+import { isTauri } from './platform';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_KEY as string | undefined;
@@ -18,6 +20,10 @@ export const supabase = createClient(
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
+    },
+    global: {
+      // WebView2 blocks cross-origin window.fetch; route through Tauri's HTTP plugin instead.
+      fetch: isTauri() ? (platformFetch as typeof globalThis.fetch) : globalThis.fetch,
     },
   },
 );
