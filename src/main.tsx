@@ -17,7 +17,7 @@ if (typeof window.__TAURI_INTERNALS__ !== 'undefined') {
     else { Object.entries(h as Record<string,string>).forEach(([k,v]) => { out[k] = safe(v); }); }
     return { ...init, headers: out };
   };
-  // @ts-expect-error patching globals
+  // @ts-ignore patching globals
   window.Headers = class extends _Hdrs {
     constructor(init?: HeadersInit) {
       if (init && !(init instanceof _Hdrs)) {
