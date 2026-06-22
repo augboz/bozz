@@ -199,7 +199,10 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const advanceStage = (item: TopicItem) => {
     const idx = topic.stages.findIndex(s => s.id === item.stageId);
-    const next = topic.stages.find((s, i) => i > idx && !s.done);
+    // Advance to the immediate next stage — including a `done` stage. The old
+    // code skipped `done` stages (`!s.done`), which made tasks get stuck on the
+    // last stage before "Done" because the only remaining stage was filtered out.
+    const next = topic.stages[idx + 1];
     if (!next) return;
     updateItem({ ...item, stageId: next.id, completedAt: next.done ? Date.now() : null });
   };

@@ -7,7 +7,14 @@ import ReactDOM from "react-dom/client";
 if (typeof window.__TAURI_INTERNALS__ !== 'undefined') {
   const _Req  = window.Request;
   const _Hdrs = window.Headers;
-  const safe  = (s: string) => s.replace(/[^\x00-\xFF]/g, '');
+  // Strip code points > 0xFF (WebView2 rejects non-ISO-8859-1 header values)
+  // AND coerce non-strings first: header values are occasionally numbers or
+  // undefined (e.g. Content-Length, or library-set headers), and calling
+  // .replace on a non-string throws "x.replace is not a function" — which is
+  // exactly what crashed sign-up/sign-in. Tauri's own plugin-http guards
+  // header values the same way (`typeof val === 'string' ? val : val.toString()`).
+  const safe  = (v: unknown): string =>
+    (typeof v === 'string' ? v : v == null ? '' : String(v)).replace(/[^\x00-\xFF]/g, '');
   const sanitiseInit = (init?: RequestInit): RequestInit | undefined => {
     if (!init?.headers) return init;
     const h = init.headers;
@@ -23,7 +30,7 @@ if (typeof window.__TAURI_INTERNALS__ !== 'undefined') {
       if (init && !(init instanceof _Hdrs)) {
         const out: Record<string, string> = {};
         const entries = Array.isArray(init) ? init : Object.entries(init as Record<string,string>);
-        (entries as [string,string][]).forEach(([k,v]) => { out[k] = safe(String(v)); });
+        (entries as [string, unknown][]).forEach(([k,v]) => { out[k] = safe(v); });
         super(out); return;
       }
       super(init as undefined);
