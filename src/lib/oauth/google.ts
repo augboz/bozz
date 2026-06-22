@@ -45,46 +45,40 @@ export async function connectGoogle(
 
   if (isTauri()) {
     // ── Desktop (Tauri): TCP server + system browser ────────────────────────
-    // Opening auth in a WebView2 popup causes Google to detect the embedded
-    // browser and route sign-in through Edge, where our popup can't intercept
-    // the redirect. Instead we open the URL in the user's real browser and let
-    // a local TCP server catch the callback — the standard desktop OAuth flow.
+    // oauth_run binds to port 0 (OS always assigns a free port — never fails),
+    // emits oauth:port so we know which port to put in the redirect_uri, then
+    // blocks until the browser callback lands. We open the auth URL in the
+    // user's real browser so Google never sees WebView2.
     const { invoke } = await import('@tauri-apps/api/core');
     const { listen } = await import('@tauri-apps/api/event');
     const { openUrl } = await import('@tauri-apps/plugin-opener');
 
-    let deepResolve: ((p: Record<string, string>) => void) | null = null;
-    let deepReject: ((e: Error) => void) | null = null;
-
-    const paramsPromise = new Promise<Record<string, string>>((res, rej) => {
-      deepResolve = res;
-      deepReject = rej;
+    // Subscribe to oauth:port BEFORE starting the server so we can't miss it.
+    let portResolve: ((p: number) => void) | null = null;
+    let portReject: ((e: Error) => void) | null = null;
+    const portPromise = new Promise<number>((res, rej) => {
+      portResolve = res;
+      portReject = rej;
     });
+    const unlisten = await listen<number>('oauth:port', (e) => portResolve?.(e.payload));
 
-    const unlisten = await listen<string>('oauth:callback', (e) => {
-      try {
-        const url = new URL(e.payload);
-        const p: Record<string, string> = {};
-        url.searchParams.forEach((v, k) => { p[k] = v; });
-        deepResolve?.(p);
-      } catch (err) {
-        deepReject?.(err instanceof Error ? err : new Error(String(err)));
-      }
-    });
+    // Start server — port: null → OS picks a guaranteed-free random port.
+    // The invoke resolves with the parsed query params once the redirect lands.
+    const runPromise = invoke<Record<string, string>>('oauth_run', { port: null });
+    runPromise.catch((e: unknown) =>
+      portReject?.(e instanceof Error ? e : new Error(String(e))),
+    );
 
     const timeout = setTimeout(
-      () => deepReject?.(new Error('Sign in timed out')),
+      () => portReject?.(new Error('Sign in timed out')),
       300_000,
     );
 
     try {
-      const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
-        .catch(() => 14987);
-      redirectUri = `http://127.0.0.1:${tcpPort}`;
-
-      // Open in the user's real browser — no WebView2 detection issues.
+      const port = await portPromise;
+      redirectUri = `http://127.0.0.1:${port}`;
       await openUrl(buildAuthUrl(redirectUri));
-      params = await paramsPromise;
+      params = await runPromise;
     } finally {
       clearTimeout(timeout);
       unlisten();
