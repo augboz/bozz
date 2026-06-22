@@ -42,13 +42,19 @@ fn secret_delete(account: String) -> Result<(), String> {
 /// `on_navigation`.  This handles the case where Google detects WebView2 and
 /// opens the sign-in completion in the default system browser instead of the
 /// in-app popup.
+///
+/// Returns the port actually bound (may differ from `port` if that port was busy).
 #[tauri::command]
-fn start_oauth_server(app: tauri::AppHandle, port: u16) -> Result<(), String> {
+fn start_oauth_server(app: tauri::AppHandle, port: u16) -> Result<u16, String> {
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
-    let addr = format!("127.0.0.1:{port}");
-    let listener = TcpListener::bind(&addr).map_err(|e| format!("bind {addr}: {e}"))?;
+    // Try the requested port; fall back to a random OS-assigned port if busy.
+    let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
+        .or_else(|_| TcpListener::bind("127.0.0.1:0"))
+        .map_err(|e| format!("bind: {e}"))?;
+
+    let actual_port = listener.local_addr().map_err(|e| e.to_string())?.port();
 
     std::thread::spawn(move || {
         if let Ok((mut stream, _)) = listener.accept() {
@@ -70,12 +76,12 @@ fn start_oauth_server(app: tauri::AppHandle, port: u16) -> Result<(), String> {
             );
 
             let query = path.splitn(2, '?').nth(1).unwrap_or("");
-            let callback_url = format!("http://127.0.0.1:{port}?{query}");
+            let callback_url = format!("http://127.0.0.1:{actual_port}?{query}");
             let _ = app.emit("oauth:callback", callback_url);
         }
     });
 
-    Ok(())
+    Ok(actual_port)
 }
 
 /// Opens a popup WebviewWindow for OAuth sign-in.

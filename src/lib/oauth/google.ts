@@ -51,7 +51,7 @@ export async function connectGoogle(
     // a local TCP server catch the callback — the standard desktop OAuth flow.
     const { invoke } = await import('@tauri-apps/api/core');
     const { listen } = await import('@tauri-apps/api/event');
-    const { open } = await import('@tauri-apps/plugin-opener');
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
 
     let deepResolve: ((p: Record<string, string>) => void) | null = null;
     let deepReject: ((e: Error) => void) | null = null;
@@ -83,7 +83,7 @@ export async function connectGoogle(
       redirectUri = `http://127.0.0.1:${tcpPort}`;
 
       // Open in the user's real browser — no WebView2 detection issues.
-      await open(buildAuthUrl(redirectUri));
+      await openUrl(buildAuthUrl(redirectUri));
       params = await paramsPromise;
     } finally {
       clearTimeout(timeout);
