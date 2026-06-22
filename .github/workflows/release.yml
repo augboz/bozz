@@ -10,6 +10,11 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      id-token: write   # lets SignPath verify the build via GitHub OIDC
+    env:
+      # Gates the SignPath signing steps below. Until this secret is set, signing
+      # is skipped and the release ships unsigned exactly as before.
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +55,42 @@ jobs:
             If you already have Bozz installed, it will update itself automatically on next launch.
           releaseDraft: false
           prerelease: false
+
+      # ── Authenticode signing via SignPath (free for OSS projects) ──────────
+      # Signs the NSIS installer so Microsoft Defender/SmartScreen stops
+      # flagging it. Skipped entirely until SIGNPATH_API_TOKEN is configured.
+      # The signed .exe overwrites the unsigned one in place, so the steps below
+      # (fixed-name copy + updater .nsis.zip) pick up the signed binary.
+      - name: Upload unsigned installer for signing
+        if: env.SIGNPATH_API_TOKEN != ''
+        id: unsigned_installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: src-tauri/target/release/bundle/nsis/*_x64-setup.exe
+
+      - name: Sign installer with SignPath
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: bozz
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned_installer.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: src-tauri/target/release/bundle/nsis/
+
+      - name: Re-upload signed installer to release
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          tag="${{ github.ref_name }}"
+          signed=$(find src-tauri/target/release/bundle/nsis -name "*_x64-setup.exe" | head -1)
+          gh release upload "$tag" "$signed" --clobber
 
       - name: Upload fixed-name installer and updater files
         shell: bash
