@@ -44,13 +44,14 @@ export async function connectGoogle(
   let redirectUri: string;
 
   if (isTauri()) {
-    // ── Desktop (Tauri): open auth in a popup Tauri window ─────────────────
-    // on_navigation intercepts the redirect to 127.0.0.1 before any TCP
-    // connection is attempted, so no local server is needed.
+    // ── Desktop (Tauri): TCP server + system browser ────────────────────────
+    // Opening auth in a WebView2 popup causes Google to detect the embedded
+    // browser and route sign-in through Edge, where our popup can't intercept
+    // the redirect. Instead we open the URL in the user's real browser and let
+    // a local TCP server catch the callback — the standard desktop OAuth flow.
     const { invoke } = await import('@tauri-apps/api/core');
     const { listen } = await import('@tauri-apps/api/event');
-
-    redirectUri = 'http://127.0.0.1:14987'; // Google Desktop clients allow any loopback port
+    const { open } = await import('@tauri-apps/plugin-opener');
 
     let deepResolve: ((p: Record<string, string>) => void) | null = null;
     let deepReject: ((e: Error) => void) | null = null;
@@ -77,22 +78,16 @@ export async function connectGoogle(
     );
 
     try {
-      // Start TCP server first — catches the redirect if Google opens Edge.
-      await invoke('start_oauth_server', { port: 14987 }).catch(() => {/* port busy, popup-only */});
-      await invoke('open_oauth_window', {
-        url: buildAuthUrl(redirectUri),
-        redirectPrefix: redirectUri,
-      });
+      const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
+        .catch(() => 14987);
+      redirectUri = `http://127.0.0.1:${tcpPort}`;
+
+      // Open in the user's real browser — no WebView2 detection issues.
+      await open(buildAuthUrl(redirectUri));
       params = await paramsPromise;
     } finally {
       clearTimeout(timeout);
       unlisten();
-      // Close the OAuth popup (it may already be closed by the navigation cancel)
-      try {
-        const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        const win = await WebviewWindow.getByLabel('oauth');
-        if (win) win.close();
-      } catch { /* already closed */ }
     }
 
   } else {

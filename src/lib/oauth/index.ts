@@ -106,11 +106,10 @@ export async function connectProvider(
   let redirectUri: string;
 
   if (isTauri()) {
-    // ── Desktop (Tauri): open auth in a popup Tauri window ─────────────────
+    // ── Desktop (Tauri): TCP server + system browser ────────────────────────
     const { invoke } = await import('@tauri-apps/api/core');
     const { listen } = await import('@tauri-apps/api/event');
-
-    redirectUri = 'http://127.0.0.1:14987';
+    const { open } = await import('@tauri-apps/plugin-opener');
 
     let deepResolve: ((p: Record<string, string>) => void) | null = null;
     let deepReject: ((e: Error) => void) | null = null;
@@ -136,8 +135,9 @@ export async function connectProvider(
       300_000,
     );
 
-    // Start TCP server first — catches the redirect if Google opens Edge instead of the popup.
-    await invoke('start_oauth_server', { port: 14987 }).catch(() => {/* port busy, popup-only */});
+    const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
+      .catch(() => 14987);
+    redirectUri = `http://127.0.0.1:${tcpPort}`;
 
     const authParams = new URLSearchParams({
       client_id: clientId,
@@ -151,19 +151,11 @@ export async function connectProvider(
     });
 
     try {
-      await invoke('open_oauth_window', {
-        url: `${cfg.authUrl}?${authParams.toString()}`,
-        redirectPrefix: redirectUri,
-      });
+      await open(`${cfg.authUrl}?${authParams.toString()}`);
       params = await paramsPromise;
     } finally {
       clearTimeout(timeout);
       unlisten();
-      try {
-        const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        const win = await WebviewWindow.getByLabel('oauth');
-        if (win) win.close();
-      } catch { /* already closed */ }
     }
 
   } else {
