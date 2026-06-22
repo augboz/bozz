@@ -41,11 +41,15 @@ function verifyTerraSignature(req, secret) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
 
+  // Fail CLOSED: require a configured signing secret and a valid signature.
+  // (Previously, if TERRA_SIGNING_SECRET was unset the check was skipped and
+  // any internet POST could write forged health data via the service key.)
   const terraSecret = process.env.TERRA_SIGNING_SECRET;
-  if (terraSecret) {
-    if (!verifyTerraSignature(req, terraSecret)) {
-      return res.status(401).json({ error: 'Invalid webhook signature' });
-    }
+  if (!terraSecret) {
+    return res.status(503).json({ error: 'Webhook signing secret not configured' });
+  }
+  if (!verifyTerraSignature(req, terraSecret)) {
+    return res.status(401).json({ error: 'Invalid webhook signature' });
   }
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;

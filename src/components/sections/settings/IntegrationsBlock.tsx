@@ -23,6 +23,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, RefreshCw, ChevronDown } from 'lucide-react';
 import { isWeb } from '../../../lib/platform';
 import { platformFetch } from '../../../lib/http';
+import { apiFetch } from '../../../lib/apiClient';
 // Tauri-only APIs — imported lazily inside functions so they don't crash on web
 const tauriInvoke = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
   const { invoke } = await import('@tauri-apps/api/core'); return invoke<T>(cmd, args);
@@ -612,7 +613,7 @@ async function connectNotionOAuth(
   if (params.state !== state) throw new Error('State mismatch — possible CSRF');
 
   // Token exchange via server proxy — Notion client secret stays server-side
-  const tokenRes = await platformFetch(`${API_BASE}/api/notion-token`, {
+  const tokenRes = await apiFetch(`${API_BASE}/api/notion-token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code: params.code, redirect_uri: redirectUri }),

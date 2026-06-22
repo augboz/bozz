@@ -4,6 +4,8 @@
  * Body: { institution_id: string, return_url: string }
  * Response: { requisition_id: string, link: string }
  */
+import { authed } from './_auth.js';
+
 async function getToken() {
   const r = await fetch('https://bankaccountdata.gocardless.com/api/v2/token/new/', {
     method: 'POST',
@@ -20,6 +22,7 @@ async function getToken() {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
+  if (!(await authed(req, res))) return;
 
   if (!process.env.GOCARDLESS_SECRET_ID) {
     return res.status(503).json({ error: 'GoCardless not configured' });

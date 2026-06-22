@@ -1,4 +1,5 @@
 import { platformFetch } from '../http';
+import { apiFetch } from '../apiClient';
 import { isTauri } from '../platform';
 import type { EmailProvider, OAuthAccount } from '../types';
 import { pkceChallenge, randomString } from './pkce';
@@ -191,7 +192,7 @@ export async function connectProvider(
   // Other providers (e.g. Outlook public clients) call the token URL directly.
   let tokenRes: Response;
   if (cfg.usesClientSecret && cfg.tokenUrl.includes('google')) {
-    tokenRes = await platformFetch(`${API_BASE}/api/google-token`, {
+    tokenRes = await apiFetch(`${API_BASE}/api/google-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -245,7 +246,7 @@ export async function refreshAccessToken(
 ): Promise<{ accessToken: string; expiresAt: number; newRefreshToken?: string }> {
   let res: Response;
   if (cfg.usesClientSecret && cfg.tokenUrl.includes('google')) {
-    res = await platformFetch(`${API_BASE}/api/google-token`, {
+    res = await apiFetch(`${API_BASE}/api/google-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

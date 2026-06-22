@@ -5,6 +5,8 @@
  * Setup: Sign up free at bankaccountdata.gocardless.com
  * Add to Vercel env vars: GOCARDLESS_SECRET_ID, GOCARDLESS_SECRET_KEY
  */
+import { authed } from './_auth.js';
+
 async function getToken() {
   const r = await fetch('https://bankaccountdata.gocardless.com/api/v2/token/new/', {
     method: 'POST',
@@ -20,6 +22,8 @@ async function getToken() {
 }
 
 export default async function handler(req, res) {
+  if (!(await authed(req, res))) return;
+
   const secretId = process.env.GOCARDLESS_SECRET_ID;
   const secretKey = process.env.GOCARDLESS_SECRET_KEY;
 

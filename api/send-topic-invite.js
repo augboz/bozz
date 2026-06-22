@@ -11,6 +11,8 @@
  * Add RESEND_API_KEY to Vercel environment variables.
  * In Resend, verify a sending domain or use the sandbox (resend.dev) for testing.
  */
+import { authed } from './_auth.js';
+
 function escHtml(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
@@ -22,6 +24,7 @@ function escHtml(str) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed');
+  if (!(await authed(req, res))) return;
 
   const { inviteUrl, invitedEmail, ownerEmail, topicName } = req.body ?? {};
   if (!inviteUrl || !invitedEmail) return res.status(400).json({ error: 'Missing fields' });

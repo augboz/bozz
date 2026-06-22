@@ -5,6 +5,7 @@
  */
 
 import { platformFetch } from '../http';
+import { apiFetch } from '../apiClient';
 import { isTauri } from '../platform';
 import { pkceChallenge, randomString } from './pkce';
 import { secretSet } from './keyring';
@@ -136,7 +137,7 @@ export async function connectGoogle(
   if (params.state !== state) throw new Error('State mismatch');
 
   // Exchange code → tokens via server proxy (secret stays server-side)
-  const tokenRes = await platformFetch(`${API_BASE}/api/google-token`, {
+  const tokenRes = await apiFetch(`${API_BASE}/api/google-token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

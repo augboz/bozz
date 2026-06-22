@@ -3,6 +3,8 @@
  * Fetches bank transactions for a completed GoCardless requisition.
  * Response: { status, transactions, institution_name }
  */
+import { authed } from './_auth.js';
+
 async function getToken() {
   const r = await fetch('https://bankaccountdata.gocardless.com/api/v2/token/new/', {
     method: 'POST',
@@ -18,6 +20,8 @@ async function getToken() {
 }
 
 export default async function handler(req, res) {
+  if (!(await authed(req, res))) return;
+
   const { req_id } = req.query;
   if (!req_id) return res.status(400).json({ error: 'req_id required' });
 

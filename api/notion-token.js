@@ -4,11 +4,14 @@
  *
  * POST body (JSON): { code, redirect_uri }
  */
+import { authed } from './_auth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end();
   }
+  if (!(await authed(req, res))) return;
 
   const clientId     = process.env.NOTION_CLIENT_ID;
   const clientSecret = process.env.NOTION_CLIENT_SECRET;

@@ -1,4 +1,5 @@
 import { platformFetch } from './http';
+import { apiFetch } from './apiClient';
 /**
  * Google Calendar API helper.
  * Reads the stored OAuth token from keyring and fetches the next 60 days of events
@@ -29,7 +30,7 @@ async function refreshAccessToken(): Promise<string | null> {
     const refresh = await secretGet(storageKey('refresh'));
     if (!refresh) return null;
 
-    const res = await platformFetch(`${API_BASE}/api/google-token`, {
+    const res = await apiFetch(`${API_BASE}/api/google-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'refresh', refresh_token: refresh, client_id: CLIENT_ID }),

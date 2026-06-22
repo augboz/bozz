@@ -8,11 +8,16 @@
  *   exchange: { code, code_verifier, redirect_uri, client_id }
  *   refresh:  { refresh_token, client_id }
  */
+import { authed } from './_auth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end();
   }
+
+  // Require a signed-in Bozz user — this endpoint wields GOOGLE_CLIENT_SECRET.
+  if (!(await authed(req, res))) return;
 
   const secret = process.env.GOOGLE_CLIENT_SECRET;
   if (!secret) return res.status(500).json({ error: 'Server not configured' });
