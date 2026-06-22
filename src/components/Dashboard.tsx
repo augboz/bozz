@@ -1273,8 +1273,11 @@ export default function Dashboard() {
               onDismiss={dismissOnboarding}
             />
           )}
-          {activeSection === 'home' && (
+          {/* Home stays mounted (display toggle) so returning is instant and the
+              widget grid never re-animates — see gridReady in HomeView. */}
+          <div style={{ display: activeSection === 'home' ? undefined : 'none' }}>
             <HomeView
+              visible={activeSection === 'home'}
               items={homeItems}
               setItems={setHomeItems}
               widgetShape={appearance.widgetShape ?? 'rounded'}
@@ -1291,7 +1294,7 @@ export default function Dashboard() {
                 widgetConfig: {}, onWidgetConfig: () => {},
               }}
             />
-          )}
+          </div>
           {activeSection === 'music' && (
             <SimpleListView items={musicItems} setItems={setMusicItems} t={t}
               accent={sectionAccents.music} placeholder="add a music task…" emptyText="no music tasks yet"

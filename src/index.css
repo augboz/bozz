@@ -184,6 +184,10 @@ button:focus-visible {
 .topic-grid:not(.topic-grid-ready) .react-grid-item {
   transition: none !important;
 }
+/* Same for the Home grid — stops widgets sliding in when you open/return to Home */
+.home-grid:not(.home-grid-ready) .react-grid-item {
+  transition: none !important;
+}
 .react-grid-item.react-draggable-dragging {
   z-index: 10;
   cursor: grabbing;

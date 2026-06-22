@@ -25,6 +25,9 @@ interface HomeViewProps {
   widgetBorder: WidgetBorder;
   onWidgetShape: (v: WidgetShape) => void;
   onWidgetBorder: (v: WidgetBorder) => void;
+  /** Whether the Home section is currently shown (Home stays mounted). Used to
+   *  re-arm the grid's mount-animation suppression each time it becomes visible. */
+  visible?: boolean;
 }
 
 function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
@@ -36,13 +39,33 @@ function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
 }
 
 
-export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder }: HomeViewProps) {
+export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true }: HomeViewProps) {
   const { t } = ctx;
   const [editMode, setEditMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [configPanelPos, setConfigPanelPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Suppress the react-grid-layout mount slide-in. Re-armed every time Home
+  // becomes visible, because keeping Home mounted under display:none collapses
+  // its width to 0 — on reveal the grid re-measures and would otherwise slide.
+  const [gridReady, setGridReady] = useState(false);
+  useEffect(() => {
+    if (!visible) return;
+    setGridReady(false);
+    const id = window.setTimeout(() => setGridReady(true), 0);
+    return () => window.clearTimeout(id);
+  }, [visible]);
+
+  // Home stays mounted now, so close its edit/add panels when navigating away
+  // (otherwise the portal-rendered AddPanel/config could linger over other pages).
+  useEffect(() => {
+    if (visible) return;
+    setEditMode(false);
+    setShowAdd(false);
+    setConfiguringId(null);
+  }, [visible]);
 
   // ── Page background ────────────────────────────────────────────────────────
   const [pageBg, setPageBgState] = useState<PageBg | null>(null);
@@ -278,7 +301,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
       {editMode && <div style={{ marginBottom: '0.75rem' }} />}
 
       <Grid
-        className="home-grid"
+        className={`home-grid${gridReady ? ' home-grid-ready' : ''}`}
         layout={layout}
         cols={COLS}
         rowHeight={ROW_H}
