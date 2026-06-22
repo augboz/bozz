@@ -31,7 +31,7 @@ if (typeof window.__TAURI_INTERNALS__ !== 'undefined') {
     set(k: string, v: string) { super.set(k, safe(v)); }
     append(k: string, v: string) { super.append(k, safe(v)); }
   };
-  // @ts-expect-error patching globals
+  // @ts-ignore patching globals
   window.Request = class extends _Req {
     constructor(input: RequestInfo | URL, init?: RequestInit) { super(input, sanitiseInit(init)); }
   };
