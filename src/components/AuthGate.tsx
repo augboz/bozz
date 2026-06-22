@@ -129,17 +129,45 @@ export default function AuthGate({ children }: Props) {
   const signInWithGoogle = async () => {
     setBusy(true); setStatus(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: { prompt: 'select_account' },
-        },
-      });
-      if (error) setStatus({ text: error.message, ok: false });
-    } catch (err) { setStatus({ text: String(err), ok: false }); }
-    // Google opens a browser tab; busy state doesn't need resetting here
-    setBusy(false);
+      if (isTauri()) {
+        // In the packaged app window.location.origin is tauri://localhost — not a
+        // valid OAuth redirect. Use a local TCP server + system browser instead.
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { listen }  = await import('@tauri-apps/api/event');
+        const { openUrl } = await import('@tauri-apps/plugin-opener');
+
+        const tcpPort  = await invoke<number>('start_oauth_server', { port: 14985 }).catch(() => 14985);
+        const redirectTo = `http://127.0.0.1:${tcpPort}`;
+
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+        });
+        if (error) { setStatus({ text: error.message, ok: false }); setBusy(false); return; }
+        if (!data?.url) { setStatus({ text: 'No auth URL returned.', ok: false }); setBusy(false); return; }
+
+        const unlisten = await listen<string>('oauth:callback', async (e) => {
+          unlisten();
+          try {
+            const code = new URL(e.payload).searchParams.get('code');
+            if (!code) { setStatus({ text: 'No auth code in callback.', ok: false }); setBusy(false); return; }
+            const { error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchErr) setStatus({ text: exchErr.message, ok: false });
+          } catch (err) { setStatus({ text: String(err), ok: false }); }
+          setBusy(false);
+        });
+
+        await openUrl(data.url);
+        setStatus({ text: 'Browser opened — sign in with Google, then return here.', ok: true });
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } },
+        });
+        if (error) setStatus({ text: error.message, ok: false });
+        setBusy(false);
+      }
+    } catch (err) { setStatus({ text: String(err), ok: false }); setBusy(false); }
   };
 
   const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Enter') void submitPassword(); };
