@@ -109,7 +109,7 @@ export async function connectProvider(
     // ── Desktop (Tauri): TCP server + system browser ────────────────────────
     const { invoke } = await import('@tauri-apps/api/core');
     const { listen } = await import('@tauri-apps/api/event');
-    const { open } = await import('@tauri-apps/plugin-opener');
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
 
     let deepResolve: ((p: Record<string, string>) => void) | null = null;
     let deepReject: ((e: Error) => void) | null = null;
@@ -151,7 +151,7 @@ export async function connectProvider(
     });
 
     try {
-      await open(`${cfg.authUrl}?${authParams.toString()}`);
+      await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
       params = await paramsPromise;
     } finally {
       clearTimeout(timeout);
