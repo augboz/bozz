@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ChevronDown, Palette, Menu, Wallet,
-  Plug, NotebookPen, Power, RotateCcw, ListTree, User, LogOut, Plus, X,
+  ChevronDown, ChevronRight, Palette, Menu,
+  Plug, NotebookPen, Power, RotateCcw, ListTree, LogOut, Plus, X,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
-  AppearancePrefs, CalendarConnection, EmailProvider, FontChoice, FontSize,
-  HealthConnection, MoodId, OAuthAccount, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
+  AppearancePrefs, FontChoice, FontSize,
+  MoodId, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
 } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import { MOODS, THEME_COLOR_BANKS } from '../../lib/themes';
-import { CURRENCIES } from '../../lib/budget';
 import { DEFAULT_COLOR_BANK } from '../../lib/appearance';
 import TopicsBlock from './settings/TopicsBlock';
-import IntegrationsBlock from './settings/IntegrationsBlock';
 
 interface SettingsViewProps {
   t: Theme;
@@ -22,18 +20,10 @@ interface SettingsViewProps {
   resetAppearance: () => void;
   resetHomeLayout: () => void;
   sections: Array<{ id: SectionId; label: string }>;
-  currency: string;
-  onCurrencyChange: (c: string) => void;
   reviewSettings: ReviewSettings;
   onReviewSettingsChange: (s: ReviewSettings) => void;
-  oauthAccounts: OAuthAccount[];
-  emailSyncErrors: Array<{ account: string; error: string }>;
-  onConnectAccount: (provider: EmailProvider, clientId: string) => Promise<void>;
-  onDisconnectAccount: (provider: EmailProvider, email: string) => Promise<void>;
-  calendarConnections?: CalendarConnection[];
-  onCalendarConnectionsChange?: (next: CalendarConnection[]) => void;
-  healthConnections?: HealthConnection[];
-  onHealthConnectionsChange?: (next: HealthConnection[]) => void;
+  /** Navigate to the standalone Apps page (Connected apps button). */
+  onOpenApps: () => void;
   topics: Topic[];
   onTopicsChange: (next: Topic[]) => void;
   topicFolders: TopicFolder[];
@@ -357,11 +347,7 @@ function ColorBankEditor({ t, bank, onChange, currentMood }: {
 
 export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, sections,
-  currency, onCurrencyChange,
-  reviewSettings, onReviewSettingsChange,
-  oauthAccounts, emailSyncErrors, onConnectAccount, onDisconnectAccount,
-  calendarConnections, onCalendarConnectionsChange,
-  healthConnections, onHealthConnectionsChange,
+  reviewSettings, onReviewSettingsChange, onOpenApps,
   topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
   accountEmail, onSignOut,
 }: SettingsViewProps) {
@@ -403,27 +389,23 @@ export default function SettingsView({
     <div>
       <SectionHeader title="Settings" t={t} />
 
-      <Block title="Account" t={t} icon={User}>
-        <Field
-          label={accountEmail ?? 'Not signed in'}
-          hint={accountEmail ? 'Your data syncs across devices when signed in.' : 'Sign in to enable cloud sync.'}
-          t={t}
-        >
-          {accountEmail && (
-            <button
-              onClick={() => { void onSignOut(); }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                background: 'transparent', border: `1px solid ${t.alertBorder}`,
-                color: t.alert, borderRadius: '8px', padding: '0.4rem 0.85rem',
-                fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
-              }}
-            >
-              <LogOut size={13} strokeWidth={1.6} /> Sign out
-            </button>
-          )}
-        </Field>
-      </Block>
+      {/* Connected apps — opens the standalone Apps page */}
+      <button
+        onClick={onOpenApps}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
+          padding: '0.95rem 0.25rem',
+          background: 'transparent', border: 'none', borderTop: `1px solid ${t.border}`,
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          transition: 'background 0.12s ease',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = t.bgAlt)}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      >
+        <Plug size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '0.9rem', color: t.text, fontWeight: 500 }}>Connected apps</span>
+        <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
+      </button>
 
       <Block title="Appearance" t={t} icon={Palette}>
         <Field label="Theme" t={t}>
@@ -554,38 +536,6 @@ export default function SettingsView({
         </div>
       </Block>
 
-      <Block title="Budget" t={t} icon={Wallet}>
-        <Field label="Currency" hint="Used across the Budget section" t={t}>
-          <select
-            value={currency}
-            onChange={e => onCurrencyChange(e.target.value)}
-            aria-label="Currency"
-            style={{
-              background: t.input, border: `1px solid ${t.border}`, borderRadius: '8px',
-              padding: '0.4rem 0.6rem', color: t.text, fontSize: '0.8rem',
-              fontFamily: 'inherit', outline: 'none',
-            }}
-          >
-            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </Field>
-      </Block>
-
-      <Block title="Integrations" t={t} icon={Plug}>
-        <IntegrationsBlock
-          t={t}
-          oauthAccounts={oauthAccounts}
-          emailSyncErrors={emailSyncErrors}
-          onConnectAccount={onConnectAccount}
-          onDisconnectAccount={onDisconnectAccount}
-          calendarConnections={calendarConnections ?? []}
-          onCalendarConnectionsChange={onCalendarConnectionsChange ?? (() => {})}
-          healthConnections={healthConnections ?? []}
-          onHealthConnectionsChange={onHealthConnectionsChange ?? (() => {})}
-          colorBank={appearance.colorBank}
-        />
-      </Block>
-
       <Block title="Weekly review" t={t} icon={NotebookPen}>
         <Field label="Day" hint="When the week-ending review becomes available" t={t}>
           <select
@@ -653,6 +603,26 @@ export default function SettingsView({
           </button>
         </Field>
       </Block>
+
+      {/* Sign out — bottom of the page, no dropdown */}
+      <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+        {accountEmail && (
+          <div style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: '0.75rem' }}>
+            Signed in as <span style={{ color: t.text }}>{accountEmail}</span> · your data syncs across devices.
+          </div>
+        )}
+        <button
+          onClick={() => { void onSignOut(); }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+            background: 'transparent', border: `1px solid ${t.alertBorder}`,
+            color: t.alert, borderRadius: '8px', padding: '0.5rem 1rem',
+            fontSize: '0.8rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
+          }}
+        >
+          <LogOut size={14} strokeWidth={1.6} /> Sign out
+        </button>
+      </div>
     </div>
   );
 }

@@ -89,6 +89,10 @@ export interface IntegrationsProps {
   onCalendarConnectionsChange: (next: CalendarConnection[]) => void;
   healthConnections: HealthConnection[];
   onHealthConnectionsChange: (next: HealthConnection[]) => void;
+  /** Optional free-text filter — matches app names (used by the Apps page search). */
+  searchQuery?: string;
+  /** 'grid' lays cards out in a responsive ~3-col grid; 'list' (default) stacks them. */
+  variant?: 'list' | 'grid';
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -1516,7 +1520,7 @@ export default function IntegrationsBlock({
   t, oauthAccounts, emailSyncErrors, onConnectAccount, onDisconnectAccount,
   calendarConnections, onCalendarConnectionsChange,
   healthConnections, onHealthConnectionsChange,
-  colorBank,
+  colorBank, searchQuery, variant = 'list',
 }: IntegrationsProps) {
   const bank = colorBank ?? [];
   // Track connected state for storage-based services (loaded async)
@@ -1536,8 +1540,6 @@ export default function IntegrationsBlock({
     imap:      localConn.imap,
     whatsapp:  localConn.whatsapp,
   };
-
-  const anyConnected = Object.values(isConnected).some(Boolean);
 
   // Shared card props
   const gmailCard = (
@@ -1564,33 +1566,51 @@ export default function IntegrationsBlock({
   const gfitCard   = <GoogleFitCard       key="gfit"    t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
   const ahealthCard = <AppleHealthCard    key="ahealth" t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
 
-  const allCards: Array<{ id: keyof typeof isConnected; node: React.ReactNode }> = [
-    { id: 'gmail',   node: gmailCard },
-    { id: 'outlook', node: outlookCard },
-    { id: 'icloud',  node: icloudCard },
-    { id: 'imap',    node: imapCard },
-    { id: 'gcal',    node: gcalCard },
-    { id: 'acal',    node: acalCard },
-    { id: 'spotify', node: spotifyCard },
-    { id: 'notion',  node: notionCard },
-    { id: 'gfit',      node: gfitCard },
-    { id: 'ahealth',   node: ahealthCard },
-    { id: 'whatsapp',  node: whatsappCard },
+  // `name`/`keywords` drive the Apps-page search filter.
+  const allCards: Array<{ id: keyof typeof isConnected; name: string; keywords?: string; node: React.ReactNode }> = [
+    { id: 'gmail',   name: 'Gmail',           keywords: 'google email mail',          node: gmailCard },
+    { id: 'outlook', name: 'Outlook / Hotmail', keywords: 'microsoft email mail hotmail', node: outlookCard },
+    { id: 'icloud',  name: 'iCloud Mail',     keywords: 'apple email mail',           node: icloudCard },
+    { id: 'imap',    name: 'Other inbox',     keywords: 'imap email mail',            node: imapCard },
+    { id: 'gcal',    name: 'Google Calendar', keywords: 'google calendar gcal',       node: gcalCard },
+    { id: 'acal',    name: 'Apple Calendar',  keywords: 'apple icloud calendar caldav', node: acalCard },
+    { id: 'spotify', name: 'Spotify',         keywords: 'music',                      node: spotifyCard },
+    { id: 'notion',  name: 'Notion',          keywords: 'notes docs',                 node: notionCard },
+    { id: 'gfit',    name: 'Google Fit',      keywords: 'google health fitness',      node: gfitCard },
+    { id: 'ahealth', name: 'Apple Health',    keywords: 'apple health fitness',       node: ahealthCard },
+    { id: 'whatsapp', name: 'WhatsApp',       keywords: 'messaging chat meta',        node: whatsappCard },
   ];
 
-  const connected  = allCards.filter(c => isConnected[c.id]);
-  const available  = allCards.filter(c => !isConnected[c.id]);
+  const q = (searchQuery ?? '').trim().toLowerCase();
+  const match = (c: { name: string; keywords?: string }) =>
+    !q || c.name.toLowerCase().includes(q) || (c.keywords ?? '').includes(q);
+
+  const connected = allCards.filter(c => isConnected[c.id] && match(c));
+  const available = allCards.filter(c => !isConnected[c.id] && match(c));
+
+  const gridStyle: React.CSSProperties | undefined = variant === 'grid'
+    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.65rem', alignItems: 'start' }
+    : undefined;
 
   return (
     <div>
-      {anyConnected && (
+      {connected.length > 0 && (
         <>
           <SectionLabel t={t} label="Connected" />
-          {connected.map(c => c.node)}
+          <div style={gridStyle}>{connected.map(c => c.node)}</div>
         </>
       )}
-      <SectionLabel t={t} label={anyConnected ? 'Available to connect' : 'Connect a service'} />
-      {available.map(c => c.node)}
+      {available.length > 0 && (
+        <>
+          <SectionLabel t={t} label={connected.length > 0 ? 'Available to connect' : 'Connect a service'} />
+          <div style={gridStyle}>{available.map(c => c.node)}</div>
+        </>
+      )}
+      {q && connected.length === 0 && available.length === 0 && (
+        <div style={{ padding: '2rem 0', textAlign: 'center', color: t.textMuted, fontSize: '0.85rem' }}>
+          No apps match “{searchQuery}”.
+        </div>
+      )}
     </div>
   );
 }

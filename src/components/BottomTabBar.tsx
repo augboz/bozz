@@ -9,7 +9,7 @@
  * Center: scrollable topic/section tabs.
  */
 
-import { Inbox, Settings } from 'lucide-react';
+import { Inbox, Settings, LayoutGrid } from 'lucide-react';
 import type { ElementType, ReactNode } from 'react';
 import type { Theme } from '../lib/types';
 import { sectionAccents } from '../lib/themes';
@@ -31,6 +31,7 @@ interface Props {
   /** Drives the badge on the Quicks button. */
   quicksCount?: number;
   onQuicks?: () => void;
+  onApps?: () => void;
   onSettings?: () => void;
   /** Optional mic button node rendered in the left fixed section. */
   micButton?: ReactNode;
@@ -39,8 +40,9 @@ interface Props {
   tbOffset: number;
 }
 
-export default function BottomTabBar({ tabs, active, onSelect, quicksCount = 0, onQuicks, onSettings, micButton, t }: Props) {
+export default function BottomTabBar({ tabs, active, onSelect, quicksCount = 0, onQuicks, onApps, onSettings, micButton, t }: Props) {
   const isQuicksActive = active === 'inbox';
+  const isAppsActive = active === 'apps';
   const isSettingsActive = active === 'settings';
 
   return (
@@ -155,6 +157,34 @@ export default function BottomTabBar({ tabs, active, onSelect, quicksCount = 0, 
             );
           })}
         </div>
+
+        {/* Apps button — fixed near the right end, next to Quicks */}
+        {onApps && (
+          <button
+            onClick={onApps}
+            aria-label="Apps"
+            aria-current={isAppsActive ? 'page' : undefined}
+            style={{
+              flexShrink: 0,
+              minWidth: 52,
+              height: BOTTOM_TAB_HEIGHT,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: '3px',
+              background: isAppsActive ? t.panel : 'transparent',
+              border: 'none', borderLeft: `1px solid ${t.border}`,
+              cursor: 'pointer', fontFamily: 'inherit',
+              color: isAppsActive ? (sectionAccents as Record<string, string>).apps ?? t.text : t.textMuted,
+              transition: 'color 0.15s ease, background 0.15s ease',
+              padding: '0 4px',
+              WebkitTapHighlightColor: 'transparent',
+            } as React.CSSProperties}
+          >
+            <LayoutGrid size={20} strokeWidth={isAppsActive ? 2 : 1.5} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.6rem', fontWeight: isAppsActive ? 500 : 400, lineHeight: 1, letterSpacing: '0.02em' }}>
+              Apps
+            </span>
+          </button>
+        )}
 
         {/* Quicks button — fixed at right end */}
         {onQuicks && (

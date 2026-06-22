@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, type ElementType } f
 import {
   Music, Briefcase, Sparkles, BookOpen,
   LayoutDashboard, FileText, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, LayoutGrid,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -40,6 +40,7 @@ import SimpleListView from './sections/SimpleListView';
 import TopicView from './sections/TopicView';
 import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
+import AppsView from './sections/AppsView';
 import CalendarView from './sections/calendar/CalendarView';
 import { deadlineEvents, topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
 import DailyPlannerView from './sections/DailyPlannerView';
@@ -748,7 +749,7 @@ export default function Dashboard() {
   // 'settings' and 'inbox' are intentionally absent from navItems but still valid sections.
   // Built-in sections (email, calendar, budget, etc.) remain valid even when hidden from
   // the sidebar — only bounce if it's a topic ID that no longer exists.
-  const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'music', 'life', 'cv', 'other',
+  const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps', 'music', 'life', 'cv', 'other',
     'applications', 'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health']);
   useEffect(() => {
     if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
@@ -1151,6 +1152,23 @@ export default function Dashboard() {
             <Settings size={17} strokeWidth={1.5} />
           </button>
           <button
+            onClick={() => setActiveSection('apps')}
+            title="Apps"
+            aria-label="Apps"
+            style={{
+              background: activeSection === 'apps' ? sT.panel : 'transparent',
+              border: 'none',
+              color: activeSection === 'apps' ? sT.text : sT.textDim,
+              cursor: 'pointer', borderRadius: '6px',
+              padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'background 0.12s, color 0.12s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+            onMouseLeave={e => { e.currentTarget.style.background = activeSection === 'apps' ? sT.panel : 'transparent'; e.currentTarget.style.color = activeSection === 'apps' ? sT.text : sT.textDim; }}
+          >
+            <LayoutGrid size={17} strokeWidth={1.5} />
+          </button>
+          <button
             onClick={() => setActiveSection('inbox')}
             title={isTauri() ? 'Quicks (Ctrl+B)' : 'Quicks'}
             aria-label="Quicks"
@@ -1371,6 +1389,20 @@ export default function Dashboard() {
             }
             return null;
           })()}
+          {activeSection === 'apps' && (
+            <AppsView
+              t={t}
+              colorBank={appearance.colorBank}
+              oauthAccounts={oauthAccounts}
+              emailSyncErrors={emailSyncErrors}
+              onConnectAccount={connectAccount}
+              onDisconnectAccount={disconnect}
+              calendarConnections={calendarConnections}
+              onCalendarConnectionsChange={setCalendarConnections}
+              healthConnections={[]}
+              onHealthConnectionsChange={() => {}}
+            />
+          )}
           {activeSection === 'settings' && (
             <SettingsView
               t={t}
@@ -1402,20 +1434,13 @@ export default function Dashboard() {
                 // onAuthStateChange SIGNED_OUT fires → AuthGate shows login screen.
                 try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
               }}
-              currency={budget.currency}
-              onCurrencyChange={(c) => setBudget(b => ({ ...b, currency: c }))}
               reviewSettings={reviewSettings}
               onReviewSettingsChange={setReviewSettings}
-              oauthAccounts={oauthAccounts}
-              emailSyncErrors={emailSyncErrors}
-              onConnectAccount={connectAccount}
-              onDisconnectAccount={disconnect}
+              onOpenApps={() => setActiveSection('apps')}
               topics={topics}
               onTopicsChange={setTopics}
               topicFolders={topicFolders}
               onTopicFoldersChange={setTopicFolders}
-              calendarConnections={calendarConnections}
-              onCalendarConnectionsChange={setCalendarConnections}
             />
           )}
         </main>
@@ -1457,6 +1482,7 @@ export default function Dashboard() {
           onSelect={setActiveSection}
           quicksCount={inbox.length}
           onQuicks={() => setActiveSection('inbox')}
+          onApps={() => setActiveSection('apps')}
           onSettings={() => setActiveSection('settings')}
           micButton={
             <VoiceButton
