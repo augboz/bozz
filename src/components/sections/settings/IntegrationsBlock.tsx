@@ -230,22 +230,26 @@ function Card({
   );
 }
 
-function ConnectBtn({ t, label = 'Connect', busy, onClick, disabled }: {
-  t: Theme; label?: string; busy?: boolean; onClick: () => void; disabled?: boolean;
+function ConnectBtn({ t, label = 'Connect', busy, onClick, disabled, errored }: {
+  t: Theme; label?: string; busy?: boolean; onClick: () => void; disabled?: boolean; errored?: boolean;
 }) {
+  const showError = Boolean(errored) && !busy;
   return (
     <button
       onClick={onClick}
       disabled={busy || disabled}
       style={{
-        background: t.text, color: t.bg, border: 'none', borderRadius: '999px',
+        background: showError ? 'transparent' : t.text,
+        color: showError ? t.alert : t.bg,
+        border: showError ? `1px solid ${t.alertBorder}` : 'none',
+        borderRadius: '999px',
         padding: '0.5rem 1.15rem', fontSize: '0.82rem', fontFamily: 'inherit',
         cursor: busy || disabled ? 'wait' : 'pointer', fontWeight: 600,
         opacity: busy || disabled ? 0.55 : 1, flexShrink: 0,
         transition: 'opacity 0.15s',
       }}
     >
-      {busy ? 'Connecting…' : label}
+      {busy ? 'Connecting…' : showError ? 'Try connect again' : label}
     </button>
   );
 }
@@ -311,7 +315,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
       t={t} color="#EA4335" letter="G" name="Gmail"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
       action={configured
-        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} />
+        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
         : undefined}
     >
       {connected.map(a => {
@@ -332,7 +336,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
         );
       })}
       {!configured && <DevNote t={t} vars={['VITE_GMAIL_CLIENT_ID']} />}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }
@@ -367,7 +371,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
       t={t} color="#0078D4" letter="M" name="Outlook / Hotmail"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
       action={configured
-        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} />
+        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
         : undefined}
     >
       {connected.map(a => {
@@ -400,7 +404,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
           </div>
         </div>
       )}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }
@@ -460,11 +464,11 @@ function SpotifyCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (
       action={account
         ? <DisconnectBtn t={t} onClick={disconnect} />
         : configured
-          ? <ConnectBtn t={t} busy={busy} onClick={connect} />
+          ? <ConnectBtn t={t} busy={busy} onClick={connect} errored={Boolean(error)} />
           : undefined}
     >
       {!configured && <DevNote t={t} vars={['VITE_SPOTIFY_CLIENT_ID']} />}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }
@@ -736,7 +740,7 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
       action={isConnected
         ? <DisconnectBtn t={t} onClick={disconnect} />
         : oauthReady
-          ? <ConnectBtn t={t} busy={busy} onClick={connectOAuth} />
+          ? <ConnectBtn t={t} busy={busy} onClick={connectOAuth} errored={Boolean(error)} />
           : undefined}
     >
       {error && (
@@ -1188,7 +1192,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
       t={t} color="#4285F4" letter="G" name="Google Calendar"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your Google calendars'}
       action={configured
-        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} />
+        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
         : undefined}
     >
       {connected.map(c => (
@@ -1204,7 +1208,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
         />
       ))}
       {!configured && <DevNote t={t} vars={['VITE_GCAL_CLIENT_ID']} />}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }
@@ -1333,11 +1337,11 @@ function GoogleFitCard({ t, connections, onChange }: {
       action={connected.length
         ? <DisconnectBtn t={t} onClick={disconnect} />
         : configured
-          ? <ConnectBtn t={t} busy={busy} onClick={connect} />
+          ? <ConnectBtn t={t} busy={busy} onClick={connect} errored={Boolean(error)} />
           : undefined}
     >
       {!configured && <DevNote t={t} vars={['VITE_GFIT_CLIENT_ID']} />}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }
@@ -1495,7 +1499,7 @@ function WhatsAppCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: 
           Add <code style={{ background: t.bgAlt, padding: '0.05rem 0.3rem', borderRadius: '3px', fontSize: '0.68rem' }}>VITE_WA_BACKEND_URL</code> to enable on web.
         </div>
       )}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>{error}</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }

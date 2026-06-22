@@ -78,7 +78,15 @@ export async function connectGoogle(
       const port = await portPromise;
       redirectUri = `http://127.0.0.1:${port}`;
       await openUrl(buildAuthUrl(redirectUri));
-      params = await runPromise;
+      // Race the callback against a timeout. Without this, if the user closes
+      // the browser tab the Rust server waits forever and the UI stays stuck on
+      // "connecting" — there's no OS event when an external browser tab closes,
+      // so a timeout is the only way to recover. Rejecting resets the button.
+      params = await Promise.race([
+        runPromise,
+        new Promise<Record<string, string>>((_, reject) =>
+          setTimeout(() => reject(new Error('Connection cancelled or timed out — please try again.')), 180_000)),
+      ]);
     } finally {
       clearTimeout(timeout);
       unlisten();
