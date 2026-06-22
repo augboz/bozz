@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, RefreshCw } from 'lucide-react';
+import { X, RefreshCw, ChevronDown } from 'lucide-react';
 import { isWeb } from '../../../lib/platform';
 import { platformFetch } from '../../../lib/http';
 // Tauri-only APIs — imported lazily inside functions so they don't crash on web
@@ -192,16 +192,22 @@ function AccountRow({
   );
 }
 
-/** Wrapper card for each service. */
+/** Wrapper card for each service.
+ *  `details` is the connected-account info (email, sync time, …) — it's hidden
+ *  behind a chevron so every card stays the same height; click to expand.
+ *  `children` (connect forms, errors, dev notes) always render. */
 function Card({
-  t, color, letter, name, status, action,
+  t, color, letter, name, status, action, details,
   children,
 }: {
   t: Theme; color: string; letter: string; name: string;
   status?: React.ReactNode; action?: React.ReactNode;
+  details?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const [hover, setHover] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+  const hasDetails = React.Children.toArray(details).length > 0;
   return (
     <div
       onMouseEnter={() => setHover(true)}
@@ -224,7 +230,25 @@ function Card({
           )}
         </div>
         {action}
+        {hasDetails && (
+          <button
+            onClick={() => setOpen(o => !o)}
+            aria-expanded={open}
+            aria-label={open ? 'Hide account details' : 'Show account details'}
+            title={open ? 'Hide account details' : 'Show account details'}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted,
+              padding: '0.25rem', display: 'flex', flexShrink: 0,
+            }}
+          >
+            <ChevronDown
+              size={16} strokeWidth={1.7}
+              style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s' }}
+            />
+          </button>
+        )}
       </div>
+      {hasDetails && open && <div>{details}</div>}
       {children}
     </div>
   );
@@ -317,8 +341,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
         : undefined}
-    >
-      {connected.map(a => {
+      details={connected.map(a => {
         const err = syncErrors.find(e => e.account === a.email)?.error;
         const needsReauth = err?.includes('invalid_grant') || err?.includes('expired') || err?.includes('revoked');
         return (
@@ -335,6 +358,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
           />
         );
       })}
+    >
       {!configured && <DevNote t={t} vars={['VITE_GMAIL_CLIENT_ID']} />}
       {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
@@ -373,8 +397,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
         : undefined}
-    >
-      {connected.map(a => {
+      details={connected.map(a => {
         const err = syncErrors.find(e => e.account === a.email)?.error;
         return (
           <AccountRow
@@ -385,6 +408,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
           />
         );
       })}
+    >
       {!configured && (
         <div style={{
           marginTop: '0.7rem', fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6,
@@ -946,14 +970,14 @@ function ICloudCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
       action={step === 'idle'
         ? <ConnectBtn t={t} onClick={openApple} label={accounts.length ? 'Add account' : 'Connect'} />
         : <button onClick={() => { setStep('idle'); setError(null); }} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', color: t.textMuted }}>Cancel</button>}
-    >
-      {accounts.map(acc => (
+      details={accounts.map(acc => (
         <AccountRow
           key={acc.email} t={t} label={acc.email}
           subLabel={acc.lastSync ? `synced ${formatDistanceToNowStrict(acc.lastSync, { addSuffix: true })}` : 'not synced yet'}
           onDisconnect={() => disconnect(acc)}
         />
       ))}
+    >
 
       {step === 'form' && (
         <div style={{ marginTop: '0.75rem', paddingTop: '0.7rem', borderTop: `1px solid ${t.border}`, display: 'grid', gap: '0.45rem' }}>
@@ -1100,14 +1124,14 @@ function ImapCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: 
       action={!showForm
         ? <ConnectBtn t={t} onClick={() => setShowForm(true)} label={accounts.length ? 'Add account' : 'Connect'} />
         : <button onClick={() => { setShowForm(false); setError(null); }} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', color: t.textMuted }}>Cancel</button>}
-    >
-      {accounts.map(acc => (
+      details={accounts.map(acc => (
         <AccountRow
           key={acc.email} t={t} label={acc.email}
           subLabel={acc.lastSync ? `synced ${formatDistanceToNowStrict(acc.lastSync, { addSuffix: true })}` : 'not synced yet'}
           onDisconnect={() => disconnect(acc)}
         />
       ))}
+    >
 
       {showForm && (
         <div style={{ marginTop: '0.75rem', paddingTop: '0.7rem', borderTop: `1px solid ${t.border}`, display: 'grid', gap: '0.45rem' }}>
@@ -1194,8 +1218,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
         : undefined}
-    >
-      {connected.map(c => (
+      details={connected.map(c => (
         <AccountRow
           key={c.email} t={t} label={c.email}
           subLabel={c.lastSync ? `synced ${formatDistanceToNowStrict(c.lastSync, { addSuffix: true })}` : 'connected — events coming soon'}
@@ -1207,6 +1230,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
           bank={bank}
         />
       ))}
+    >
       {!configured && <DevNote t={t} vars={['VITE_GCAL_CLIENT_ID']} />}
       {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
@@ -1268,8 +1292,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
       action={!showForm
         ? <ConnectBtn t={t} onClick={() => { tauriOpenUrl('https://appleid.apple.com/account/manage'); setShowForm(true); }} label={connected.length ? 'Add account' : 'Connect'} />
         : <button onClick={() => { setShowForm(false); setError(null); }} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', color: t.textMuted }}>Cancel</button>}
-    >
-      {connected.map(c => (
+      details={connected.map(c => (
         <AccountRow
           key={c.email} t={t} label={c.email}
           subLabel={c.lastSync ? `synced ${formatDistanceToNowStrict(c.lastSync, { addSuffix: true })}` : 'connected — events coming soon'}
@@ -1281,6 +1304,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
           bank={bank}
         />
       ))}
+    >
       {showForm && (
         <div style={{ marginTop: '0.75rem', paddingTop: '0.7rem', borderTop: `1px solid ${t.border}`, display: 'grid', gap: '0.45rem' }}>
           <div style={{ fontSize: '0.73rem', color: t.textMuted, lineHeight: 1.6 }}>
