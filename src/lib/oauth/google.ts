@@ -10,7 +10,7 @@ import { pkceChallenge, randomString } from './pkce';
 import { secretSet } from './keyring';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
-  ?? 'https://life-bozz.vercel.app';
+  ?? 'https://bozz-app.vercel.app';
 
 export interface GoogleTokenResult {
   accessToken: string;

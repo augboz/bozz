@@ -60,14 +60,14 @@ async function saveAndSync(key: string, value: unknown): Promise<void> {
 
 // ── Env vars (set once in .env.local) ────────────────────────────────────────
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://life-bozz.vercel.app';
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://bozz-app.vercel.app';
 
 const ENV = {
   gmailClientId:        import.meta.env.VITE_GMAIL_CLIENT_ID       as string | undefined,
   outlookClientId:      import.meta.env.VITE_OUTLOOK_CLIENT_ID      as string | undefined,
   spotifyClientId:      import.meta.env.VITE_SPOTIFY_CLIENT_ID      as string | undefined,
   notionClientId:       import.meta.env.VITE_NOTION_CLIENT_ID       as string | undefined,
-  /** Base URL of the deployed Vercel redirect proxy, e.g. https://life-bozz.vercel.app */
+  /** Base URL of the deployed Vercel redirect proxy, e.g. https://bozz-app.vercel.app */
   notionRedirectBase:   import.meta.env.VITE_NOTION_REDIRECT_URL    as string | undefined,
   gcalClientId:         import.meta.env.VITE_GCAL_CLIENT_ID         as string | undefined,
   gfitClientId:         import.meta.env.VITE_GFIT_CLIENT_ID         as string | undefined,
@@ -515,7 +515,7 @@ async function releaseNotionPort(): Promise<void> {
  *   which our Rust HTTP server captures.
  *
  * Redirect URI registered in the Notion integration settings:
- *   https://life-bozz.vercel.app/api/notion-redirect
+ *   https://bozz-app.vercel.app/api/notion-redirect
  */
 async function connectNotionOAuth(
   clientId: string,

@@ -10,7 +10,7 @@ import { secretGet, secretSet } from './oauth/keyring';
 import type { CalendarEvent } from './types';
 
 const CLIENT_ID = import.meta.env.VITE_GCAL_CLIENT_ID as string | undefined;
-const API_BASE  = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://life-bozz.vercel.app';
+const API_BASE  = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://bozz-app.vercel.app';
 
 // These must match the keys written by connectGoogle() in src/lib/oauth/google.ts
 function storageKey(suffix: 'access' | 'refresh'): string {
