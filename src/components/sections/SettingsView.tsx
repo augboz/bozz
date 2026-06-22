@@ -24,6 +24,8 @@ interface SettingsViewProps {
   onReviewSettingsChange: (s: ReviewSettings) => void;
   /** Navigate to the standalone Apps page (Connected apps button). */
   onOpenApps: () => void;
+  /** Re-show the new-user getting-started walkthroughs on the Home page. */
+  onReplayWalkthroughs: () => void;
   topics: Topic[];
   onTopicsChange: (next: Topic[]) => void;
   topicFolders: TopicFolder[];
@@ -347,7 +349,7 @@ function ColorBankEditor({ t, bank, onChange, currentMood }: {
 
 export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, sections,
-  reviewSettings, onReviewSettingsChange, onOpenApps,
+  reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
   accountEmail, onSignOut,
 }: SettingsViewProps) {
@@ -404,6 +406,24 @@ export default function SettingsView({
       >
         <Plug size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />
         <span style={{ flex: 1, fontSize: '0.9rem', color: t.text, fontWeight: 500 }}>Connected apps</span>
+        <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
+      </button>
+
+      {/* Replay the new-user getting-started walkthroughs */}
+      <button
+        onClick={onReplayWalkthroughs}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
+          padding: '0.95rem 0.25rem',
+          background: 'transparent', border: 'none', borderTop: `1px solid ${t.border}`,
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          transition: 'background 0.12s ease',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = t.bgAlt)}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      >
+        <RotateCcw size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '0.9rem', color: t.text, fontWeight: 500 }}>Replay walkthroughs</span>
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
       </button>
 

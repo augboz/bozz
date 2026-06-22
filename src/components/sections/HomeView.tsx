@@ -171,11 +171,12 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         }}>
           {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
           {editMode && (
-            <button onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
+            <button data-onb="add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
               <Plus size={14} strokeWidth={1.5} /> Add widget
             </button>
           )}
           <button
+            data-onb="home-edit"
             onClick={() => { setEditMode(e => !e); setShowAdd(false); }}
             style={ghostBtn(t)}
           >
@@ -258,7 +259,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
           )}
           {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
           {editMode && (
-            <button onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
+            <button data-onb="add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
               <Plus size={14} strokeWidth={1.5} /> Add widget
             </button>
           )}

@@ -41,6 +41,7 @@ import TopicView from './sections/TopicView';
 import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
+import Onboarding, { HighlightPulse } from './onboarding/Onboarding';
 import CalendarView from './sections/calendar/CalendarView';
 import { deadlineEvents, topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
 import DailyPlannerView from './sections/DailyPlannerView';
@@ -101,6 +102,9 @@ export default function Dashboard() {
   const [topicFolders, setTopicFolders] = useState<TopicFolder[]>([]);
   const [sidebarEditing, setSidebarEditing] = useState(false);
   const [collapsedFolderOpen, setCollapsedFolderOpen] = useState<string | null>(null);
+  const [onbDismissed, setOnbDismissed] = useState(false);
+  const [onbHighlight, setOnbHighlight] = useState<string | null>(null);
+  const onbInit = useRef(false);
 
   // Exit edit mode automatically when the user navigates away or collapses the sidebar
   useEffect(() => { setSidebarEditing(false); }, [activeSection, sidebarCollapsed]);
@@ -358,6 +362,39 @@ export default function Dashboard() {
     // Debounced push to Supabase whenever any synced key changes
     if (userId) schedulePush(userId);
   };
+
+  // Onboarding visibility: show the getting-started walkthroughs to brand-new
+  // accounts; respect a stored dismissal for everyone else (and after the user
+  // replays them from Settings).
+  useEffect(() => {
+    if (loading || onbInit.current) return;
+    onbInit.current = true;
+    getItem('onboardingDismissed').then(r => {
+      if (r?.value != null) {
+        try { setOnbDismissed(JSON.parse(r.value) === true); } catch { /* ignore */ }
+      } else {
+        const established = oauthAccounts.length > 0 || topics.some(tp => tp.id !== 'topic-general-default');
+        setOnbDismissed(established);
+      }
+    }).catch(() => {});
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dismissOnboarding = () => {
+    setOnbHighlight(null);
+    setOnbDismissed(true);
+    void save('onboardingDismissed', true);
+  };
+  const replayWalkthroughs = () => {
+    setOnbDismissed(false);
+    void save('onboardingDismissed', false);
+    setActiveSection('home');
+  };
+  // Onboarding step signals (auto-check the walkthrough steps as they're done).
+  const gmailConnected = oauthAccounts.some(a => a.provider === 'gmail');
+  const emailsWidgetAdded = homeItems.some(it => it.type === 'recentEmails');
+  const topicAdded = topics.length > 1;
+  const topicInFolder = topics.some(tp => !!tp.folderId);
+  const showOnboarding = !onbDismissed && !(gmailConnected && emailsWidgetAdded && topicAdded && topicInFolder);
 
   useEffect(() => { applyAppearanceVars(appearance); }, [appearance]);
 
@@ -1099,6 +1136,7 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setSidebarEditing(e => !e)}
+              data-onb="edit-nav"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
                 flexShrink: 0,
@@ -1155,6 +1193,7 @@ export default function Dashboard() {
             onClick={() => setActiveSection('apps')}
             title="Apps"
             aria-label="Apps"
+            data-onb="apps"
             style={{
               background: activeSection === 'apps' ? sT.panel : 'transparent',
               border: 'none',
@@ -1222,6 +1261,18 @@ export default function Dashboard() {
 
 
         <main>
+          {activeSection === 'home' && showOnboarding && (
+            <Onboarding
+              t={t}
+              gmailConnected={gmailConnected}
+              emailsWidgetAdded={emailsWidgetAdded}
+              topicAdded={topicAdded}
+              topicInFolder={topicInFolder}
+              onHighlight={setOnbHighlight}
+              onGo={setActiveSection}
+              onDismiss={dismissOnboarding}
+            />
+          )}
           {activeSection === 'home' && (
             <HomeView
               items={homeItems}
@@ -1437,6 +1488,7 @@ export default function Dashboard() {
               reviewSettings={reviewSettings}
               onReviewSettingsChange={setReviewSettings}
               onOpenApps={() => setActiveSection('apps')}
+              onReplayWalkthroughs={replayWalkthroughs}
               topics={topics}
               onTopicsChange={setTopics}
               topicFolders={topicFolders}
@@ -1447,6 +1499,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <HighlightPulse targetId={onbHighlight} accent={t.doneAccent} />
       {quickAddOpen && (
         <QuickAddModal
           t={t}
