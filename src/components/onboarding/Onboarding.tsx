@@ -94,9 +94,9 @@ function Step({ t, done, label, actionLabel, onAction }: {
 
 // ── Walkthrough card ───────────────────────────────────────────────────────────
 
-function WalkCard({ t, icon: Icon, title, subtitle, children, complete }: {
+function WalkCard({ t, icon: Icon, title, subtitle, children, complete, forceOpen = false }: {
   t: Theme; icon: React.ElementType; title: string; subtitle: string;
-  children: React.ReactNode; complete: boolean;
+  children: React.ReactNode; complete: boolean; forceOpen?: boolean;
 }) {
   return (
     <div style={{
@@ -118,7 +118,7 @@ function WalkCard({ t, icon: Icon, title, subtitle, children, complete }: {
           <div style={{ fontSize: '0.72rem', color: t.textMuted }}>{complete ? 'All done — nice!' : subtitle}</div>
         </div>
       </div>
-      {!complete && <div style={{ paddingLeft: '0.1rem' }}>{children}</div>}
+      {(!complete || forceOpen) && <div style={{ paddingLeft: '0.1rem' }}>{children}</div>}
     </div>
   );
 }
@@ -127,6 +127,8 @@ function WalkCard({ t, icon: Icon, title, subtitle, children, complete }: {
 
 export interface OnboardingProps {
   t: Theme;
+  /** Replay mode (opened from Settings): keep steps expanded even when complete. */
+  replay?: boolean;
   gmailConnected: boolean;
   emailsWidgetAdded: boolean;
   topicAdded: boolean;
@@ -137,7 +139,7 @@ export interface OnboardingProps {
 }
 
 export default function Onboarding({
-  t, gmailConnected, emailsWidgetAdded, topicAdded, topicInFolder,
+  t, replay = false, gmailConnected, emailsWidgetAdded, topicAdded, topicInFolder,
   onHighlight, onGo, onDismiss,
 }: OnboardingProps) {
   const emailComplete = gmailConnected && emailsWidgetAdded;
@@ -173,14 +175,14 @@ export default function Onboarding({
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <WalkCard t={t} icon={Mail} title="Set up your email" subtitle="Connect Gmail and add the widget" complete={emailComplete}>
+        <WalkCard t={t} icon={Mail} title="Set up your email" subtitle="Connect Gmail and add the widget" complete={emailComplete} forceOpen={replay}>
           <Step t={t} done={gmailConnected} label="Connect your Gmail account"
             actionLabel="Show me" onAction={() => guide('apps', 'apps')} />
           <Step t={t} done={emailsWidgetAdded} label="On Home, click Edit → Add widget → “Recent emails”"
             actionLabel="Show me" onAction={() => guide('home-edit', 'home')} />
         </WalkCard>
 
-        <WalkCard t={t} icon={FolderTree} title="Organize with topics" subtitle="Create a topic inside a folder" complete={topicsComplete}>
+        <WalkCard t={t} icon={FolderTree} title="Organize with topics" subtitle="Create a topic inside a folder" complete={topicsComplete} forceOpen={replay}>
           <Step t={t} done={topicAdded} label="Create your first topic"
             actionLabel="Show me" onAction={() => guide('edit-nav')} />
           <Step t={t} done={topicInFolder} label="Put a topic into a new folder"

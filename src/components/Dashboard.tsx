@@ -53,6 +53,7 @@ import InboxView from './sections/InboxView';
 import ReviewView from './sections/review/ReviewView';
 import EmailView from './sections/email/EmailView';
 import SearchModal from './SearchModal';
+import ErrorBoundary from './ErrorBoundary';
 
 const EMAIL_REFRESH_MS = 15 * 60 * 1000;
 const PROVIDER_CFG: Record<EmailProvider, ProviderConfig> = { gmail: gmailConfig, outlook: outlookConfig };
@@ -104,6 +105,9 @@ export default function Dashboard() {
   const [collapsedFolderOpen, setCollapsedFolderOpen] = useState<string | null>(null);
   const [onbDismissed, setOnbDismissed] = useState(false);
   const [onbHighlight, setOnbHighlight] = useState<string | null>(null);
+  // Replay mode: force the getting-started guide to show even after every step
+  // is complete, so "Replay walkthroughs" in Settings can always bring it back.
+  const [onbForced, setOnbForced] = useState(false);
   const onbInit = useRef(false);
 
   // Exit edit mode automatically when the user navigates away or collapses the sidebar
@@ -381,10 +385,14 @@ export default function Dashboard() {
 
   const dismissOnboarding = () => {
     setOnbHighlight(null);
+    setOnbForced(false);
     setOnbDismissed(true);
     void save('onboardingDismissed', true);
   };
   const replayWalkthroughs = () => {
+    // Force the guide to show even when every step is already complete, and
+    // navigate home where it lives — so it's always reachable from Settings.
+    setOnbForced(true);
     setOnbDismissed(false);
     void save('onboardingDismissed', false);
     setActiveSection('home');
@@ -394,7 +402,7 @@ export default function Dashboard() {
   const emailsWidgetAdded = homeItems.some(it => it.type === 'recentEmails');
   const topicAdded = topics.length > 1;
   const topicInFolder = topics.some(tp => !!tp.folderId);
-  const showOnboarding = !onbDismissed && !(gmailConnected && emailsWidgetAdded && topicAdded && topicInFolder);
+  const showOnboarding = onbForced || (!onbDismissed && !(gmailConnected && emailsWidgetAdded && topicAdded && topicInFolder));
 
   useEffect(() => { applyAppearanceVars(appearance); }, [appearance]);
 
@@ -1158,7 +1166,7 @@ export default function Dashboard() {
 
         {/* Bottom row: mic + settings gear always visible, date fades when collapsed. */}
         <div style={{
-          display: 'flex', flexDirection: 'row',
+          display: 'flex', flexDirection: sidebarCollapsed ? 'column' : 'row',
           alignItems: 'center',
           gap: '0.3rem',
           padding: '0.7rem 0.15rem 0.1rem',
@@ -1174,7 +1182,6 @@ export default function Dashboard() {
             label={false}
             iconSize={17}
           />
-          {!sidebarCollapsed && (<>
           <button
             onClick={() => setActiveSection('settings')}
             title="Settings"
@@ -1234,6 +1241,7 @@ export default function Dashboard() {
               }} />
             )}
           </button>
+          {!sidebarCollapsed && (
           <span style={{
             fontSize: '0.7rem', color: sT.textDim,
             letterSpacing: '0.02em', textAlign: 'right',
@@ -1242,7 +1250,7 @@ export default function Dashboard() {
           }}>
             {today.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
           </span>
-          </>)}
+          )}
         </div>
       </aside>
 
@@ -1262,19 +1270,23 @@ export default function Dashboard() {
 
         <main>
           {activeSection === 'home' && showOnboarding && (
-            <Onboarding
-              t={t}
-              gmailConnected={gmailConnected}
-              emailsWidgetAdded={emailsWidgetAdded}
-              topicAdded={topicAdded}
-              topicInFolder={topicInFolder}
-              onHighlight={setOnbHighlight}
-              onGo={setActiveSection}
-              onDismiss={dismissOnboarding}
-            />
+            <ErrorBoundary label="the getting-started guide">
+              <Onboarding
+                t={t}
+                replay={onbForced}
+                gmailConnected={gmailConnected}
+                emailsWidgetAdded={emailsWidgetAdded}
+                topicAdded={topicAdded}
+                topicInFolder={topicInFolder}
+                onHighlight={setOnbHighlight}
+                onGo={setActiveSection}
+                onDismiss={dismissOnboarding}
+              />
+            </ErrorBoundary>
           )}
           {/* Home stays mounted (display toggle) so returning is instant and the
               widget grid never re-animates — see gridReady in HomeView. */}
+          <ErrorBoundary label="the home view">
           <div style={{ display: activeSection === 'home' ? undefined : 'none' }}>
             <HomeView
               visible={activeSection === 'home'}
@@ -1295,6 +1307,8 @@ export default function Dashboard() {
               }}
             />
           </div>
+          </ErrorBoundary>
+          <ErrorBoundary key={activeSection} label="this section" onReset={() => setActiveSection('home')}>
           {activeSection === 'music' && (
             <SimpleListView items={musicItems} setItems={setMusicItems} t={t}
               accent={sectionAccents.music} placeholder="add a music task…" emptyText="no music tasks yet"
@@ -1498,6 +1512,7 @@ export default function Dashboard() {
               onTopicFoldersChange={setTopicFolders}
             />
           )}
+          </ErrorBoundary>
         </main>
         </div>
       </div>
