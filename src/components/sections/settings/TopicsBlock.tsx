@@ -280,7 +280,7 @@ export default function TopicsBlock({ t, topics, setTopics, topicFolders, setTop
       <div style={{ marginBottom: '1.2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <span style={{ fontSize: '0.72rem', color: t.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Folders</span>
-          <button onClick={addFolder} style={smallBtn(t)}>
+          <button data-onb="add-folder" onClick={addFolder} style={smallBtn(t)}>
             <Plus size={12} strokeWidth={1.6} /> New folder
           </button>
         </div>
@@ -346,6 +346,7 @@ export default function TopicsBlock({ t, topics, setTopics, topicFolders, setTop
       </DndContext>
 
       <button
+        data-onb="add-topic"
         onClick={addTopic}
         style={{
           marginTop: topics.length > 0 ? '0.65rem' : 0,

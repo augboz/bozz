@@ -474,6 +474,7 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
             return (
               <button
                 key={m.type}
+                data-onb={m.type === 'recentEmails' ? 'recent-emails-option' : undefined}
                 onClick={() => !added && onAdd(m.type)}
                 disabled={added}
                 style={{

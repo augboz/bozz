@@ -45,6 +45,7 @@ import { supabase } from '../../../lib/supabase';
 import { connectSpotify } from '../../../lib/oauth/spotify';
 import { secretDelete, secretSet, tokenKey } from '../../../lib/oauth/keyring';
 import ColorBankPicker from '../../shared/ColorBankPicker';
+import { BrandLogo, type BrandId } from './brandLogos';
 import { randomString } from '../../../lib/oauth/pkce';
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { CalendarConnection, EmailProvider, HealthConnection, ImapAccount, OAuthAccount, SpotifyAccount, Theme } from '../../../lib/types';
@@ -106,7 +107,22 @@ const inp = (t: Theme): React.CSSProperties => ({
 
 // ── ServiceCard ───────────────────────────────────────────────────────────────
 
-function ServiceIcon({ color, letter }: { color: string; letter: string }) {
+function ServiceIcon({ brand, color, letter }: { brand?: BrandId; color: string; letter: string }) {
+  // Real brand logo on a neutral "app tile" — reads correctly on light & dark.
+  if (brand) {
+    return (
+      <div style={{
+        width: '40px', height: '40px', borderRadius: '11px', flexShrink: 0,
+        background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.07)',
+        overflow: 'hidden',
+      }}>
+        <BrandLogo id={brand} size={24} />
+      </div>
+    );
+  }
+  // Fallback: coloured initial (used if a card has no brand mark).
   return (
     <div style={{
       width: '40px', height: '40px', borderRadius: '11px', flexShrink: 0,
@@ -198,10 +214,10 @@ function AccountRow({
  *  behind a chevron so every card stays the same height; click to expand.
  *  `children` (connect forms, errors, dev notes) always render. */
 function Card({
-  t, color, letter, name, status, action, details,
+  t, color, letter, brand, name, status, action, details,
   children,
 }: {
-  t: Theme; color: string; letter: string; name: string;
+  t: Theme; color: string; letter: string; brand?: BrandId; name: string;
   status?: React.ReactNode; action?: React.ReactNode;
   details?: React.ReactNode;
   children?: React.ReactNode;
@@ -221,7 +237,7 @@ function Card({
         transition: 'border-color 0.25s, background 0.25s, transform 0.25s',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <ServiceIcon color={color} letter={letter} />
+        <ServiceIcon brand={brand} color={color} letter={letter} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '0.9rem', color: t.text, fontWeight: 600 }}>{name}</div>
           {status && (
@@ -337,7 +353,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
 
   return (
     <Card
-      t={t} color="#EA4335" letter="G" name="Gmail"
+      t={t} brand="gmail" color="#EA4335" letter="G" name="Gmail"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
@@ -393,7 +409,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
 
   return (
     <Card
-      t={t} color="#0078D4" letter="M" name="Outlook / Hotmail"
+      t={t} brand="outlook" color="#0078D4" letter="M" name="Outlook / Hotmail"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
@@ -484,7 +500,7 @@ function SpotifyCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (
 
   return (
     <Card
-      t={t} color="#1DB954" letter="S" name="Spotify"
+      t={t} brand="spotify" color="#1DB954" letter="S" name="Spotify"
       status={account ? `● ${account.displayName}` : 'Now playing widget'}
       action={account
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -667,6 +683,7 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   const [pickerOpen, setPickerOpen] = useState(false);
   const [loadingPages, setLoadingPages] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
+  const [showManualToken, setShowManualToken] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -719,6 +736,10 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
 
   const connectOAuth = async (releaseFirst = false) => {
     if (!ENV.notionClientId || !ENV.notionRedirectBase) return;
+    if (isWeb()) {
+      setError('OAuth connect requires the desktop app. Use the integration token below instead.');
+      return;
+    }
     setBusy(true); setError(null);
     try {
       if (releaseFirst) await releaseNotionPort();
@@ -756,9 +777,18 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   const isConnected = Boolean(config?.token);
   const selectedIds = new Set(config?.pages.map(p => p.id) ?? []);
 
+  const tokenRow = (
+    <div style={{ display: 'flex', gap: '0.4rem' }}>
+      <input value={tokenInput} onChange={e => setTokenInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && saveToken()}
+        placeholder="ntn_… or secret_…" style={{ ...inp(t), flex: 1 }} />
+      <ConnectBtn t={t} label="Connect" busy={busy} onClick={saveToken} />
+    </div>
+  );
+
   return (
     <Card
-      t={t} color="#3d3d3d" letter="N" name="Notion"
+      t={t} brand="notion" color="#3d3d3d" letter="N" name="Notion"
       status={isConnected
         ? `● Connected · ${selectedIds.size} page${selectedIds.size !== 1 ? 's' : ''} in widget`
         : 'View your workspace pages'}
@@ -786,19 +816,34 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
         </div>
       )}
 
-      {/* Token-paste fallback */}
-      {!isConnected && !oauthReady && (
+      {/* Manual integration-token connect. Always offered when not connected:
+          this is the path that works without a public-integration OAuth
+          redirect URI being registered, so it's the reliable fallback when the
+          one-click "Connect" flow returns an invalid_redirect_uri error. */}
+      {!isConnected && (
         <div style={{ marginTop: '0.75rem', paddingTop: '0.7rem', borderTop: `1px solid ${t.border}` }}>
-          <p style={{ fontSize: '0.73rem', color: t.textMuted, margin: '0 0 0.5rem', lineHeight: 1.5 }}>
-            Paste your integration token from{' '}
-            <strong style={{ color: t.text }}>notion.so/profile/integrations</strong>.
-          </p>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
-            <input value={tokenInput} onChange={e => setTokenInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveToken()}
-              placeholder="ntn_…" style={{ ...inp(t), flex: 1 }} />
-            <ConnectBtn t={t} label="Connect" busy={busy} onClick={saveToken} />
-          </div>
+          {oauthReady && !showManualToken ? (
+            <button
+              onClick={() => setShowManualToken(true)}
+              style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                color: t.textMuted, fontSize: '0.73rem', fontFamily: 'inherit',
+                textDecoration: 'underline', textUnderlineOffset: '2px',
+              }}
+            >
+              Or connect with an integration token
+            </button>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.73rem', color: t.textMuted, margin: '0 0 0.5rem', lineHeight: 1.5 }}>
+                Create an integration at{' '}
+                <strong style={{ color: t.text }}>notion.so/profile/integrations</strong>, copy its
+                Internal Integration Secret and paste it here. Then open each page →{' '}
+                <strong style={{ color: t.text }}>···</strong> → Connections → add your integration.
+              </p>
+              {tokenRow}
+            </>
+          )}
         </div>
       )}
 
@@ -966,7 +1011,7 @@ function ICloudCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
 
   return (
     <Card
-      t={t} color="#555" letter="" name="iCloud Mail"
+      t={t} brand="icloud" color="#555" letter="" name="iCloud Mail"
       status={accounts.length ? `${accounts.length} account${accounts.length > 1 ? 's' : ''} connected` : 'Sync your iCloud inbox'}
       action={step === 'idle'
         ? <ConnectBtn t={t} onClick={openApple} label={accounts.length ? 'Add account' : 'Connect'} />
@@ -1118,7 +1163,7 @@ function ImapCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: 
 
   return (
     <Card
-      t={t} color="#6B7280" letter="@" name="Other inbox"
+      t={t} brand="imap" color="#6B7280" letter="@" name="Other inbox"
       status={accounts.length
         ? `${accounts.length} account${accounts.length > 1 ? 's' : ''} connected`
         : 'Yahoo, Fastmail, Zoho, any IMAP'}
@@ -1214,7 +1259,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
 
   return (
     <Card
-      t={t} color="#4285F4" letter="G" name="Google Calendar"
+      t={t} brand="gcal" color="#4285F4" letter="G" name="Google Calendar"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your Google calendars'}
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
@@ -1276,7 +1321,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
 
   if (isWeb()) {
     return (
-      <Card t={t} color="#555" letter="" name="Apple Calendar"
+      <Card t={t} brand="acal" color="#555" letter="" name="Apple Calendar"
         status="Desktop app only — CalDAV requires direct server access"
         action={null}>
         <div style={{ fontSize: '0.75rem', color: t.textMuted, marginTop: '0.35rem' }}>
@@ -1288,7 +1333,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
 
   return (
     <Card
-      t={t} color="#555" letter="" name="Apple Calendar"
+      t={t} brand="acal" color="#555" letter="" name="Apple Calendar"
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your iCloud calendars'}
       action={!showForm
         ? <ConnectBtn t={t} onClick={() => { tauriOpenUrl('https://appleid.apple.com/account/manage'); setShowForm(true); }} label={connected.length ? 'Add account' : 'Connect'} />
@@ -1357,7 +1402,7 @@ function GoogleFitCard({ t, connections, onChange }: {
 
   return (
     <Card
-      t={t} color="#4285F4" letter="G" name="Google Fit"
+      t={t} brand="gfit" color="#4285F4" letter="G" name="Google Fit"
       status={connected.length ? '● Connected — steps & sleep synced' : 'Sync steps, sleep & activity'}
       action={connected.length
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -1383,7 +1428,7 @@ function AppleHealthCard({ t, connections, onChange }: {
 
   return (
     <Card
-      t={t} color="#fc3c44" letter="" name="Apple Health"
+      t={t} brand="ahealth" color="#fc3c44" letter="" name="Apple Health"
       status={connected.length ? '● Connected' : 'Steps, sleep & heart rate from iPhone'}
       action={connected.length
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -1488,7 +1533,7 @@ function WhatsAppCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: 
 
   return (
     <Card
-      t={t} color="#25D366" letter="W" name="WhatsApp"
+      t={t} brand="whatsapp" color="#25D366" letter="W" name="WhatsApp"
       status={connected
         ? `● ${phone ? `+${phone}` : 'Connected'}`
         : scanning ? 'Scan the QR code with your phone' : 'Recent messages widget'}
@@ -1572,11 +1617,13 @@ export default function IntegrationsBlock({
 
   // Shared card props
   const gmailCard = (
-    <GmailCard
-      key="gmail" t={t} accounts={oauthAccounts} syncErrors={emailSyncErrors}
-      onConnect={cid => onConnectAccount('gmail', cid)}
-      onDisconnect={email => onDisconnectAccount('gmail', email)}
-    />
+    <div key="gmail" data-onb="gmail-card">
+      <GmailCard
+        t={t} accounts={oauthAccounts} syncErrors={emailSyncErrors}
+        onConnect={cid => onConnectAccount('gmail', cid)}
+        onDisconnect={email => onDisconnectAccount('gmail', email)}
+      />
+    </div>
   );
   const outlookCard = (
     <OutlookCard
@@ -1586,7 +1633,7 @@ export default function IntegrationsBlock({
     />
   );
   const icloudCard = <ICloudCard key="icloud" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, icloud: v }))} />;
-  const imapCard   = <ImapCard   key="imap"   t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, imap: v }))} />;
+  const imapCard   = <div key="imap" data-onb="imap-card"><ImapCard t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, imap: v }))} /></div>;
   const spotifyCard = <SpotifyCard key="spotify" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, spotify: v }))} />;
   const notionCard    = <NotionCard    key="notion"    t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, notion: v }))} />;
   const whatsappCard  = <WhatsAppCard  key="whatsapp"  t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, whatsapp: v }))} />;

@@ -5,7 +5,14 @@
       "name": "dashboard",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 1420
+      "port": 1420,
+      "autoPort": false
+    },
+    {
+      "name": "dashboard-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5199", "--strictPort"],
+      "port": 5199
     },
     {
       "name": "website",

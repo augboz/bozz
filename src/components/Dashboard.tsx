@@ -41,7 +41,7 @@ import TopicView from './sections/TopicView';
 import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
-import Onboarding, { HighlightPulse } from './onboarding/Onboarding';
+import Onboarding from './onboarding/Onboarding';
 import CalendarView from './sections/calendar/CalendarView';
 import { deadlineEvents, topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
 import DailyPlannerView from './sections/DailyPlannerView';
@@ -104,7 +104,9 @@ export default function Dashboard() {
   const [sidebarEditing, setSidebarEditing] = useState(false);
   const [collapsedFolderOpen, setCollapsedFolderOpen] = useState<string | null>(null);
   const [onbDismissed, setOnbDismissed] = useState(false);
-  const [onbHighlight, setOnbHighlight] = useState<string | null>(null);
+  // When a walkthrough is active the Onboarding component must stay mounted
+  // even when the user navigates away from home so the spotlight persists.
+  const [onbKeepMounted, setOnbKeepMounted] = useState(false);
   // Replay mode: force the getting-started guide to show even after every step
   // is complete, so "Replay walkthroughs" in Settings can always bring it back.
   const [onbForced, setOnbForced] = useState(false);
@@ -384,7 +386,7 @@ export default function Dashboard() {
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissOnboarding = () => {
-    setOnbHighlight(null);
+    setOnbKeepMounted(false);
     setOnbForced(false);
     setOnbDismissed(true);
     void save('onboardingDismissed', true);
@@ -957,6 +959,7 @@ export default function Dashboard() {
               return (
                 <button
                   key={id}
+                  data-onb={id === 'home' ? 'nav-home' : undefined}
                   onClick={() => setActiveSection(id)}
                   title={sidebarCollapsed ? label : undefined}
                   style={{
@@ -1185,6 +1188,7 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveSection('settings')}
             title="Settings"
+            data-onb="nav-settings"
             style={{
               background: 'transparent', border: 'none',
               color: sT.textDim, cursor: 'pointer', borderRadius: '6px',
@@ -1269,18 +1273,21 @@ export default function Dashboard() {
 
 
         <main>
-          {activeSection === 'home' && showOnboarding && (
+          {(activeSection === 'home' || onbKeepMounted) && showOnboarding && (
             <ErrorBoundary label="the getting-started guide">
               <Onboarding
                 t={t}
                 replay={onbForced}
+                activeSection={activeSection}
                 gmailConnected={gmailConnected}
                 emailsWidgetAdded={emailsWidgetAdded}
                 topicAdded={topicAdded}
+                folderCreated={topicFolders.length > 0}
                 topicInFolder={topicInFolder}
-                onHighlight={setOnbHighlight}
                 onGo={setActiveSection}
                 onDismiss={dismissOnboarding}
+                onWalkStart={() => setOnbKeepMounted(true)}
+                onWalkEnd={() => setOnbKeepMounted(false)}
               />
             </ErrorBoundary>
           )}
@@ -1517,7 +1524,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <HighlightPulse targetId={onbHighlight} accent={t.doneAccent} />
       {quickAddOpen && (
         <QuickAddModal
           t={t}
