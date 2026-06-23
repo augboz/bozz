@@ -47,16 +47,9 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
   const [configPanelPos, setConfigPanelPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Suppress the react-grid-layout mount slide-in. Re-armed every time Home
-  // becomes visible, because keeping Home mounted under display:none collapses
-  // its width to 0 — on reveal the grid re-measures and would otherwise slide.
-  const [gridReady, setGridReady] = useState(false);
-  useEffect(() => {
-    if (!visible) return;
-    setGridReady(false);
-    const id = window.setTimeout(() => setGridReady(true), 0);
-    return () => window.clearTimeout(id);
-  }, [visible]);
+  // Grid position transitions are gated on edit mode (see .home-grid-editing in
+  // index.css) so widgets never slide in on mount or when returning to Home —
+  // only while you actively rearrange them.
 
   // Home stays mounted now, so close its edit/add panels when navigating away
   // (otherwise the portal-rendered AddPanel/config could linger over other pages).
@@ -186,7 +179,11 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
     const sortedItems = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
     return (
       <div style={{ position: 'relative' }}>
-        {pageBg && <BgLayer bg={pageBg} t={t} />}
+        {/* Gate on `visible`: BgLayer portals a position:fixed layer into
+            document.body, which escapes Home's display:none wrapper. Without
+            this guard it stays on screen over every other section and hides
+            views that don't sit above zIndex 0 (Calendar/Settings/Apps). */}
+        {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
         <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{
           display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
@@ -266,7 +263,9 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
   // ── Desktop grid ───────────────────────────────────────────────────────
   return (
     <div style={{ position: 'relative' }}>
-      {pageBg && <BgLayer bg={pageBg} t={t} />}
+      {/* Gate on `visible` — see note above: the portalled fixed BgLayer would
+          otherwise cover other sections while Home stays mounted. */}
+      {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
       <div style={{ position: 'relative', zIndex: 1 }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -301,7 +300,11 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
       {editMode && <div style={{ marginBottom: '0.75rem' }} />}
 
       <Grid
-        className={`home-grid${gridReady ? ' home-grid-ready' : ''}`}
+        className={`home-grid${editMode ? ' home-grid-editing' : ''}`}
+        // Measure the container width BEFORE first paint so widgets render at
+        // their real positions immediately — no default-width render that then
+        // reflows left ("widgets sliding in from the right").
+        measureBeforeMount
         layout={layout}
         cols={COLS}
         rowHeight={ROW_H}

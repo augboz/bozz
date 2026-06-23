@@ -180,12 +180,12 @@ button:focus-visible {
   border-right-color: rgba(140, 140, 140, 0.55);
   border-bottom-color: rgba(140, 140, 140, 0.55);
 }
-/* Suppress position animation on initial topic page load */
-.topic-grid:not(.topic-grid-ready) .react-grid-item {
-  transition: none !important;
-}
-/* Same for the Home grid — stops widgets sliding in when you open/return to Home */
-.home-grid:not(.home-grid-ready) .react-grid-item {
+/* Grid widgets only animate their position while you are EDITING the layout —
+   never on mount or page navigation. The old setTimeout-based "ready" flag
+   re-enabled transitions before react-grid-layout finished measuring the grid
+   width, so every widget slid in on each page switch. */
+.topic-grid:not(.topic-grid-editing) .react-grid-item,
+.home-grid:not(.home-grid-editing) .react-grid-item {
   transition: none !important;
 }
 .react-grid-item.react-draggable-dragging {

@@ -271,12 +271,9 @@ const linkInput = (t: Theme): React.CSSProperties => ({
 export default function TopicView({ topic, onChange, t, ctx }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [gridReady, setGridReady] = useState(false);
-  useEffect(() => {
-    setGridReady(false);
-    const id = setTimeout(() => setGridReady(true), 0);
-    return () => clearTimeout(id);
-  }, [topic.id]);
+  // Grid position transitions are gated on edit mode (see .topic-grid-editing in
+  // index.css) so widgets never slide in when you switch topics — only while you
+  // actively rearrange them.
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [configPanelPos, setConfigPanelPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -475,7 +472,10 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
       </div>
 
       <Grid
-        className={`topic-grid${gridReady ? ' topic-grid-ready' : ''}`}
+        className={`topic-grid${editMode ? ' topic-grid-editing' : ''}`}
+        // Render only after the width is measured so widgets appear directly in
+        // place instead of sliding in from the right on each topic open.
+        measureBeforeMount
         layout={layout}
         cols={COLS}
         rowHeight={ROW_H}

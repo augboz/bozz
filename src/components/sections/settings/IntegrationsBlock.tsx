@@ -1595,6 +1595,10 @@ export default function IntegrationsBlock({
   const gfitCard   = <GoogleFitCard       key="gfit"    t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
   const ahealthCard = <AppleHealthCard    key="ahealth" t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
 
+  // Temporarily hidden integrations — not functional yet, so don't surface them
+  // in the connected-apps UI. Remove an id from this set to bring it back.
+  const HIDDEN_INTEGRATIONS = new Set(['whatsapp', 'gfit', 'ahealth']);
+
   // `name`/`keywords` drive the Apps-page search filter.
   const allCards: Array<{ id: keyof typeof isConnected; name: string; keywords?: string; node: React.ReactNode }> = [
     { id: 'gmail',   name: 'Gmail',           keywords: 'google email mail',          node: gmailCard },
@@ -1614,8 +1618,8 @@ export default function IntegrationsBlock({
   const match = (c: { name: string; keywords?: string }) =>
     !q || c.name.toLowerCase().includes(q) || (c.keywords ?? '').includes(q);
 
-  const connected = allCards.filter(c => isConnected[c.id] && match(c));
-  const available = allCards.filter(c => !isConnected[c.id] && match(c));
+  const connected = allCards.filter(c => !HIDDEN_INTEGRATIONS.has(c.id) && isConnected[c.id] && match(c));
+  const available = allCards.filter(c => !HIDDEN_INTEGRATIONS.has(c.id) && !isConnected[c.id] && match(c));
 
   const gridStyle: React.CSSProperties | undefined = variant === 'grid'
     ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.65rem', alignItems: 'start' }

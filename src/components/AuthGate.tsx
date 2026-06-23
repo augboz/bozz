@@ -107,7 +107,7 @@ export default function AuthGate({ children }: Props) {
         if (error) setStatus({ text: friendlyError(error), ok: false });
         // on success onAuthStateChange fires → session set → this screen unmounts
       } else {
-        const { error } = await withTimeout(
+        const { data, error } = await withTimeout(
           supabase.auth.signUp({
             email: e, password,
             options: { emailRedirectTo: window.location.origin },
@@ -116,6 +116,14 @@ export default function AuthGate({ children }: Props) {
         );
         if (error) {
           setStatus({ text: friendlyError(error), ok: false });
+        } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          // Supabase returns an obfuscated user with an empty `identities` array
+          // when the email is already registered (its anti-enumeration default).
+          // Surface that clearly and switch to sign-in instead of letting the
+          // user think they created a second account.
+          setStatus({ text: 'An account with that email already exists. Please sign in instead.', ok: false });
+          setMode('signin');
+          setPassword('');
         } else {
           setStatus({ text: `Check ${e} for a confirmation link, then sign in.`, ok: true });
           setMode('signin');
