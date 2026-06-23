@@ -76,6 +76,12 @@ html, body {
      top and bottom when the page is already at its scroll limits. */
   overscroll-behavior: none;
   height: 100%;
+  /* Paint the theme background on the document itself. Without this, html/body
+     stay transparent and the scrollbar gutter + overscroll area fall through to
+     the Tauri window's backgroundColor (#101015, near-black) — which made the
+     right scrollbar look black in Light/Warm mode even though the content is
+     light. Tracks the active theme via the runtime-set --app-bg var. */
+  background: var(--app-bg);
   /* iOS PWA: avoid double-tap-to-zoom delays on tappable elements */
   touch-action: manipulation;
   /* Improve mobile tap response */

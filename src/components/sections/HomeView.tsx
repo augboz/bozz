@@ -142,7 +142,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
 
   // Navigation is disabled while editing so dragging a card never navigates.
   const renderCtx = useMemo<WidgetCtx>(
-    () => ({ ...ctx, setActiveSection: editMode ? () => {} : ctx.setActiveSection }),
+    () => ({ ...ctx, editing: editMode, setActiveSection: editMode ? () => {} : ctx.setActiveSection }),
     [ctx, editMode],
   );
 
@@ -237,7 +237,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
                     </button>
                   </>
                 )}
-                <div style={{ pointerEvents: editMode ? 'none' : 'auto' }}>
+                <div className={editMode ? 'widget-edit-overlay' : ''} style={{ pointerEvents: editMode ? 'none' : 'auto' }}>
                   <W ctx={instanceCtx} />
                 </div>
               </div>
@@ -352,7 +352,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
                   </button>
                 </>
               )}
-              <div style={{ height: '100%', pointerEvents: editMode ? 'none' : 'auto' }}>
+              <div className={editMode ? 'widget-edit-overlay' : ''} style={{ height: '100%', pointerEvents: editMode ? 'none' : 'auto' }}>
                 <W ctx={instanceCtx} />
               </div>
             </div>

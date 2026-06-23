@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapPin, Cloud } from 'lucide-react';
+import { MapPin, Cloud, Pencil } from 'lucide-react';
 import { platformFetch as httpFetch } from '../../lib/http';
 import { getItem, setItem } from '../../lib/storage';
 import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
@@ -36,7 +36,7 @@ interface SavedLocation {
 type Status = 'loading' | 'locating' | 'ready' | 'error' | 'needs-city';
 
 export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t } = ctx;
+  const { t, editing } = ctx;
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +158,12 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
     return () => clearInterval(id);
   }, [fetchWeather]);
 
+  // Changing location is an edit-mode-only action — collapse the input when
+  // the user leaves edit mode so it never lingers on the read-only widget.
+  useEffect(() => {
+    if (!editing) setShowCityInput(false);
+  }, [editing]);
+
   const inp: React.CSSProperties = {
     background: t.input, border: `1px solid ${t.border}`, borderRadius: '7px',
     padding: '0.4rem 0.6rem', color: t.text, fontSize: '0.78rem',
@@ -169,8 +175,12 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
     fontFamily: 'inherit', fontSize: '0.72rem',
   };
 
-  const CityForm = () => (
-    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+  // A plain element (not a nested component) so typing doesn't remount the
+  // input and drop focus on every keystroke. `widget-interactive` keeps it
+  // clickable while the grid is in edit mode (the wrapper sets
+  // pointer-events:none on widgets while editing — see .widget-edit-overlay).
+  const cityForm = (
+    <div className="widget-interactive" style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
       <input
         value={cityInput}
         onChange={e => setCityInput(e.target.value)}
@@ -197,6 +207,17 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
     </div>
   );
 
+  // Location line shown under the temperature. By default it's read-only — the
+  // widget tracks the user's actual location. Only in edit mode does it become
+  // a button that reveals the city input.
+  const locationLine = (
+    <>
+      <MapPin size={11} strokeWidth={1.5} color={t.textDim} />
+      <span style={{ fontSize: '0.72rem', color: t.textDim }}>{weather?.city}</span>
+      <span style={{ fontSize: '0.68rem', color: t.textDim, marginLeft: '0.1rem' }}>· {weather?.windSpeed} km/h</span>
+    </>
+  );
+
   return (
     <Widget t={t} accent={ACCENT}>
       <WidgetHeader label="Weather" accent={ACCENT} t={t} icon={Cloud} />
@@ -205,27 +226,37 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
         <EmptyWidget text={status === 'locating' ? 'Detecting location…' : 'Loading weather…'} t={t} />
       )}
 
-      {status === 'needs-city' && (
+      {/* No usable location yet (geolocation denied/failed). Setting one manually
+          is an edit-mode action, so only offer the input while editing. */}
+      {status === 'needs-city' && (editing ? (
         <div style={{ marginTop: '0.85rem' }}>
           <div style={{ fontSize: '0.75rem', color: t.textMuted, marginBottom: '0.4rem' }}>
-            Enter your city to get started:
+            Enter your city:
           </div>
-          <CityForm />
+          {cityForm}
           {error && (
             <div style={{ fontSize: '0.68rem', color: t.alert, marginTop: '0.4rem' }}>{error}</div>
           )}
         </div>
-      )}
+      ) : (
+        <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <MapPin size={12} strokeWidth={1.5} color={t.textDim} />
+          <span style={{ fontSize: '0.74rem', color: t.textDim }}>Set a location in Edit mode.</span>
+        </div>
+      ))}
 
       {status === 'error' && weather === null && (
         <div style={{ marginTop: '0.85rem' }}>
           <div style={{ fontSize: '0.72rem', color: t.alert }}>{error}</div>
-          <button
-            onClick={() => { setStatus('needs-city'); setError(null); }}
-            style={{ ...btn, marginTop: '0.5rem' }}
-          >
-            Try a city name
-          </button>
+          {editing && (
+            <button
+              className="widget-interactive"
+              onClick={() => { setStatus('needs-city'); setError(null); }}
+              style={{ ...btn, marginTop: '0.5rem' }}
+            >
+              Try a city name
+            </button>
+          )}
         </div>
       )}
 
@@ -237,18 +268,26 @@ export default function WeatherWidget({ ctx }: { ctx: WidgetCtx }) {
             </span>
             <span style={{ fontSize: '0.82rem', color: t.textMuted }}>{weather.condition}</span>
           </div>
-          <button
-            onClick={() => setShowCityInput(s => !s)}
-            title="Change city"
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem', opacity: 0.7 }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
-          >
-            <MapPin size={11} strokeWidth={1.5} color={t.textDim} />
-            <span style={{ fontSize: '0.72rem', color: t.textDim }}>{weather.city}</span>
-            <span style={{ fontSize: '0.68rem', color: t.textDim, marginLeft: '0.1rem' }}>· {weather.windSpeed} km/h</span>
-          </button>
-          {showCityInput && <CityForm />}
+
+          {editing ? (
+            <button
+              className="widget-interactive"
+              onClick={() => setShowCityInput(s => !s)}
+              title="Change location"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem', opacity: 0.75 }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '0.75')}
+            >
+              {locationLine}
+              <Pencil size={9} strokeWidth={1.5} color={t.textDim} style={{ marginLeft: '0.2rem' }} />
+            </button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem' }}>
+              {locationLine}
+            </div>
+          )}
+
+          {editing && showCityInput && cityForm}
         </div>
       )}
     </Widget>
