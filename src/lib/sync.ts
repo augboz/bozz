@@ -59,12 +59,14 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
     await Promise.all(
       Object.entries(row.data ?? {})
         .filter(([, value]) => value !== undefined && value !== null)
+        // SECURITY: never import OAuth token keys from the remote blob. Rows
+        // written by older builds may still contain leaked access/refresh
+        // tokens and client secrets; tokens belong only in the local app data
+        // file, never in the synced Supabase row.
+        .filter(([key]) => !key.startsWith('__tok__'))
         .map(async ([key, value]) => {
           try {
-            const serialised = key.startsWith('__tok__')
-              ? String(value)
-              : JSON.stringify(value);
-            await setItem(key, serialised);
+            await setItem(key, JSON.stringify(value));
           } catch (e) {
             console.error(`[sync] writing local ${key}:`, e);
           }
@@ -96,16 +98,11 @@ export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
     if (entry) out[entry.key] = entry.value;
   }
 
-  // Sync OAuth tokens (__tok__* keys).
-  try {
-    const tokenKeys = await listKeysByPrefix('__tok__');
-    await Promise.all(tokenKeys.map(async key => {
-      try {
-        const r = await getItem(key);
-        if (r?.value) out[key] = r.value;
-      } catch { /* ignore */ }
-    }));
-  } catch { /* ignore */ }
+  // SECURITY: OAuth tokens (__tok__* keys — access/refresh tokens and client
+  // secrets) are deliberately NOT collected for sync. Uploading them into the
+  // Supabase row would put credentials at rest in a blob that is not end-to-end
+  // encrypted. They stay only in the local app data file; users reconnect
+  // integrations per device.
 
   // Sync per-widget photos (photo__* keys — one per Photo widget instance).
   try {
