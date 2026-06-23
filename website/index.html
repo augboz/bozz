@@ -3,9 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BOZZ · One dashboard. Everything.</title>
-<meta name="description" content="BOZZ brings your tasks, calendar, budget, health, email and habits into one calm, customisable home.">
+<title>BOZZ · Your whole morning, one window</title>
+<meta name="description" content="BOZZ brings your tasks, calendar, budget, health, email and habits into one calm, customisable desktop window.">
 <meta name="theme-color" content="#171721">
+<link rel="canonical" href="https://bozz-app.vercel.app/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235266eb'/%3E%3Ctext x='16' y='23' font-size='21' font-weight='700' text-anchor='middle' fill='white' font-family='system-ui,sans-serif'%3EB%3C/text%3E%3C/svg%3E">
+<!-- Open Graph / social link previews -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bozz-app.vercel.app/">
+<meta property="og:title" content="BOZZ · Your whole morning, one window">
+<meta property="og:description" content="Tasks, calendar, budget, health, email and habits in one calm, customisable desktop window.">
+<meta property="og:image" content="https://bozz-app.vercel.app/assets/hero-dark.png">
+<meta property="og:image:alt" content="The BOZZ dashboard in dark mode">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BOZZ · Your whole morning, one window">
+<meta name="twitter:description" content="Tasks, calendar, budget, health, email and habits in one calm, customisable desktop window.">
+<meta name="twitter:image" content="https://bozz-app.vercel.app/assets/hero-dark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -580,12 +593,12 @@ footer {
 <section class="hero" aria-label="Introduction">
   <div class="hero-badge">
     <span class="badge-dot"></span>
-    Windows 10 &amp; 11 · Free forever
+    Windows 10 &amp; 11 · Free · Open-source
   </div>
 
   <h1>
-    <span class="line"><span>One window for</span></span>
-    <span class="line"><span>your whole life.</span></span>
+    <span class="line"><span>Your whole morning,</span></span>
+    <span class="line"><span>one window.</span></span>
   </h1>
 
   <p class="hero-sub">Tasks, calendar, budget, health, email and habits. One calm, customisable home.</p>
@@ -722,7 +735,7 @@ footer {
 <section class="section section-center" id="download">
   <div class="download-wrap reveal">
     <h2>One window for everything.</h2>
-    <p class="section-sub">Free to download. Your data stays on your device, cloud sync optional.</p>
+    <p class="section-sub">Free to download. Sign in once to sync across your devices. No ads, no trackers, never sold.</p>
     <div class="dl-buttons">
       <a href="https://github.com/augboz/bozz/releases/latest/download/Bozz-setup.exe" class="dl-btn primary">
         <span class="dl-main">Download for Windows</span>
@@ -733,7 +746,8 @@ footer {
         <span class="dl-sub" id="macSub">Apple Silicon · Free</span>
       </a>
     </div>
-    <p class="dl-note">No account required. Your data stays on your device.</p>
+    <p class="dl-note">macOS is unsigned for now: on first open, right-click the app and choose Open.</p>
+    <p class="dl-note" style="margin-top:0.6rem;opacity:0.85">Free and open-source under AGPL-3.0, built by one person in the open. <a href="https://github.com/augboz/bozz" target="_blank" rel="noopener" style="color:var(--silver);text-decoration:underline">See the source</a>.</p>
     <script>
       // Auto-detect Intel Mac and swap to the right DMG
       (function() {
@@ -756,9 +770,10 @@ footer {
 <footer>
   <span class="footer-logo">BOZZ</span>
   <div class="footer-links">
-    <a href="#">Privacy</a>
-    <a href="#">Terms</a>
-    <a href="#">Contact</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="https://github.com/augboz/bozz" target="_blank" rel="noopener">GitHub</a>
+    <a href="mailto:ab5324@ic.ac.uk">Contact</a>
   </div>
   <span class="footer-copy">© 2026 BOZZ.</span>
 </footer>
