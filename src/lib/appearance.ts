@@ -14,7 +14,7 @@ export const DEFAULT_COLOR_BANK: string[] = [
 ];
 
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
-  mood: 'warm',
+  mood: 'dark',
   font: 'inter',
   fontSize: 'medium',
   hiddenSections: ['music', 'life', 'cv', 'other', 'applications',
