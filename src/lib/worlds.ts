@@ -42,7 +42,7 @@ function world(w: Omit<BozzWorld, 'background' | 'previewUrl' | 'author' | 'vers
 }): BozzWorld {
   const url = gradientWallpaper(w.gradient);
   return {
-    id: w.id, name: w.name, description: w.description, free: w.free,
+    id: w.id, name: w.name, description: w.description, free: w.free, kind: w.kind,
     mood: w.mood, colorBank: w.colorBank, accent: w.accent, font: w.font,
     widgetShape: w.widgetShape, widgetBorder: w.widgetBorder,
     ambientSound: w.ambientSound,
@@ -71,8 +71,9 @@ function topicLayout(extra: HomeWidgetItem['type'][]): HomeWidgetItem[] {
 // ── The bundled free Worlds ──────────────────────────────────────────────────
 
 export const BUNDLED_WORLDS: BozzWorld[] = [
+  // ── Themes — aesthetic only (mood, font, wallpaper) ──────────────────────────
   world({
-    id: 'default', name: 'Default', free: true,
+    id: 'default', name: 'Default', free: true, kind: 'theme',
     description: 'Bozz as it comes — clean and calm.',
     mood: 'dark', font: 'inter', accent: '#6ba8d4',
     colorBank: ['#6ba8d4', '#7dbf9a', '#d4c860', '#d4a86a', '#d47a7a', '#6abfbf'],
@@ -80,7 +81,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#0a0a0a', '#141414'], dim: 1,
   }),
   world({
-    id: 'cozy-autumn', name: 'Cozy Autumn', free: true,
+    id: 'cozy-autumn', name: 'Cozy Autumn', free: true, kind: 'theme',
     description: 'Warm ambers and soft terracotta for slow mornings.',
     mood: 'warm', font: 'fraunces', accent: '#c4683a',
     colorBank: ['#c4683a', '#d99058', '#e0b878', '#a85a3c', '#8a6f4a', '#cf9b6c'],
@@ -88,7 +89,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#3a1c12', '#6e3a1f', '#a8623a'], dim: 0.62,
   }),
   world({
-    id: 'tokyo-night', name: 'Tokyo Night', free: true,
+    id: 'tokyo-night', name: 'Tokyo Night', free: true, kind: 'theme',
     description: 'Neon dusk — deep indigo with electric magenta.',
     mood: 'dark', font: 'geist', accent: '#7aa2f7',
     colorBank: ['#7aa2f7', '#bb9af7', '#f7768e', '#7dcfff', '#9ece6a', '#e0af68'],
@@ -96,7 +97,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#0f0f1e', '#1a1b3a', '#3b1f56'], dim: 0.58,
   }),
   world({
-    id: 'minimal-cream', name: 'Minimal Cream', free: true,
+    id: 'minimal-cream', name: 'Minimal Cream', free: true, kind: 'theme',
     description: 'Quiet paper-white with the gentlest warmth.',
     mood: 'light', font: 'manrope', accent: '#9a8f7a',
     colorBank: ['#9a8f7a', '#b9a98c', '#c9b89a', '#8a7d66', '#a89878', '#d8cdb6'],
@@ -104,7 +105,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#f5f1e8', '#ece5d6', '#e3dac6'], dim: 0.35,
   }),
   world({
-    id: 'forest-calm', name: 'Forest Calm', free: true,
+    id: 'forest-calm', name: 'Forest Calm', free: true, kind: 'theme',
     description: 'Deep pine greens and moss — grounded and still.',
     mood: 'dark', font: 'inter', accent: '#7dbf9a',
     colorBank: ['#7dbf9a', '#a3c98a', '#5e9d7a', '#c8d6a0', '#4a7d63', '#9bbf7d'],
@@ -112,7 +113,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#0c1812', '#163024', '#1f4733'], dim: 0.58,
   }),
   world({
-    id: 'nordic-frost', name: 'Nordic Frost', free: true,
+    id: 'nordic-frost', name: 'Nordic Frost', free: true, kind: 'theme',
     description: 'Cool slate and glacier blue — crisp and bright.',
     mood: 'light', font: 'geist', accent: '#5b8fb0',
     colorBank: ['#5b8fb0', '#7fb0c9', '#a7c7d9', '#4a7a96', '#88a8bd', '#c2dae6'],
@@ -120,11 +121,29 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#eef3f6', '#dce7ee', '#cad9e4'], dim: 0.32,
   }),
 
-  // ── Plus Worlds (locked in beta-off; shown blurred so users see the depth) ──
-  // These carry a ready-made topic layout, so "Add as a new topic" drops a whole
-  // set up section (e.g. Shopping) in one tap.
+  // ── Templates — pre-made pages (widgets + look) for a specific use ───────────
+  // Applied as a New topic, these drop a fully set-up section in one tap. Two are
+  // free (activation); the rest are Plus (teased blurred until unlocked).
   world({
-    id: 'shopping', name: 'Shopping', free: false,
+    id: 'job-hunt', name: 'Job Hunt', free: true, kind: 'template',
+    description: 'Track every application from applied to offer.',
+    mood: 'dark', font: 'inter', accent: '#d47a7a', icon: 'Briefcase',
+    colorBank: ['#d47a7a', '#e0a16b', '#7da7d9', '#bb9af7', '#7fc8a9', '#c8c8c8'],
+    widgetShape: 'rounded', widgetBorder: 'normal',
+    topicWidgets: topicLayout(['upcomingDeadlines', 'quickAdd']),
+    gradient: ['#1a1216', '#2a1a22', '#3a2230'], dim: 0.55,
+  }),
+  world({
+    id: 'study', name: 'Study', free: true, kind: 'template',
+    description: 'Assignments, revision and deadlines — sorted.',
+    mood: 'light', font: 'manrope', accent: '#7da7d9', icon: 'GraduationCap',
+    colorBank: ['#7da7d9', '#bb9af7', '#7fc8a9', '#e0a16b', '#9a8f7a', '#a7c7d9'],
+    widgetShape: 'rounded', widgetBorder: 'normal',
+    topicWidgets: topicLayout(['today', 'upcomingDeadlines']),
+    gradient: ['#eef2f7', '#dde6f0', '#cdd9e8'], dim: 0.32,
+  }),
+  world({
+    id: 'shopping', name: 'Shopping', free: false, kind: 'template',
     description: 'A ready-made shopping space — lists, links and budget, themed.',
     mood: 'warm', font: 'quicksand', accent: '#d4756a', icon: 'ShoppingBag',
     colorBank: ['#d4756a', '#e0a16b', '#d4b078', '#c98a7a', '#b86a5c', '#e8c4a0'],
@@ -133,13 +152,22 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#3a201c', '#74332c', '#b8625a'], dim: 0.55,
   }),
   world({
-    id: 'deep-work', name: 'Deep Work', free: false,
+    id: 'deep-work', name: 'Deep Work', free: false, kind: 'template',
     description: 'A focused workspace — timer, today and a clean dark canvas.',
     mood: 'dark', font: 'mono', accent: '#8ab4f8', icon: 'Target',
     colorBank: ['#8ab4f8', '#a0a0a0', '#c8c8c8', '#6a8fd0', '#7d7d7d', '#b0c4de'],
     widgetShape: 'sharp', widgetBorder: 'subtle',
     topicWidgets: topicLayout(['pomodoro', 'clock']),
     gradient: ['#0b0d10', '#15191f', '#1d242e'], dim: 0.55,
+  }),
+  world({
+    id: 'travel', name: 'Travel', free: false, kind: 'template',
+    description: 'Plan a trip — checklist, budget and links in one place.',
+    mood: 'light', font: 'quicksand', accent: '#5bb0a8', icon: 'Plane',
+    colorBank: ['#5bb0a8', '#7fc8c0', '#e0b878', '#d99058', '#88bdd0', '#a7d9d2'],
+    widgetShape: 'pill', widgetBorder: 'normal',
+    topicWidgets: topicLayout(['budget', 'today']),
+    gradient: ['#e8f2f0', '#d2e8e4', '#bcdcd6'], dim: 0.32,
   }),
 ];
 

@@ -439,6 +439,11 @@ export interface BozzWorld {
   description: string;
   author: string;              // "Bozz"
   free: boolean;               // a few are free
+  /**
+   * 'theme'    = aesthetic only (mood, font, wallpaper) — e.g. Cozy Autumn.
+   * 'template' = a pre-made page: widgets + look for a specific use (Shopping).
+   */
+  kind: 'theme' | 'template';
   // The look — maps onto AppearancePrefs:
   mood: MoodId;
   colorBank: string[];         // palette this World installs (<=30)
@@ -462,22 +467,6 @@ export interface BozzWorld {
 
 /** Where an applied World should land. */
 export type WorldScope = 'global' | 'newTopic' | 'existingTopic' | 'newFolder';
-
-// ── Templates / starter packs (Bozz Plus — "Build" pillar) ───────────────────
-
-export interface BozzTemplate {
-  id: string;
-  name: string;            // "Student", "Founder", "Job hunt", "Calm minimal"
-  description: string;
-  tags: string[];
-  topics: Topic[];
-  folders?: TopicFolder[];
-  homeWidgetLayout: HomeWidgetItem[];
-  appearance?: Partial<AppearancePrefs>;
-  starterHabits?: Habit[];
-  budgetCategories?: string[];
-  createdBy?: string;
-}
 
 // ── Entitlement / billing (Bozz Plus — money model) ──────────────────────────
 

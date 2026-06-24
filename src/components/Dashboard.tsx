@@ -32,13 +32,12 @@ import type {
   ListItem, Application, Status, SectionId, SortMode, TaskListKey, AppearancePrefs, HomeWidgetItem,
   CalendarFeed, CalendarCache, CalendarEvent, CalendarConnection, CalendarNote, BudgetData, InboxItem,
   WeeklyReview, ReviewSettings, OAuthAccount, EmailMessage, EmailProvider,
-  Topic, TopicFolder, PriorityAlertSettings, BozzTemplate,
+  Topic, TopicFolder, PriorityAlertSettings,
 } from '../lib/types';
 import {
   DEFAULT_ALERT_SETTINGS, startAlertWatcher, stopAlertWatcher, seedWatchState,
 } from '../lib/alerts';
 import { loadEntitlement } from '../lib/plus';
-import { applyTemplate } from '../lib/templates';
 import { BgLayer } from './shared/BackgroundControls';
 import WorldsView from './sections/WorldsView';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
@@ -671,19 +670,6 @@ export default function Dashboard() {
     setAppearance(prev => ({ ...prev, ...patch }));
   const resetAppearance = () => setAppearance(DEFAULT_APPEARANCE);
   const resetHomeLayout = () => setHomeItems(DEFAULT_HOME);
-
-  // Apply a free starter pack: merge topics/folders/habits, set the home layout
-  // and the matching look. Never clobbers existing data (applyTemplate appends
-  // with fresh ids). Then jump home so the user sees the result immediately.
-  const onApplyTemplate = (tpl: BozzTemplate) => {
-    const result = applyTemplate(tpl, { topics, topicFolders, habits });
-    setTopics(result.topics);
-    setTopicFolders(result.topicFolders);
-    setHabits(result.habits);
-    setHomeItems(result.homeWidgetLayout);
-    if (result.appearance) patchAppearance(result.appearance);
-    setActiveSection('home');
-  };
 
   const addTaskToList = (list: TaskListKey, text: string, deadline: number | null) => {
     const item: ListItem = {
@@ -1608,7 +1594,6 @@ export default function Dashboard() {
               priorityAlerts={priorityAlerts}
               onPriorityAlertsChange={setPriorityAlerts}
               oauthAccounts={oauthAccounts}
-              onApplyTemplate={onApplyTemplate}
               onOpenWorlds={() => setActiveSection('worlds')}
             />
           )}

@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronDown, ChevronRight, Palette, Menu,
   Plug, NotebookPen, Power, RotateCcw, ListTree, LogOut, Plus, X,
-  Bell, Sparkles, Package,
+  Bell, Sparkles,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
-  AppearancePrefs, BozzTemplate, FontChoice, FontSize,
+  AppearancePrefs, FontChoice, FontSize,
   MoodId, OAuthAccount, PriorityAlertSettings, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
 } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
@@ -15,7 +15,6 @@ import { DEFAULT_COLOR_BANK } from '../../lib/appearance';
 import TopicsBlock from './settings/TopicsBlock';
 import PriorityAlertsBlock from './settings/PriorityAlertsBlock';
 import PlanBlock from './settings/PlanBlock';
-import StarterPacksBlock from './settings/StarterPacksBlock';
 
 interface SettingsViewProps {
   t: Theme;
@@ -41,7 +40,6 @@ interface SettingsViewProps {
   priorityAlerts: PriorityAlertSettings;
   onPriorityAlertsChange: (s: PriorityAlertSettings) => void;
   oauthAccounts: OAuthAccount[];
-  onApplyTemplate: (tpl: BozzTemplate) => void;
   onOpenWorlds: () => void;
 }
 
@@ -361,7 +359,7 @@ export default function SettingsView({
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
   accountEmail, onSignOut,
-  priorityAlerts, onPriorityAlertsChange, oauthAccounts, onApplyTemplate, onOpenWorlds,
+  priorityAlerts, onPriorityAlertsChange, oauthAccounts, onOpenWorlds,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -448,10 +446,6 @@ export default function SettingsView({
           onChange={onPriorityAlertsChange}
           accounts={oauthAccounts}
         />
-      </Block>
-
-      <Block title="Starter packs" t={t} icon={Package}>
-        <StarterPacksBlock t={t} onApply={onApplyTemplate} />
       </Block>
 
       <Block title="Appearance" t={t} icon={Palette}>

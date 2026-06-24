@@ -31,14 +31,18 @@ export default function WorldsView({
   onTopicsChange, onTopicFoldersChange, onNavigate, onBack,
 }: Props) {
   const activeId = appearance.activeWorldId;
+  const [filter, setFilter] = useState<'all' | 'theme' | 'template'>('all');
   const [preview, setPreview] = useState<BozzWorld | null>(null);
   const [scope, setScope] = useState<WorldScope>('global');
   const [name, setName] = useState('');
   const [targetTopic, setTargetTopic] = useState<string>('');
 
+  const shown = BUNDLED_WORLDS.filter(w => filter === 'all' || w.kind === filter);
+
   const openPreview = (world: BozzWorld) => {
     setPreview(world);
-    setScope('global');
+    // Templates default to "New topic" (they're a page); themes to "Whole of Bozz".
+    setScope(world.kind === 'template' ? 'newTopic' : 'global');
     setName(world.name);
     setTargetTopic(topics[0]?.id ?? '');
   };
@@ -111,10 +115,32 @@ export default function WorldsView({
         ) : undefined}
       />
 
-      <p style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.55, margin: '0 0 1.2rem', fontWeight: 300 }}>
-        A World is a one-tap look. Tap one to preview it, then choose where it lands — your whole
-        dashboard, a single topic, or a brand-new section.
+      <p style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.55, margin: '0 0 0.9rem', fontWeight: 300 }}>
+        <strong style={{ color: t.text, fontWeight: 500 }}>Themes</strong> restyle Bozz — colour,
+        wallpaper and font. <strong style={{ color: t.text, fontWeight: 500 }}>Templates</strong> are
+        ready-made pages with widgets for a specific job. Tap any to preview, then choose where it lands.
       </p>
+
+      {/* Themes / Templates filter */}
+      <div style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '9px', overflow: 'hidden', marginBottom: '1.2rem' }}>
+        {([['all', 'All'], ['theme', 'Themes'], ['template', 'Templates']] as const).map(([id, label], i) => {
+          const on = filter === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setFilter(id)}
+              style={{
+                background: on ? t.bgAlt : 'transparent', color: on ? t.text : t.textMuted,
+                border: 'none', borderLeft: i === 0 ? 'none' : `1px solid ${t.border}`,
+                padding: '0.42rem 0.95rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer',
+                fontWeight: on ? 500 : 400,
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Ambient controls (shown when the active World has sound) */}
       {ambient && (
@@ -138,7 +164,7 @@ export default function WorldsView({
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.9rem' }}>
-        {BUNDLED_WORLDS.map(world => {
+        {shown.map(world => {
           const active = activeId === world.id || (!activeId && world.id === 'default');
           // Plus worlds are always teased blurred so users see the premium tier;
           // whether they can actually apply is decided in the modal (canApply).
@@ -178,8 +204,11 @@ export default function WorldsView({
                 )}
               </div>
               <div style={{ padding: '0.7rem 0.85rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.86rem', color: t.text, fontWeight: 500 }}>{world.name}</span>
+                  {world.kind === 'template' && (
+                    <span style={pill(t.textMuted, t.border)}>Template</span>
+                  )}
                   {world.free && world.id !== 'default' && (
                     <span style={pill(t.doneAccent, t.doneBorder)}>Free</span>
                   )}
