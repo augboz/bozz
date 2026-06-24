@@ -206,13 +206,24 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
       <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '0.8rem', display: 'grid', gap: '0.7rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <span style={{ fontSize: '0.82rem', color: t.text }}>Check every</span>
-          <select
-            value={settings.pollMinutes}
-            onChange={e => patch({ pollMinutes: Number(e.target.value) })}
-            style={inp}
-          >
-            {[1, 3, 5, 15].map(m => <option key={m} value={m}>{m} min</option>)}
-          </select>
+          <div style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '8px', overflow: 'hidden' }}>
+            {[1, 3, 5, 15].map((m, i) => {
+              const on = settings.pollMinutes === m;
+              return (
+                <button
+                  key={m}
+                  onClick={() => patch({ pollMinutes: m })}
+                  style={{
+                    background: on ? t.bgAlt : 'transparent', color: on ? t.text : t.textMuted,
+                    border: 'none', borderLeft: i === 0 ? 'none' : `1px solid ${t.border}`,
+                    padding: '0.4rem 0.7rem', fontSize: '0.76rem', fontFamily: 'inherit', cursor: 'pointer',
+                  }}
+                >
+                  {m}m
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>

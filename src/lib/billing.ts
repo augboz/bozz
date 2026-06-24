@@ -8,6 +8,10 @@
 // During beta there is no live checkout: openCheckout() opens the (placeholder)
 // product/waitlist page, and activateLicense() is stubbed. When money turns on
 // (Phase 3), wire these to the MoR license API and flip BETA_UNLOCK in plus.ts.
+//
+// IMPORTANT: all plan/pricing/payment UI lives on the WEBSITE, not in the app.
+// The app only shows the current plan and an "Explore plans" button that opens
+// the web plans page. Keeps the desktop app calm and avoids app-store IAP rules.
 
 import type { Entitlement } from './types';
 import { setEntitlement, BETA_UNLOCK } from './plus';
@@ -18,6 +22,7 @@ export type DonateMethod = 'sponsors' | 'kofi' | 'tip';
 // Public links. Checkout/portal URLs are placeholders until the MoR store is
 // live; the donation links are real and shippable today.
 const LINKS = {
+  plans: 'https://bozz.app/plus',
   waitlist: 'https://bozz.app/plus',
   worldsLifetime: 'https://bozz.app/plus',
   plusMonthly: 'https://bozz.app/plus',
@@ -36,6 +41,11 @@ async function open(url: string): Promise<void> {
     // Web fallback.
     try { window.open(url, '_blank', 'noopener'); } catch { /* ignore */ }
   }
+}
+
+/** Open the web plans/pricing page in the system browser. */
+export function openPlansPage(): void {
+  void open(LINKS.plans);
 }
 
 /** Open the merchant-of-record checkout (or the beta waitlist) in the browser. */

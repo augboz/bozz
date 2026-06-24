@@ -7,7 +7,7 @@
 // budget, calendar). The wallpaper reuses the existing page-background render
 // path (homeBackground → BgLayer) so there is no new global render layer.
 
-import type { AppearancePrefs, BozzWorld } from './types';
+import type { AppearancePrefs, BozzWorld, HomeWidgetItem, Topic, TopicFolder } from './types';
 import { hasWorldsAccess } from './plus';
 
 // ── Wallpaper generation (offline, no binary assets) ─────────────────────────
@@ -46,11 +46,26 @@ function world(w: Omit<BozzWorld, 'background' | 'previewUrl' | 'author' | 'vers
     mood: w.mood, colorBank: w.colorBank, accent: w.accent, font: w.font,
     widgetShape: w.widgetShape, widgetBorder: w.widgetBorder,
     ambientSound: w.ambientSound,
+    icon: w.icon, topicWidgets: w.topicWidgets,
     author: 'Bozz',
     background: { url, dim: w.dim },
     previewUrl: url,
     version: 1,
   };
+}
+
+let wcount = 0;
+const wid = () => { wcount += 1; return `ww-${wcount}`; };
+/** A compact ready-made topic-page layout for topic/folder-scoped Worlds. */
+function topicLayout(extra: HomeWidgetItem['type'][]): HomeWidgetItem[] {
+  const base: HomeWidgetItem[] = [
+    { i: wid(), type: 'topicTodos', x: 0, y: 0, w: 7, h: 12 },
+    { i: wid(), type: 'topicNote', x: 7, y: 0, w: 5, h: 6 },
+    { i: wid(), type: 'topicLinks', x: 7, y: 6, w: 5, h: 6 },
+  ];
+  let y = 12;
+  for (const type of extra) { base.push({ i: wid(), type, x: 0, y, w: 6, h: 6 }); y += 6; }
+  return base;
 }
 
 // ── The bundled free Worlds ──────────────────────────────────────────────────
@@ -104,6 +119,28 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     widgetShape: 'sharp', widgetBorder: 'normal',
     gradient: ['#eef3f6', '#dce7ee', '#cad9e4'], dim: 0.32,
   }),
+
+  // ── Plus Worlds (locked in beta-off; shown blurred so users see the depth) ──
+  // These carry a ready-made topic layout, so "Add as a new topic" drops a whole
+  // set up section (e.g. Shopping) in one tap.
+  world({
+    id: 'shopping', name: 'Shopping', free: false,
+    description: 'A ready-made shopping space — lists, links and budget, themed.',
+    mood: 'warm', font: 'quicksand', accent: '#d4756a', icon: 'ShoppingBag',
+    colorBank: ['#d4756a', '#e0a16b', '#d4b078', '#c98a7a', '#b86a5c', '#e8c4a0'],
+    widgetShape: 'pill', widgetBorder: 'normal',
+    topicWidgets: topicLayout(['budget', 'quickAdd']),
+    gradient: ['#3a201c', '#74332c', '#b8625a'], dim: 0.55,
+  }),
+  world({
+    id: 'deep-work', name: 'Deep Work', free: false,
+    description: 'A focused workspace — timer, today and a clean dark canvas.',
+    mood: 'dark', font: 'mono', accent: '#8ab4f8', icon: 'Target',
+    colorBank: ['#8ab4f8', '#a0a0a0', '#c8c8c8', '#6a8fd0', '#7d7d7d', '#b0c4de'],
+    widgetShape: 'sharp', widgetBorder: 'subtle',
+    topicWidgets: topicLayout(['pomodoro', 'clock']),
+    gradient: ['#0b0d10', '#15191f', '#1d242e'], dim: 0.55,
+  }),
 ];
 
 /** Look up a World by id across bundled (and later, catalog) Worlds. */
@@ -144,4 +181,62 @@ export function revertToDefault(prefs: AppearancePrefs): AppearancePrefs {
 /** True if the user may apply this World (free, or has access during/after beta). */
 export function canApply(world: BozzWorld): boolean {
   return world.free || hasWorldsAccess();
+}
+
+// ── Topic / folder scopes ────────────────────────────────────────────────────
+// Applying a World to a topic is appearance + layout only: it sets the topic's
+// colour, icon, page background and (if the World ships them) a ready-made
+// widget layout. It never touches the topic's items.
+
+let idc = 0;
+const freshId = (p: string) => { idc += 1; return `${p}-${Date.now().toString(36)}-${idc}`; };
+
+const DEFAULT_STAGES: Topic['stages'] = [
+  { id: 'stg-todo', label: 'To do', color: '#7da7d9', done: false },
+  { id: 'stg-doing', label: 'Doing', color: '#e0a16b', done: false },
+  { id: 'stg-done', label: 'Done', color: '#7fc8a9', done: true },
+];
+
+/** Build a fresh Topic from a World (used by the "New topic" scope). */
+export function worldToTopic(world: BozzWorld, name: string, order: number, folderId?: string): Topic {
+  const stages = DEFAULT_STAGES.map(s => ({ ...s, id: freshId('stg') }));
+  return {
+    id: freshId('topic'),
+    name: name.trim() || world.name,
+    color: world.accent,
+    icon: world.icon,
+    keywords: [],
+    order,
+    stages,
+    items: [],
+    sortMode: 'manual',
+    widgetLayout: (world.topicWidgets ?? []).map(w => ({ ...w, i: freshId('w') })),
+    pageBg: { url: world.background.url, dim: world.background.dim },
+    folderId,
+  };
+}
+
+/** Patch an existing Topic with a World's look (+ layout if the World ships one). */
+export function worldTopicPatch(world: BozzWorld): Partial<Topic> {
+  const patch: Partial<Topic> = {
+    color: world.accent,
+    icon: world.icon,
+    pageBg: { url: world.background.url, dim: world.background.dim },
+  };
+  if (world.topicWidgets && world.topicWidgets.length) {
+    patch.widgetLayout = world.topicWidgets.map(w => ({ ...w, i: freshId('w') }));
+  }
+  return patch;
+}
+
+/** Build a fresh folder from a World (used by the "New folder" scope). */
+export function worldToFolder(world: BozzWorld, name: string, order: number): TopicFolder {
+  return {
+    id: freshId('folder'),
+    name: name.trim() || world.name,
+    icon: world.icon,
+    color: world.accent,
+    order,
+    collapsed: false,
+  };
 }

@@ -40,7 +40,6 @@ import {
 import { loadEntitlement } from '../lib/plus';
 import { applyTemplate } from '../lib/templates';
 import { BgLayer } from './shared/BackgroundControls';
-import PlusView from './sections/PlusView';
 import WorldsView from './sections/WorldsView';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
@@ -866,7 +865,7 @@ export default function Dashboard() {
   // the sidebar — only bounce if it's a topic ID that no longer exists.
   const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps', 'music', 'life', 'cv', 'other',
     'applications', 'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
-    'plus', 'worlds']);
+    'worlds']);
   useEffect(() => {
     if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
     const stillVisible = navItems.some(n => n.id === activeSection);
@@ -1331,7 +1330,11 @@ export default function Dashboard() {
       </aside>
 
       {/* ── Main content ── */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* position:relative + zIndex:1 keeps section content above the global
+          appBackground BgLayer (portalled to body at zIndex 0); without it an
+          applied World's wallpaper paints over Settings/Worlds and swallows
+          clicks visually. Home wraps its own content the same way. */}
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
         <div style={{
           maxWidth: '1600px', margin: '0 auto',
           padding: isMobile ? '1.25rem 1rem 1.5rem' : '2.5rem 3.25rem',
@@ -1550,19 +1553,17 @@ export default function Dashboard() {
               onHealthConnectionsChange={() => {}}
             />
           )}
-          {activeSection === 'plus' && (
-            <PlusView
-              t={t}
-              onBack={() => setActiveSection('settings')}
-              onOpenWorlds={() => setActiveSection('worlds')}
-            />
-          )}
           {activeSection === 'worlds' && (
             <WorldsView
               t={t}
               appearance={appearance}
               patchAppearance={patchAppearance}
-              onBack={() => setActiveSection('plus')}
+              topics={topics}
+              topicFolders={topicFolders}
+              onTopicsChange={setTopics}
+              onTopicFoldersChange={setTopicFolders}
+              onNavigate={setActiveSection}
+              onBack={() => setActiveSection('settings')}
             />
           )}
           {activeSection === 'settings' && (
@@ -1608,7 +1609,7 @@ export default function Dashboard() {
               onPriorityAlertsChange={setPriorityAlerts}
               oauthAccounts={oauthAccounts}
               onApplyTemplate={onApplyTemplate}
-              onOpenPlus={() => setActiveSection('plus')}
+              onOpenWorlds={() => setActiveSection('worlds')}
             />
           )}
           </ErrorBoundary>

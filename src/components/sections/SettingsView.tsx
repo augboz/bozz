@@ -42,7 +42,7 @@ interface SettingsViewProps {
   onPriorityAlertsChange: (s: PriorityAlertSettings) => void;
   oauthAccounts: OAuthAccount[];
   onApplyTemplate: (tpl: BozzTemplate) => void;
-  onOpenPlus: () => void;
+  onOpenWorlds: () => void;
 }
 
 function Block({ title, t, icon: Icon, children, defaultOpen = false }: {
@@ -361,7 +361,7 @@ export default function SettingsView({
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
   accountEmail, onSignOut,
-  priorityAlerts, onPriorityAlertsChange, oauthAccounts, onApplyTemplate, onOpenPlus,
+  priorityAlerts, onPriorityAlertsChange, oauthAccounts, onApplyTemplate, onOpenWorlds,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -438,7 +438,7 @@ export default function SettingsView({
       </button>
 
       <Block title="Bozz Plus" t={t} icon={Sparkles} defaultOpen>
-        <PlanBlock t={t} onOpenPlus={onOpenPlus} />
+        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} />
       </Block>
 
       <Block title="Priority alerts" t={t} icon={Bell}>

@@ -450,7 +450,18 @@ export interface BozzWorld {
   ambientSound?: { url: string; name: string };              // looping audio, optional
   previewUrl: string;          // gallery thumbnail
   version: number;
+  /** Lucide icon name for the topic/folder a World creates. */
+  icon?: string;
+  /**
+   * Optional widgets a World installs when applied to a topic/folder scope (so
+   * e.g. a "Shopping" World drops a ready-made Shopping topic). Empty/undefined
+   * = a pure aesthetic World (look only).
+   */
+  topicWidgets?: HomeWidgetItem[];
 }
+
+/** Where an applied World should land. */
+export type WorldScope = 'global' | 'newTopic' | 'existingTopic' | 'newFolder';
 
 // ── Templates / starter packs (Bozz Plus — "Build" pillar) ───────────────────
 
