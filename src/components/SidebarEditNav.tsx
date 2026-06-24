@@ -224,11 +224,11 @@ export default function SidebarEditNav({
                   const Icon = item.section.icon;
                   const hidden = hiddenSectionIds.includes(item.section.id);
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : hidden ? 0.5 : 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : 1 }}>
                       <span {...dragProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 3px', flexShrink: 0, touchAction: 'none' }}>
                         <GripVertical size={12} strokeWidth={1.5} />
                       </span>
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0 }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0, opacity: hidden ? 0.45 : 1 }}>
                         <Icon size={15} strokeWidth={1.5} color={t.textMuted} style={{ flexShrink: 0 }} />
                         <span style={{ ...textFade, fontSize: '0.84rem', color: t.textMuted, flex: 1 }}>
                           {item.section.label}
@@ -248,7 +248,7 @@ export default function SidebarEditNav({
                   const folderHidden = hiddenFolderIds.includes(item.folder.id);
 
                   return (
-                    <div style={{ opacity: isDragging ? 0.45 : folderHidden ? 0.55 : 1 }}>
+                    <div style={{ opacity: isDragging ? 0.45 : 1 }}>
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '0.4rem',
                         padding: '0.35rem 0.3rem 0.35rem 0.3rem',
@@ -263,7 +263,7 @@ export default function SidebarEditNav({
                         </span>
                         <button
                           onClick={() => toggleFolder(item.folder.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', minWidth: 0 }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', minWidth: 0, opacity: folderHidden && !isDropTarget ? 0.45 : 1 }}
                         >
                           <Folder size={13} strokeWidth={1.5} color={isDropTarget ? accentColor : (item.folder.color ?? t.textDim)} style={{ flexShrink: 0 }} />
                           <span style={{ ...textFade, fontSize: '0.78rem', fontWeight: 500, color: isDropTarget ? accentColor : t.textDim, flex: 1, textAlign: 'left' }}>
@@ -298,18 +298,18 @@ export default function SidebarEditNav({
                                       {(tProps, tDragging) => (
                                         <div style={{
                                           display: 'flex', alignItems: 'center', paddingLeft: '0.35rem',
-                                          opacity: tDragging ? 0.45 : topicHidden ? 0.5 : 1,
+                                          opacity: tDragging ? 0.45 : 1,
                                           borderBottom: idx < folderTopics.length - 1 ? `1px solid ${t.border}` : 'none',
                                         }}>
                                           <span {...tProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 2px', flexShrink: 0, touchAction: 'none' }}>
                                             <GripVertical size={11} strokeWidth={1.5} />
                                           </span>
-                                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 0.3rem', minWidth: 0 }}>
+                                          <button onClick={() => onEditTopic(topic.id)} title="Edit topic" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 0.3rem', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: topicHidden ? 0.45 : 1 }}>
                                             <Icon size={13} strokeWidth={1.5} color={topic.color} style={{ flexShrink: 0 }} />
                                             <span style={{ ...textFade, fontSize: '0.82rem', color: t.textMuted, flex: 1 }}>
                                               {topic.name || '(unnamed)'}
                                             </span>
-                                          </div>
+                                          </button>
                                           {!sidebarCollapsed && (
                                             <>
                                               <EyeBtn hidden={topicHidden} onClick={() => onToggleHiddenTopic(topic.id)} />
@@ -337,16 +337,16 @@ export default function SidebarEditNav({
                 const Icon = iconForTopic(item.topic.icon);
                 const topicHidden = hiddenTopicIds.includes(item.topic.id);
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : topicHidden ? 0.5 : 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : 1 }}>
                     <span {...dragProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 3px', flexShrink: 0, touchAction: 'none' }}>
                       <GripVertical size={12} strokeWidth={1.5} />
                     </span>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0 }}>
+                    <button onClick={() => onEditTopic(item.topic.id)} title="Edit topic" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: topicHidden ? 0.45 : 1 }}>
                       <Icon size={15} strokeWidth={1.5} color={item.topic.color} style={{ flexShrink: 0 }} />
                       <span style={{ ...textFade, fontSize: '0.84rem', color: t.textMuted, flex: 1 }}>
                         {item.topic.name || '(unnamed)'}
                       </span>
-                    </div>
+                    </button>
                     {!sidebarCollapsed && (
                       <>
                         <EyeBtn hidden={topicHidden} onClick={() => onToggleHiddenTopic(item.topic.id)} />
