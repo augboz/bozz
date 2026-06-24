@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ChevronRight, Palette, Menu,
-  Plug, NotebookPen, Power, RotateCcw, ListTree, LogOut, Plus, X,
+  ChevronRight, Palette,
+  Plug, NotebookPen, Power, RotateCcw, LogOut, Plus, X,
   Bell, Sparkles,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
   AppearancePrefs, FontChoice, FontSize,
-  MoodId, OAuthAccount, PriorityAlertSettings, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
+  MoodId, OAuthAccount, PriorityAlertSettings, ReviewSettings, SectionId, Theme, Topic,
 } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import { MOODS, THEME_COLOR_BANKS } from '../../lib/themes';
 import { DEFAULT_COLOR_BANK } from '../../lib/appearance';
-import TopicsBlock from './settings/TopicsBlock';
 import PriorityAlertsBlock from './settings/PriorityAlertsBlock';
 import PlanBlock from './settings/PlanBlock';
 
@@ -30,11 +29,7 @@ interface SettingsViewProps {
   /** Re-show the new-user getting-started walkthroughs on the Home page. */
   onReplayWalkthroughs: () => void;
   topics: Topic[];
-  onTopicsChange: (next: Topic[]) => void;
-  topicFolders: TopicFolder[];
-  onTopicFoldersChange: (next: TopicFolder[]) => void;
   hiddenTopicIds: string[];
-  onResetNavigation: () => void;
   accountEmail: string | null;
   onSignOut: () => Promise<void>;
   priorityAlerts: PriorityAlertSettings;
@@ -334,7 +329,7 @@ function ColorBankEditor({ t, bank, onChange, currentMood }: {
 export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, sections,
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
-  topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
+  topics, hiddenTopicIds,
   accountEmail, onSignOut,
   priorityAlerts, onPriorityAlertsChange, oauthAccounts, onOpenWorlds,
 }: SettingsViewProps) {
@@ -352,24 +347,6 @@ export default function SettingsView({
       if (autostartOn) { await disable(); } else { await enable(); }
       setAutostartOn(v => !v);
     } catch (e) { console.error('Autostart error:', e); }
-  };
-
-  const hideable = sections.filter(s => s.id !== 'settings');
-
-  const toggleSection = (id: SectionId) => {
-    const hidden = appearance.hiddenSections.includes(id)
-      ? appearance.hiddenSections.filter(s => s !== id)
-      : [...appearance.hiddenSections, id];
-    const defaultSection = (hidden as string[]).includes(appearance.defaultSection) ? 'home' : appearance.defaultSection;
-    patchAppearance({ hiddenSections: hidden, defaultSection });
-  };
-
-  const toggleTopic = (id: string) => {
-    const next = hiddenTopicIds.includes(id)
-      ? hiddenTopicIds.filter(x => x !== id)
-      : [...hiddenTopicIds, id];
-    const defaultSection = next.includes(appearance.defaultSection) ? 'home' : appearance.defaultSection;
-    patchAppearance({ hiddenTopicIds: next, defaultSection });
   };
 
   return (
@@ -499,58 +476,6 @@ export default function SettingsView({
             onChange={(next) => patchAppearance({ colorBank: next })}
             currentMood={appearance.mood}
           />
-        </div>
-      </Block>
-
-      <Block title="Topics" t={t} icon={ListTree}>
-        <TopicsBlock
-          t={t} topics={topics} setTopics={onTopicsChange}
-          topicFolders={topicFolders} setTopicFolders={onTopicFoldersChange}
-          colorBank={appearance.colorBank}
-        />
-      </Block>
-
-      <Block title="Navigation" t={t} icon={Menu}>
-        {hideable.map(s => (
-          <Field key={s.id} label={s.label} t={t}>
-            <Toggle
-              on={!appearance.hiddenSections.includes(s.id)}
-              onClick={() => toggleSection(s.id)}
-              t={t}
-            />
-          </Field>
-        ))}
-        {topics.length > 0 && (
-          <>
-            <div style={{
-              fontSize: '0.68rem', color: t.textDim, letterSpacing: '0.08em',
-              textTransform: 'uppercase', padding: '0.75rem 0 0.1rem',
-            }}>
-              Topics
-            </div>
-            {topics.map(top => (
-              <Field key={top.id} label={top.name || '(unnamed)'} t={t}>
-                <Toggle
-                  on={!hiddenTopicIds.includes(top.id)}
-                  onClick={() => toggleTopic(top.id)}
-                  t={t}
-                />
-              </Field>
-            ))}
-          </>
-        )}
-        <div style={{ paddingTop: '0.85rem' }}>
-          <button
-            onClick={onResetNavigation}
-            style={{
-              background: 'transparent', border: `1px solid ${t.border}`,
-              borderRadius: '8px', padding: '0.4rem 0.9rem',
-              fontSize: '0.78rem', color: t.textMuted,
-              fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
-            }}
-          >
-            Reset navigation to defaults
-          </button>
         </div>
       </Block>
 

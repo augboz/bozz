@@ -85,7 +85,7 @@ function genId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-function makeBlankTopic(order: number, bank: string[] = DEFAULT_COLOR_BANK): Topic {
+export function makeBlankTopic(order: number, bank: string[] = DEFAULT_COLOR_BANK): Topic {
   const color = bank[Math.floor(Math.random() * bank.length)] ?? COLOR_PRESETS[0];
   return {
     id: genId(),

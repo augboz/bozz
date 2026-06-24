@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useMemo, useCallback, type ElementType } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type ElementType, type CSSProperties } from 'react';
 import {
   Music, Briefcase, Sparkles, BookOpen,
   LayoutDashboard, FileText, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, LayoutGrid,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, LayoutGrid, Plus, ListTree, FolderPlus,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -40,6 +40,8 @@ import {
 import { loadEntitlement } from '../lib/plus';
 import { BgLayer } from './shared/BackgroundControls';
 import WorldsView from './sections/WorldsView';
+import TopicFolderEditModal from './TopicFolderEditModal';
+import { makeBlankTopic } from './sections/settings/TopicsBlock';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
 import SimpleListView from './sections/SimpleListView';
@@ -650,6 +652,13 @@ export default function Dashboard() {
 
   const t = themes[appearance.mood];
 
+  const addMenuItem: CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: '0.45rem',
+    background: 'transparent', border: 'none', borderRadius: '6px',
+    padding: '0.4rem 0.6rem', color: t.text, cursor: 'pointer',
+    fontFamily: 'inherit', fontSize: '0.8rem', textAlign: 'left', width: '100%',
+  };
+
   // Sidebar may have a dark background (e.g. warm terracotta) while the main
   // content is light — use CSS vars so the sidebar text always contrasts.
   const sT = {
@@ -670,6 +679,55 @@ export default function Dashboard() {
     setAppearance(prev => ({ ...prev, ...patch }));
   const resetAppearance = () => setAppearance(DEFAULT_APPEARANCE);
   const resetHomeLayout = () => setHomeItems(DEFAULT_HOME);
+
+  // ── Topic / folder editing from the sidebar edit mode ──────────────────────
+  const [editTopicId, setEditTopicId] = useState<string | null>(null);
+  const [editFolderId, setEditFolderId] = useState<string | null>(null);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+
+  const addTopicFromNav = () => {
+    const fresh = makeBlankTopic(topics.length, appearance.colorBank ?? []);
+    setTopics(prev => [...prev, fresh]);
+    setEditTopicId(fresh.id);
+  };
+  const addFolderFromNav = () => {
+    const folder: TopicFolder = {
+      id: `folder-${Date.now().toString(36)}`, name: '',
+      color: (appearance.colorBank ?? [])[0], order: topicFolders.length, collapsed: false,
+    };
+    setTopicFolders(prev => [...prev, folder]);
+    setEditFolderId(folder.id);
+  };
+  const updateTopic = (id: string, patch: Partial<Topic>) =>
+    setTopics(prev => prev.map(tp => tp.id === id ? { ...tp, ...patch } : tp));
+  const deleteTopic = (id: string) => {
+    setTopics(prev => prev.filter(tp => tp.id !== id).map((tp, i) => ({ ...tp, order: i })));
+    setEditTopicId(null);
+  };
+  const updateFolder = (id: string, patch: Partial<TopicFolder>) =>
+    setTopicFolders(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f));
+  const deleteFolder = (id: string) => {
+    setTopicFolders(prev => prev.filter(f => f.id !== id));
+    setTopics(prev => prev.map(tp => tp.folderId === id ? { ...tp, folderId: undefined } : tp));
+    setEditFolderId(null);
+  };
+  const toggleHiddenTopic = (id: string) =>
+    setAppearance(a => {
+      const cur = a.hiddenTopicIds ?? [];
+      return { ...a, hiddenTopicIds: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
+    });
+  const toggleHiddenFolder = (id: string) =>
+    setAppearance(a => {
+      const cur = a.hiddenFolderIds ?? [];
+      return { ...a, hiddenFolderIds: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
+    });
+  const toggleHiddenSection = (id: SectionId) =>
+    setAppearance(a => {
+      const cur = a.hiddenSections;
+      const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+      const defaultSection = (next as string[]).includes(a.defaultSection) ? 'home' : a.defaultSection;
+      return { ...a, hiddenSections: next, defaultSection };
+    });
 
   const addTaskToList = (list: TaskListKey, text: string, deadline: number | null) => {
     const item: ListItem = {
@@ -810,6 +868,7 @@ export default function Dashboard() {
 
   // Unified nav: Home → topics (in sidebar order) → other visible sections
   const hiddenTopicIds = appearance.hiddenTopicIds ?? [];
+  const hiddenFolderIds = appearance.hiddenFolderIds ?? [];
   const navItems: NavTab[] = useMemo(() => {
     const visibleSections = allSections.filter(
       s => s.id !== 'settings' && s.id !== 'inbox' && !appearance.hiddenSections.includes(s.id),
@@ -817,7 +876,7 @@ export default function Dashboard() {
     const home   = visibleSections.find(s => s.id === 'home');
     const middle = visibleSections.filter(s => s.id !== 'home');
 
-    const allVisible = topics.filter(tp => !hiddenTopicIds.includes(tp.id));
+    const allVisible = topics.filter(tp => !hiddenTopicIds.includes(tp.id) && !(tp.folderId && hiddenFolderIds.includes(tp.folderId)));
     const unfiled    = allVisible.filter(tp => !tp.folderId);
 
     // Mirror the sidebar order: unfiled topics + folders interleaved by unified order,
@@ -828,7 +887,7 @@ export default function Dashboard() {
         order: tp.order,
         tabs: [{ id: tp.id, label: tp.name || '(unnamed)', icon: iconForTopic(tp.icon), accent: tp.color }],
       })),
-      ...topicFolders.map(f => ({
+      ...topicFolders.filter(f => !hiddenFolderIds.includes(f.id)).map(f => ({
         order: f.order,
         tabs: allVisible
           .filter(tp => tp.folderId === f.id)
@@ -843,7 +902,7 @@ export default function Dashboard() {
       ...middle.map(s => ({ id: s.id, label: s.label, icon: s.icon })),
     ];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appearance.hiddenSections, hiddenTopicIds, topics, topicFolders]);
+  }, [appearance.hiddenSections, hiddenTopicIds, hiddenFolderIds, topics, topicFolders]);
 
   // If the item you're viewing gets hidden, fall back to home.
   // 'settings' and 'inbox' are intentionally absent from navItems but still valid sections.
@@ -978,13 +1037,20 @@ export default function Dashboard() {
               topics={topics}
               topicFolders={topicFolders}
               hiddenTopicIds={hiddenTopicIds}
-              sections={allSections.filter(s => s.id !== 'settings' && s.id !== 'inbox' && s.id !== 'home' && !appearance.hiddenSections.includes(s.id))}
+              hiddenFolderIds={hiddenFolderIds}
+              hiddenSectionIds={appearance.hiddenSections}
+              sections={allSections.filter(s => s.id !== 'settings' && s.id !== 'inbox' && s.id !== 'home')}
               navOrder={appearance.navOrder}
               sidebarCollapsed={sidebarCollapsed}
               t={t}
               onTopicsChange={setTopics}
               onTopicFoldersChange={setTopicFolders}
               onNavOrderChange={order => setAppearance(a => ({ ...a, navOrder: order }))}
+              onToggleHiddenTopic={toggleHiddenTopic}
+              onToggleHiddenFolder={toggleHiddenFolder}
+              onToggleHiddenSection={(id) => toggleHiddenSection(id as SectionId)}
+              onEditTopic={setEditTopicId}
+              onEditFolder={setEditFolderId}
             />
           ) : (() => {
             const visibleSections = allSections.filter(
@@ -992,7 +1058,7 @@ export default function Dashboard() {
             );
             const middleSections = visibleSections.filter(s => s.id !== 'home');
             const visibleTopics = [...topics]
-              .filter(top => !hiddenTopicIds.includes(top.id));
+              .filter(top => !hiddenTopicIds.includes(top.id) && !(top.folderId && hiddenFolderIds.includes(top.folderId)));
             const unfiledTopics = visibleTopics.filter(top => !top.folderId);
 
             // Unified nav: topics + folders + sections, all sorted by navOrder if present
@@ -1007,7 +1073,7 @@ export default function Dashboard() {
 
             const topLevelNav: NavTopItem[] = [
               ...unfiledTopics.map(tp  => ({ type: 'topic'   as const, order: orderOf(tp.id, tp.order), topic: tp })),
-              ...topicFolders.map(f   => ({ type: 'folder'  as const, order: orderOf(f.id, f.order),   folder: f })),
+              ...topicFolders.filter(f => !hiddenFolderIds.includes(f.id)).map(f => ({ type: 'folder'  as const, order: orderOf(f.id, f.order),   folder: f })),
               ...middleSections.map((s, i) => ({ type: 'section' as const, order: orderOf(s.id, 1000 + i), section: s })),
             ].sort((a, b) => a.order - b.order);
 
@@ -1221,6 +1287,44 @@ export default function Dashboard() {
             >
               {sidebarEditing ? <><span style={{ fontSize: '0.7rem' }}>✓</span> Done</> : <><Pencil size={9} strokeWidth={1.8} /> Edit</>}
             </button>
+            {sidebarEditing && (
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={() => setAddMenuOpen(o => !o)}
+                  title="Add topic or folder"
+                  aria-label="Add topic or folder"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'transparent', border: `1px solid ${sT.border}`, borderRadius: '6px',
+                    padding: '0.3rem 0.4rem', color: sT.textMuted, cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
+                >
+                  <Plus size={13} strokeWidth={2} />
+                </button>
+                {addMenuOpen && (
+                  <div style={{
+                    position: 'absolute', bottom: '34px', right: 0, zIndex: 60,
+                    background: t.panel, border: `1px solid ${t.borderStrong}`, borderRadius: '9px',
+                    padding: '0.25rem', minWidth: '130px', boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+                    display: 'flex', flexDirection: 'column', gap: '0.1rem',
+                  }}>
+                    <button onClick={() => { setAddMenuOpen(false); addTopicFromNav(); }} style={addMenuItem}
+                      onMouseEnter={e => { e.currentTarget.style.background = t.bgAlt; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                      <ListTree size={13} strokeWidth={1.6} /> New topic
+                    </button>
+                    <button onClick={() => { setAddMenuOpen(false); addFolderFromNav(); }} style={addMenuItem}
+                      onMouseEnter={e => { e.currentTarget.style.background = t.bgAlt; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                      <FolderPlus size={13} strokeWidth={1.6} /> New folder
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1563,11 +1667,6 @@ export default function Dashboard() {
                 .filter(s => ['budget','calendar','email','review'].includes(s.id))
                 .map(s => ({ id: s.id, label: s.label }))}
               hiddenTopicIds={hiddenTopicIds}
-              onResetNavigation={() => patchAppearance({
-                hiddenSections: DEFAULT_APPEARANCE.hiddenSections,
-                hiddenTopicIds: [],
-                defaultSection: DEFAULT_APPEARANCE.defaultSection,
-              })}
               accountEmail={session?.user.email ?? null}
               onSignOut={async () => {
                 cancelPendingPush();
@@ -1588,9 +1687,6 @@ export default function Dashboard() {
               onOpenApps={() => setActiveSection('apps')}
               onReplayWalkthroughs={replayWalkthroughs}
               topics={topics}
-              onTopicsChange={setTopics}
-              topicFolders={topicFolders}
-              onTopicFoldersChange={setTopicFolders}
               priorityAlerts={priorityAlerts}
               onPriorityAlertsChange={setPriorityAlerts}
               oauthAccounts={oauthAccounts}
@@ -1611,6 +1707,36 @@ export default function Dashboard() {
           onAddBudget={(transaction) => setBudget(b => ({ ...b, transactions: [...b.transactions, transaction] }))}
         />
       )}
+
+      {/* Topic / folder editor — opened from the sidebar edit mode */}
+      {editTopicId && (() => {
+        const topic = topics.find(tp => tp.id === editTopicId);
+        if (!topic) return null;
+        return (
+          <TopicFolderEditModal
+            t={t}
+            bank={appearance.colorBank ?? []}
+            topic={topic}
+            onChangeTopic={(patch) => updateTopic(topic.id, patch)}
+            onDelete={() => deleteTopic(topic.id)}
+            onClose={() => setEditTopicId(null)}
+          />
+        );
+      })()}
+      {editFolderId && (() => {
+        const folder = topicFolders.find(f => f.id === editFolderId);
+        if (!folder) return null;
+        return (
+          <TopicFolderEditModal
+            t={t}
+            bank={appearance.colorBank ?? []}
+            folder={folder}
+            onChangeFolder={(patch) => updateFolder(folder.id, patch)}
+            onDelete={() => deleteFolder(folder.id)}
+            onClose={() => setEditFolderId(null)}
+          />
+        );
+      })()}
 
       {searchOpen && (
         <SearchModal

@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Folder, ChevronDown, ChevronRight, FolderMinus } from 'lucide-react';
+import { GripVertical, Folder, ChevronDown, ChevronRight, FolderMinus, Eye, EyeOff, Pencil } from 'lucide-react';
 import type { ElementType } from 'react';
 import type { Theme, Topic, TopicFolder } from '../lib/types';
 import { iconForTopic } from './sections/settings/TopicsBlock';
@@ -23,6 +23,9 @@ interface Props {
   topics: Topic[];
   topicFolders: TopicFolder[];
   hiddenTopicIds: string[];
+  hiddenFolderIds: string[];
+  hiddenSectionIds: string[];
+  /** ALL hideable sections (including hidden ones). */
   sections: SectionDef[];
   navOrder?: string[];
   sidebarCollapsed: boolean;
@@ -30,6 +33,11 @@ interface Props {
   onTopicsChange: (topics: Topic[]) => void;
   onTopicFoldersChange: (folders: TopicFolder[]) => void;
   onNavOrderChange: (order: string[]) => void;
+  onToggleHiddenTopic: (id: string) => void;
+  onToggleHiddenFolder: (id: string) => void;
+  onToggleHiddenSection: (id: string) => void;
+  onEditTopic: (id: string) => void;
+  onEditFolder: (id: string) => void;
 }
 
 function SortableRow({ id, children }: {
@@ -46,9 +54,10 @@ function SortableRow({ id, children }: {
 }
 
 export default function SidebarEditNav({
-  topics, topicFolders, hiddenTopicIds, sections, navOrder,
+  topics, topicFolders, hiddenTopicIds, hiddenFolderIds, hiddenSectionIds, sections, navOrder,
   sidebarCollapsed, t,
   onTopicsChange, onTopicFoldersChange, onNavOrderChange,
+  onToggleHiddenTopic, onToggleHiddenFolder, onToggleHiddenSection, onEditTopic, onEditFolder,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -63,18 +72,15 @@ export default function SidebarEditNav({
       return next;
     });
 
-  const visible = useMemo(
-    () => [...topics].filter(tp => !hiddenTopicIds.includes(tp.id)),
-    [topics, hiddenTopicIds],
-  );
-  const unfiledTopics = useMemo(() => visible.filter(tp => !tp.folderId), [visible]);
+  // Edit mode shows ALL topics/folders (hidden ones dimmed), so they can be unhidden.
+  const unfiledTopics = useMemo(() => topics.filter(tp => !tp.folderId), [topics]);
   const topicsInFolder = useMemo(() => {
     const map: Record<string, Topic[]> = {};
     for (const f of topicFolders) {
-      map[f.id] = visible.filter(tp => tp.folderId === f.id).sort((a, b) => a.order - b.order);
+      map[f.id] = topics.filter(tp => tp.folderId === f.id).sort((a, b) => a.order - b.order);
     }
     return map;
-  }, [topicFolders, visible]);
+  }, [topicFolders, topics]);
 
   type TopItem =
     | { key: string; type: 'topic';   order: number; topic: Topic }
@@ -90,9 +96,7 @@ export default function SidebarEditNav({
     ...sections.map((s, i) => ({ key: s.id,  type: 'section' as const, order: orderOf(s.id, 1000 + i),   section: s })),
   ].sort((a, b) => a.order - b.order), [unfiledTopics, topicFolders, sections, navOrder]);
 
-  // Emit a full navOrder array reflecting the new positions
   const emitOrder = (reordered: TopItem[]) => {
-    // Rebuild topic/folder numeric orders too
     const topicUpdates: Record<string, number> = {};
     const folderUpdates: Record<string, number> = {};
     const newNavOrder: string[] = [];
@@ -134,7 +138,6 @@ export default function SidebarEditNav({
     const overItem   = topItems.find(i => i.key === String(over.id));
     if (!activeItem || !overItem) return;
 
-    // Topic dropped onto folder → assign to folder
     if (activeItem.type === 'topic' && overItem.type === 'folder') {
       const folderId = overItem.folder.id;
       const newOrder = (topicsInFolder[folderId] ?? []).length;
@@ -180,6 +183,26 @@ export default function SidebarEditNav({
     whiteSpace: 'nowrap', overflow: 'hidden',
   };
 
+  // Trailing eye (+ optional edit/move) controls, hidden when the sidebar is collapsed.
+  const EyeBtn = ({ hidden, onClick }: { hidden: boolean; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      title={hidden ? 'Show' : 'Hide'}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', color: hidden ? t.textDim : t.textMuted, padding: '0.28rem 0.3rem', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+    >
+      {hidden ? <EyeOff size={13} strokeWidth={1.6} /> : <Eye size={13} strokeWidth={1.6} />}
+    </button>
+  );
+  const EditBtn = ({ onClick }: { onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      title="Edit"
+      style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, padding: '0.28rem 0.3rem', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+    >
+      <Pencil size={12} strokeWidth={1.6} />
+    </button>
+  );
+
   return (
     <DndContext
       sensors={sensors}
@@ -199,17 +222,19 @@ export default function SidebarEditNav({
                 // ── Section row ────────────────────────────────────────────
                 if (item.type === 'section') {
                   const Icon = item.section.icon;
+                  const hidden = hiddenSectionIds.includes(item.section.id);
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : hidden ? 0.5 : 1 }}>
                       <span {...dragProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 3px', flexShrink: 0, touchAction: 'none' }}>
                         <GripVertical size={12} strokeWidth={1.5} />
                       </span>
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px' }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0 }}>
                         <Icon size={15} strokeWidth={1.5} color={t.textMuted} style={{ flexShrink: 0 }} />
                         <span style={{ ...textFade, fontSize: '0.84rem', color: t.textMuted, flex: 1 }}>
                           {item.section.label}
                         </span>
                       </div>
+                      {!sidebarCollapsed && <EyeBtn hidden={hidden} onClick={() => onToggleHiddenSection(item.section.id)} />}
                     </div>
                   );
                 }
@@ -220,38 +245,27 @@ export default function SidebarEditNav({
                   const isDropTarget = draggingTopicId !== null && hoverFolderId === item.folder.id;
                   const folderTopics = topicsInFolder[item.folder.id] ?? [];
                   const accentColor  = item.folder.color ?? t.doneAccent;
+                  const folderHidden = hiddenFolderIds.includes(item.folder.id);
 
                   return (
-                    <div style={{ opacity: isDragging ? 0.45 : 1 }}>
+                    <div style={{ opacity: isDragging ? 0.45 : folderHidden ? 0.55 : 1 }}>
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        padding: '0.35rem 0.45rem 0.35rem 0.3rem',
+                        padding: '0.35rem 0.3rem 0.35rem 0.3rem',
                         background: isDropTarget ? `${accentColor}22` : isDragging ? t.todoBg : t.panel,
                         border: `1px solid ${isDropTarget ? accentColor : isDragging ? t.borderStrong : t.border}`,
                         borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
                         transition: 'background 0.12s, border-color 0.12s',
                         boxShadow: isDropTarget ? `0 0 0 2px ${accentColor}33` : 'none',
                       }}>
-                        <span
-                          {...dragProps}
-                          style={{ cursor: 'grab', color: t.textDim, display: 'flex', flexShrink: 0, touchAction: 'none', padding: '0 2px' }}
-                        >
+                        <span {...dragProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', flexShrink: 0, touchAction: 'none', padding: '0 2px' }}>
                           <GripVertical size={12} strokeWidth={1.5} />
                         </span>
                         <button
                           onClick={() => toggleFolder(item.folder.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '0.4rem',
-                            flex: 1, background: 'none', border: 'none',
-                            cursor: 'pointer', padding: 0,
-                            fontFamily: 'inherit', minWidth: 0,
-                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', minWidth: 0 }}
                         >
-                          <Folder
-                            size={13} strokeWidth={1.5}
-                            color={isDropTarget ? accentColor : (item.folder.color ?? t.textDim)}
-                            style={{ flexShrink: 0 }}
-                          />
+                          <Folder size={13} strokeWidth={1.5} color={isDropTarget ? accentColor : (item.folder.color ?? t.textDim)} style={{ flexShrink: 0 }} />
                           <span style={{ ...textFade, fontSize: '0.78rem', fontWeight: 500, color: isDropTarget ? accentColor : t.textDim, flex: 1, textAlign: 'left' }}>
                             {isDropTarget ? `add to ${item.folder.name || 'folder'}` : (item.folder.name || '(folder)')}
                           </span>
@@ -261,60 +275,50 @@ export default function SidebarEditNav({
                               : <ChevronRight size={11} strokeWidth={1.6} color={t.textDim} style={{ flexShrink: 0 }} />
                           )}
                         </button>
+                        {!sidebarCollapsed && !isDropTarget && (
+                          <>
+                            <EyeBtn hidden={folderHidden} onClick={() => onToggleHiddenFolder(item.folder.id)} />
+                            <EditBtn onClick={() => onEditFolder(item.folder.id)} />
+                          </>
+                        )}
                       </div>
 
                       {isExpanded && (
-                        <div style={{
-                          border: `1px solid ${t.border}`, borderTop: 'none',
-                          borderRadius: '0 0 6px 6px', background: t.bgAlt, overflow: 'hidden',
-                        }}>
+                        <div style={{ border: `1px solid ${t.border}`, borderTop: 'none', borderRadius: '0 0 6px 6px', background: t.bgAlt, overflow: 'hidden' }}>
                           {folderTopics.length === 0 ? (
-                            <div style={{ padding: '0.42rem 0.85rem', fontSize: '0.71rem', color: t.textDim, fontStyle: 'italic' }}>
-                              empty folder
-                            </div>
+                            <div style={{ padding: '0.42rem 0.85rem', fontSize: '0.71rem', color: t.textDim, fontStyle: 'italic' }}>empty folder</div>
                           ) : (
-                            <DndContext
-                              sensors={sensors}
-                              collisionDetection={closestCenter}
-                              onDragEnd={handleFolderDragEnd(item.folder.id)}
-                              modifiers={[restrictToVerticalAxis]}
-                            >
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleFolderDragEnd(item.folder.id)} modifiers={[restrictToVerticalAxis]}>
                               <SortableContext items={folderTopics.map(tp => tp.id)} strategy={verticalListSortingStrategy}>
                                 {folderTopics.map((topic, idx) => {
                                   const Icon = iconForTopic(topic.icon);
+                                  const topicHidden = hiddenTopicIds.includes(topic.id);
                                   return (
                                     <SortableRow key={topic.id} id={topic.id}>
                                       {(tProps, tDragging) => (
                                         <div style={{
                                           display: 'flex', alignItems: 'center', paddingLeft: '0.35rem',
-                                          opacity: tDragging ? 0.45 : 1,
+                                          opacity: tDragging ? 0.45 : topicHidden ? 0.5 : 1,
                                           borderBottom: idx < folderTopics.length - 1 ? `1px solid ${t.border}` : 'none',
                                         }}>
                                           <span {...tProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 2px', flexShrink: 0, touchAction: 'none' }}>
                                             <GripVertical size={11} strokeWidth={1.5} />
                                           </span>
-                                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 0.3rem' }}>
+                                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 0.3rem', minWidth: 0 }}>
                                             <Icon size={13} strokeWidth={1.5} color={topic.color} style={{ flexShrink: 0 }} />
                                             <span style={{ ...textFade, fontSize: '0.82rem', color: t.textMuted, flex: 1 }}>
                                               {topic.name || '(unnamed)'}
                                             </span>
                                           </div>
-                                          <button
-                                            onClick={() => moveOutOfFolder(topic.id)}
-                                            title="Move out of folder"
-                                            style={{
-                                              background: 'none', border: 'none', cursor: 'pointer',
-                                              color: t.textDim, padding: '0.28rem 0.45rem',
-                                              display: 'flex', alignItems: 'center', flexShrink: 0,
-                                              opacity: sidebarCollapsed ? 0 : 0.7,
-                                              transition: 'opacity 0.12s, color 0.12s',
-                                              pointerEvents: sidebarCollapsed ? 'none' : 'auto',
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = t.textMuted; }}
-                                            onMouseLeave={e => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = t.textDim; }}
-                                          >
-                                            <FolderMinus size={12} strokeWidth={1.5} />
-                                          </button>
+                                          {!sidebarCollapsed && (
+                                            <>
+                                              <EyeBtn hidden={topicHidden} onClick={() => onToggleHiddenTopic(topic.id)} />
+                                              <EditBtn onClick={() => onEditTopic(topic.id)} />
+                                              <button onClick={() => moveOutOfFolder(topic.id)} title="Move out of folder" style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textDim, padding: '0.28rem 0.3rem', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                                <FolderMinus size={12} strokeWidth={1.5} />
+                                              </button>
+                                            </>
+                                          )}
                                         </div>
                                       )}
                                     </SortableRow>
@@ -331,17 +335,24 @@ export default function SidebarEditNav({
 
                 // ── Unfiled topic row ──────────────────────────────────────
                 const Icon = iconForTopic(item.topic.icon);
+                const topicHidden = hiddenTopicIds.includes(item.topic.id);
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : topicHidden ? 0.5 : 1 }}>
                     <span {...dragProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 3px', flexShrink: 0, touchAction: 'none' }}>
                       <GripVertical size={12} strokeWidth={1.5} />
                     </span>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0 }}>
                       <Icon size={15} strokeWidth={1.5} color={item.topic.color} style={{ flexShrink: 0 }} />
                       <span style={{ ...textFade, fontSize: '0.84rem', color: t.textMuted, flex: 1 }}>
                         {item.topic.name || '(unnamed)'}
                       </span>
                     </div>
+                    {!sidebarCollapsed && (
+                      <>
+                        <EyeBtn hidden={topicHidden} onClick={() => onToggleHiddenTopic(item.topic.id)} />
+                        <EditBtn onClick={() => onEditTopic(item.topic.id)} />
+                      </>
+                    )}
                   </div>
                 );
               }}
@@ -350,7 +361,7 @@ export default function SidebarEditNav({
 
           {topItems.length === 0 && (
             <div style={{ fontSize: '0.74rem', color: t.textDim, padding: '0.5rem 0.65rem' }}>
-              No topics yet. Add one in Settings.
+              Nothing here yet — use + to add a topic or folder.
             </div>
           )}
 
