@@ -5,17 +5,15 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar } from 'lucide-react';
 import type {
-  CalendarEvent, CalendarNote, CalendarViewMode, ListItem, TaskListKey, Theme, Topic,
+  CalendarEvent, CalendarNote, CalendarViewMode, Theme, Topic,
 } from '../../../lib/types';
-import { deadlineEvents, topicDeadlineEvents, noteEvents, eventsOnDay } from '../../../lib/calendar';
+import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../../../lib/calendar';
 import { SectionHeader } from '../../shared/ui';
 import ColorBankPicker from '../../shared/ColorBankPicker';
 
 interface CalendarViewProps {
   t: Theme;
   feedEvents: CalendarEvent[];
-  lists: Record<TaskListKey, ListItem[]>;
-  onAddTask: (list: TaskListKey, text: string, deadlineMs: number) => void;
   topics?: Topic[];
   onAddTopicItem?: (topicId: string, text: string, deadline: number) => void;
   calendarNotes?: CalendarNote[];
@@ -529,16 +527,14 @@ function MonthGrid({ t, cursor, events, onPick }: {
 
 // ── Day panel (slide-in) ──────────────────────────────────────────────────────
 
-function DayPanel({ t, day, events, onClose, onAddTask, topics, onAddTopicItem, tbOffset = 0, onCreateNote, colorBank }: {
+function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 0, onCreateNote, colorBank }: {
   t: Theme; day: Date; events: CalendarEvent[]; onClose: () => void;
-  onAddTask: (list: TaskListKey, text: string, deadlineMs: number) => void;
   topics?: Topic[];
   onAddTopicItem?: (topicId: string, text: string, deadline: number) => void;
   tbOffset?: number;
   onCreateNote: (note: Omit<CalendarNote, 'id'>) => void;
   colorBank: string[];
 }) {
-  const [list, setList] = useState<TaskListKey>('life');
   const [topicId, setTopicId] = useState<string>(() => topics?.[0]?.id ?? '');
   const [text, setText] = useState('');
   const [showEventForm, setShowEventForm] = useState(false);
@@ -549,10 +545,9 @@ function DayPanel({ t, day, events, onClose, onAddTask, topics, onAddTopicItem, 
   const deadlines = events.filter(e => e.source === 'deadline');
 
   const add = () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !useTopics) return;
     const midnight = localMidnight(day);
-    if (useTopics) onAddTopicItem!(topicId || topics![0].id, text.trim(), midnight);
-    else onAddTask(list, text.trim(), midnight);
+    onAddTopicItem!(topicId || topics![0].id, text.trim(), midnight);
     setText('');
   };
 
@@ -659,12 +654,12 @@ function DayPanel({ t, day, events, onClose, onAddTask, topics, onAddTopicItem, 
         />
       )}
 
-      {/* Add task with this deadline */}
-      <div>
-        <div style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: t.textMuted, marginBottom: '0.5rem' }}>
-          Add task with this deadline
-        </div>
-        {useTopics ? (
+      {/* Add task with this deadline — topics only */}
+      {useTopics && (
+        <div>
+          <div style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: t.textMuted, marginBottom: '0.5rem' }}>
+            Add task with this deadline
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem' }}>
             {topics!.map(tp => {
               const on = (topicId || topics![0].id) === tp.id;
@@ -688,25 +683,18 @@ function DayPanel({ t, day, events, onClose, onAddTask, topics, onAddTopicItem, 
               );
             })}
           </div>
-        ) : (
-          <select value={list} onChange={e => setList(e.target.value as TaskListKey)} style={{ ...inputStyle(t), marginBottom: '0.5rem' }}>
-            <option value="music">Music</option>
-            <option value="life">Life</option>
-            <option value="cv">CV</option>
-            <option value="other">Other</option>
-          </select>
-        )}
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <input
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
-            placeholder="task…"
-            style={{ flex: 1, ...inputStyle(t) }}
-          />
-          <button onClick={add} style={ghostBtn(t)}>add</button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+              placeholder="task…"
+              style={{ flex: 1, ...inputStyle(t) }}
+            />
+            <button onClick={add} style={ghostBtn(t)}>add</button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -714,7 +702,7 @@ function DayPanel({ t, day, events, onClose, onAddTask, topics, onAddTopicItem, 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function CalendarView({
-  t, feedEvents, lists, onAddTask, topics, onAddTopicItem,
+  t, feedEvents, topics, onAddTopicItem,
   calendarNotes = [], onCalendarNotesChange,
   calendarConnections = [],
   onCalendarConnectionsChange,
@@ -731,12 +719,11 @@ export default function CalendarView({
 
   const events = useMemo<CalendarEvent[]>(
     () => [
-      ...deadlineEvents(lists),
       ...(topics ? topicDeadlineEvents(topics) : []),
       ...feedEvents,
       ...noteEvents(calendarNotes),
     ],
-    [lists, topics, feedEvents, calendarNotes],
+    [topics, feedEvents, calendarNotes],
   );
 
   const step = (dir: 1 | -1) => {
@@ -970,7 +957,6 @@ export default function CalendarView({
           day={selected}
           events={eventsOnDay(events, selected)}
           onClose={() => setSelected(null)}
-          onAddTask={onAddTask}
           topics={topics}
           onAddTopicItem={onAddTopicItem}
           tbOffset={tbOffset}

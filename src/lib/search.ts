@@ -1,7 +1,6 @@
 import { format } from 'date-fns';
-import { deadlineEvents } from './calendar';
 import type {
-  Application, BudgetData, CalendarEvent, InboxItem, ListItem, SectionId, TaskListKey,
+  BudgetData, CalendarEvent, InboxItem, SectionId,
 } from './types';
 
 export interface SearchEntry {
@@ -13,16 +12,10 @@ export interface SearchEntry {
 }
 
 export interface SearchSources {
-  lists: Record<TaskListKey, ListItem[]>;
-  applications: Application[];
   budget: BudgetData;
   inbox: InboxItem[];
   feedEvents: CalendarEvent[];
 }
-
-const LIST_LABEL: Record<TaskListKey, string> = {
-  music: 'Music', life: 'Life', cv: 'CV', other: 'Other',
-};
 
 const SETTINGS_ENTRIES = [
   'Mood', 'Font', 'Text size', 'Default section', 'Navigation',
@@ -31,25 +24,6 @@ const SETTINGS_ENTRIES = [
 
 export function buildSearchIndex(s: SearchSources): SearchEntry[] {
   const out: SearchEntry[] = [];
-
-  (Object.keys(s.lists) as TaskListKey[]).forEach(k => {
-    for (const i of s.lists[k]) {
-      out.push({
-        id: `task:${k}:${i.id}`,
-        label: i.text,
-        sub: `${LIST_LABEL[k]} · ${i.status}`,
-        group: 'Tasks',
-        section: k,
-      });
-    }
-  });
-
-  for (const a of s.applications) {
-    out.push({
-      id: `app:${a.id}`, label: a.name, sub: `Application · ${a.status}`,
-      group: 'Applications', section: 'applications',
-    });
-  }
 
   for (const tx of s.budget.transactions) {
     out.push({
@@ -64,8 +38,7 @@ export function buildSearchIndex(s: SearchSources): SearchEntry[] {
     out.push({ id: `inbox:${it.id}`, label: it.text, sub: 'Inbox', group: 'Inbox', section: 'inbox' });
   }
 
-  const calEvents = [...deadlineEvents(s.lists), ...s.feedEvents];
-  for (const e of calEvents) {
+  for (const e of s.feedEvents) {
     out.push({
       id: `cal:${e.id}`,
       label: e.title,

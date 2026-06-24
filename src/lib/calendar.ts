@@ -1,33 +1,5 @@
 import { isSameDay } from 'date-fns';
-import { sectionAccents } from './themes';
-import type { CalendarEvent, CalendarNote, ListItem, SectionId, TaskListKey, Topic } from './types';
-
-const LIST_SECTION: Record<TaskListKey, SectionId> = {
-  music: 'music', life: 'life', cv: 'cv', other: 'other',
-};
-
-/** Non-done tasks with a deadline, as all-day calendar events. */
-export function deadlineEvents(lists: Record<TaskListKey, ListItem[]>): CalendarEvent[] {
-  const out: CalendarEvent[] = [];
-  (Object.keys(lists) as TaskListKey[]).forEach(k => {
-    const section = LIST_SECTION[k];
-    for (const it of lists[k]) {
-      if (it.deadline != null && it.status !== 'done') {
-        out.push({
-          id: `deadline:${k}:${it.id}`,
-          title: it.text,
-          start: it.deadline,
-          end: null,
-          allDay: true,
-          color: sectionAccents[section],
-          source: 'deadline',
-          sectionId: section,
-        });
-      }
-    }
-  });
-  return out;
-}
+import type { CalendarEvent, CalendarNote, SectionId, Topic } from './types';
 
 /** Topic items with deadlines, as all-day calendar events. */
 export function topicDeadlineEvents(topics: Topic[]): CalendarEvent[] {

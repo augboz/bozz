@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type ElementType, type CSSProperties } from 'react';
 import {
-  Music, Briefcase, Sparkles, BookOpen,
-  LayoutDashboard, FileText, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
+  LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
   PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, LayoutGrid, Plus, ListTree, FolderPlus,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
@@ -29,7 +28,7 @@ import { gmailConfig } from '../lib/oauth/gmail';
 import { outlookConfig } from '../lib/oauth/outlook';
 import { archive as archiveEmail, deleteEmail, disconnectAccount, markRead as markEmailRead, syncAllAccounts } from '../lib/email';
 import type {
-  ListItem, Application, Status, SectionId, SortMode, TaskListKey, AppearancePrefs, HomeWidgetItem,
+  SectionId, AppearancePrefs, HomeWidgetItem,
   CalendarFeed, CalendarCache, CalendarEvent, CalendarConnection, CalendarNote, BudgetData, InboxItem,
   WeeklyReview, ReviewSettings, OAuthAccount, EmailMessage, EmailProvider,
   Topic, TopicFolder, PriorityAlertSettings,
@@ -44,14 +43,12 @@ import TopicFolderEditModal from './TopicFolderEditModal';
 import { makeBlankTopic } from './sections/settings/TopicsBlock';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
-import SimpleListView from './sections/SimpleListView';
 import TopicView from './sections/TopicView';
-import ApplicationsView from './sections/ApplicationsView';
 import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
 import Onboarding from './onboarding/Onboarding';
 import CalendarView from './sections/calendar/CalendarView';
-import { deadlineEvents, topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
+import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
 import DailyPlannerView from './sections/DailyPlannerView';
 import HabitsView from './sections/HabitsView';
 import HealthView from './sections/HealthView';
@@ -76,14 +73,6 @@ export default function Dashboard() {
   const [appearance, setAppearance] = useState<AppearancePrefs>(DEFAULT_APPEARANCE);
   const [activeSection, setActiveSection] = useState<string>('home');
   const [loading, setLoading] = useState(true);
-  const [musicItems, setMusicItems] = useState<ListItem[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [lifeItems, setLifeItems] = useState<ListItem[]>([]);
-  const [cvItems, setCvItems] = useState<ListItem[]>([]);
-  const [otherItems, setOtherItems] = useState<ListItem[]>([]);
-  const [taskSortPrefs, setTaskSortPrefs] = useState<Record<TaskListKey, SortMode>>({
-    music: 'manual', life: 'manual', cv: 'manual', other: 'manual',
-  });
   const [homeItems, setHomeItems] = useState<HomeWidgetItem[]>(DEFAULT_HOME);
   const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>([]);
   const [calendarCache, setCalendarCache] = useState<CalendarCache>(EMPTY_CACHE);
@@ -149,25 +138,6 @@ export default function Dashboard() {
   }, [isMobile]);
 
   useEffect(() => {
-    // Legacy types — old storage may include `done` or `tasks` shapes
-    type LegacyItem = {
-      id: number; text: string; status?: Status; done?: boolean;
-      completedAt?: number | null; deadline?: number | null;
-    };
-    type LegacyTrack = {
-      id?: number; name: string;
-      tasks?: Array<{ id?: number; text: string; status?: Status; done?: boolean }>;
-    };
-
-    function normaliseItem(i: LegacyItem): ListItem {
-      const status: Status = i.status ?? (i.done ? 'done' : 'todo');
-      return {
-        id: i.id, text: i.text, status,
-        completedAt: i.completedAt ?? null,
-        deadline: i.deadline ?? null,
-      };
-    }
-
     async function loadData() {
       if (userId) {
         // If there's local data that was never pushed (e.g. push failed on sign-out,
@@ -180,15 +150,13 @@ export default function Dashboard() {
       }
 
       const keys = [
-        'musicItems', 'tracks', 'applications', 'lifeItems', 'cvItems', 'otherItems',
-        'darkMode', 'taskSortPrefs', 'appearance', 'homeLayout',
+        'darkMode', 'appearance', 'homeLayout',
         'calendarFeeds', 'calendarCache', 'calendarConnections', 'budget', 'inbox', 'recentSearches',
         'reviews', 'reviewSettings', 'oauthAccounts', 'emailsCache', 'sidebarCollapsed',
         'topics', 'topicFolders',
         'calendarNotes', 'dailyPlan', 'habits', 'healthDays',
         'priorityAlerts',
       ];
-      let musicLoaded = false;
       let appr: AppearancePrefs = { ...DEFAULT_APPEARANCE };
       let appearanceLoaded = false;
       let legacyDark: boolean | undefined;
@@ -201,37 +169,8 @@ export default function Dashboard() {
           const result = await getItem(key);
           if (result?.value) {
             const val: unknown = JSON.parse(result.value);
-            if (key === 'tracks' && Array.isArray(val) && !musicLoaded) {
-              const flattened: ListItem[] = [];
-              for (const tr of val as LegacyTrack[]) {
-                if (tr.tasks && tr.tasks.length > 0) {
-                  for (const tk of tr.tasks) {
-                    flattened.push({
-                      id: tk.id ?? Date.now() + Math.random(),
-                      text: `${tr.name} — ${tk.text}`,
-                      status: tk.status ?? (tk.done ? 'done' : 'todo'),
-                      completedAt: null, deadline: null,
-                    });
-                  }
-                } else {
-                  flattened.push({ id: tr.id ?? Date.now(), text: tr.name, status: 'todo', completedAt: null, deadline: null });
-                }
-              }
-              if (flattened.length > 0) setMusicItems(flattened);
-            } else if (key === 'musicItems' && Array.isArray(val)) {
-              setMusicItems((val as LegacyItem[]).map(normaliseItem));
-              musicLoaded = true;
-            } else if (['lifeItems', 'otherItems', 'cvItems'].includes(key) && Array.isArray(val)) {
-              const items = (val as LegacyItem[]).map(normaliseItem);
-              if (key === 'lifeItems') setLifeItems(items);
-              else if (key === 'otherItems') setOtherItems(items);
-              else if (key === 'cvItems') setCvItems(items);
-            } else if (key === 'applications' && Array.isArray(val)) {
-              setApplications(val as Application[]);
-            } else if (key === 'darkMode') {
+            if (key === 'darkMode') {
               legacyDark = val as boolean;
-            } else if (key === 'taskSortPrefs' && val && typeof val === 'object') {
-              setTaskSortPrefs(prev => ({ ...prev, ...(val as Partial<Record<TaskListKey, SortMode>>) }));
             } else if (key === 'homeLayout') {
               if (Array.isArray(val)) {
                 // v1 format: plain array (ROW_H=64) — migrate by doubling h and y.
@@ -422,12 +361,6 @@ export default function Dashboard() {
   useEffect(() => { applyAppearanceVars(appearance); }, [appearance]);
 
   useEffect(() => { if (!loading) save('appearance', appearance); }, [appearance, loading]);
-  useEffect(() => { if (!loading) save('musicItems', musicItems); }, [musicItems, loading]);
-  useEffect(() => { if (!loading) save('applications', applications); }, [applications, loading]);
-  useEffect(() => { if (!loading) save('lifeItems', lifeItems); }, [lifeItems, loading]);
-  useEffect(() => { if (!loading) save('cvItems', cvItems); }, [cvItems, loading]);
-  useEffect(() => { if (!loading) save('otherItems', otherItems); }, [otherItems, loading]);
-  useEffect(() => { if (!loading) save('taskSortPrefs', taskSortPrefs); }, [taskSortPrefs, loading]);
   useEffect(() => { if (!loading) save('homeLayout', { v: 2, items: homeItems }); }, [homeItems, loading]);
   useEffect(() => { if (!loading) save('calendarFeeds', calendarFeeds); }, [calendarFeeds, loading]);
   useEffect(() => { if (!loading) save('calendarCache', calendarCache); }, [calendarCache, loading]);
@@ -603,10 +536,6 @@ export default function Dashboard() {
       await Promise.all([
         reload<InboxItem[]>('inbox', setInbox),
         reload<Topic[]>('topics', setTopics),
-        reload<ListItem[]>('musicItems', setMusicItems),
-        reload<ListItem[]>('lifeItems', setLifeItems),
-        reload<ListItem[]>('cvItems', setCvItems),
-        reload<ListItem[]>('otherItems', setOtherItems),
         reload<BudgetData>('budget', setBudget),
       ]);
     };
@@ -672,9 +601,6 @@ export default function Dashboard() {
     doneAccent:   t.doneAccent,
   };
 
-  const setSort = (k: TaskListKey) => (m: SortMode) =>
-    setTaskSortPrefs(p => ({ ...p, [k]: m }));
-
   const patchAppearance = (patch: Partial<AppearancePrefs>) =>
     setAppearance(prev => ({ ...prev, ...patch }));
   const resetAppearance = () => setAppearance(DEFAULT_APPEARANCE);
@@ -728,20 +654,6 @@ export default function Dashboard() {
       const defaultSection = (next as string[]).includes(a.defaultSection) ? 'home' : a.defaultSection;
       return { ...a, hiddenSections: next, defaultSection };
     });
-
-  const addTaskToList = (list: TaskListKey, text: string, deadline: number | null) => {
-    const item: ListItem = {
-      id: Date.now(), text, status: 'todo', completedAt: null, deadline,
-    };
-    const setter =
-      list === 'music' ? setMusicItems
-        : list === 'life' ? setLifeItems
-          : list === 'cv' ? setCvItems
-            : setOtherItems;
-    setter(prev => [...prev, item]);
-  };
-  const addTaskWithDeadline = (list: TaskListKey, text: string, deadlineMs: number) =>
-    addTaskToList(list, text, deadlineMs);
 
   const addTopicItem = (topicId: string, text: string, deadline: number | null, stageId?: string) => {
     setTopics(prev => prev.map(top => {
@@ -822,13 +734,12 @@ export default function Dashboard() {
 
   const todayEvents = useMemo(() => {
     const allEvents = [
-      ...deadlineEvents({ music: musicItems, life: lifeItems, cv: cvItems, other: otherItems }),
       ...topicDeadlineEvents(topics),
       ...feedEvents,
       ...noteEvents(calendarNotes),
     ];
     return eventsOnDay(allEvents, new Date());
-  }, [musicItems, lifeItems, cvItems, otherItems, topics, feedEvents, calendarNotes]);
+  }, [topics, feedEvents, calendarNotes]);
 
   // Fetch Google Calendar events whenever there's an enabled connection.
   const gcalConn = useMemo(
@@ -853,11 +764,6 @@ export default function Dashboard() {
 
   const allSections: Array<{ id: SectionId; label: string; icon: ElementType }> = [
     { id: 'home', label: 'Home', icon: LayoutDashboard },
-    { id: 'music', label: 'Music', icon: Music },
-    { id: 'applications', label: 'Applications', icon: Briefcase },
-    { id: 'life', label: 'Life', icon: Sparkles },
-    { id: 'cv', label: 'CV', icon: FileText },
-    { id: 'other', label: 'Other', icon: BookOpen },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays },
     { id: 'budget', label: 'Budget', icon: Wallet },
     { id: 'inbox', label: 'Inbox', icon: Inbox },
@@ -908,8 +814,8 @@ export default function Dashboard() {
   // 'settings' and 'inbox' are intentionally absent from navItems but still valid sections.
   // Built-in sections (email, calendar, budget, etc.) remain valid even when hidden from
   // the sidebar — only bounce if it's a topic ID that no longer exists.
-  const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps', 'music', 'life', 'cv', 'other',
-    'applications', 'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
+  const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps',
+    'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
     'worlds']);
   useEffect(() => {
     if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
@@ -1469,8 +1375,8 @@ export default function Dashboard() {
               onWidgetShape={(s) => patchAppearance({ widgetShape: s })}
               onWidgetBorder={(b) => patchAppearance({ widgetBorder: b })}
               ctx={{
-                t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails,
-                setActiveSection, addTask: addTaskToList,
+                t, budget, emails,
+                setActiveSection,
                 topics, addTopicItem, addToInbox, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
@@ -1481,36 +1387,10 @@ export default function Dashboard() {
           </div>
           </ErrorBoundary>
           <ErrorBoundary key={activeSection} label="this section" onReset={() => setActiveSection('home')}>
-          {activeSection === 'music' && (
-            <SimpleListView items={musicItems} setItems={setMusicItems} t={t}
-              accent={sectionAccents.music} placeholder="add a music task…" emptyText="no music tasks yet"
-              sortMode={taskSortPrefs.music} setSortMode={setSort('music')} />
-          )}
-          {activeSection === 'applications' && (
-            <ApplicationsView applications={applications} setApplications={setApplications}
-              t={t} accent={sectionAccents.applications} />
-          )}
-          {activeSection === 'life' && (
-            <SimpleListView items={lifeItems} setItems={setLifeItems} t={t}
-              accent={sectionAccents.life} placeholder="add something…" emptyText="nothing here yet"
-              sortMode={taskSortPrefs.life} setSortMode={setSort('life')} />
-          )}
-          {activeSection === 'cv' && (
-            <SimpleListView items={cvItems} setItems={setCvItems} t={t}
-              accent={sectionAccents.cv} placeholder="add a CV item — project, experience…" emptyText="nothing here yet"
-              sortMode={taskSortPrefs.cv} setSortMode={setSort('cv')} />
-          )}
-          {activeSection === 'other' && (
-            <SimpleListView items={otherItems} setItems={setOtherItems} t={t}
-              accent={sectionAccents.other} placeholder="add a note, book, idea…" emptyText="nothing here yet"
-              sortMode={taskSortPrefs.other} setSortMode={setSort('other')} />
-          )}
           {activeSection === 'calendar' && (
             <CalendarView
               t={t}
               feedEvents={feedEvents}
-              lists={{ music: musicItems, life: lifeItems, cv: cvItems, other: otherItems }}
-              onAddTask={addTaskWithDeadline}
               topics={topics}
               onAddTopicItem={(topicId, text, deadline) => {
                 setTopics(prev => prev.map(tp =>
@@ -1562,9 +1442,8 @@ export default function Dashboard() {
               t={t}
               reviews={reviews}
               setReviews={setReviews}
-              lists={{ music: musicItems, life: lifeItems, cv: cvItems, other: otherItems }}
-              applications={applications}
               budget={budget}
+              topics={topics}
             />
           )}
           {activeSection === 'email' && (
@@ -1614,8 +1493,8 @@ export default function Dashboard() {
                   onChange={(next) => setTopics(prev => prev.map(t => t.id === next.id ? next : t))}
                   t={t}
                   ctx={{
-                    t, musicItems, lifeItems, cvItems, otherItems, applications, budget, emails,
-                    setActiveSection, addTask: addTaskToList,
+                    t, budget, emails,
+                    setActiveSection,
                     topics, addTopicItem, addToInbox, dailyPlan, onDailyPlanChange: setDailyPlan,
                     onAdvanceStage, colorBank: appearance.colorBank ?? [],
                     habits, onHabitsChange: setHabits,
@@ -1666,15 +1545,7 @@ export default function Dashboard() {
               onClearTopics={() => {
                 setTopics([]);
                 setTopicFolders([]);
-                // Also hide the deprecated built-in task-list sections (the
-                // pre-topics "Music / Applications / Life / CV / Other"). They
-                // can't be deleted, but hiding them clears the old clutter; they
-                // stay re-showable via the eye toggle in edit mode.
-                const legacy: SectionId[] = ['music', 'applications', 'life', 'cv', 'other'];
-                patchAppearance({
-                  hiddenTopicIds: [], hiddenFolderIds: [],
-                  hiddenSections: Array.from(new Set([...appearance.hiddenSections, ...legacy])),
-                });
+                patchAppearance({ hiddenTopicIds: [], hiddenFolderIds: [] });
               }}
               sections={allSections
                 .filter(s => ['budget','calendar','email','review'].includes(s.id))
@@ -1755,8 +1626,7 @@ export default function Dashboard() {
         <SearchModal
           t={t}
           entries={buildSearchIndex({
-            lists: { music: musicItems, life: lifeItems, cv: cvItems, other: otherItems },
-            applications, budget, inbox, feedEvents,
+            budget, inbox, feedEvents,
           })}
           recent={recentSearches}
           onClose={() => setSearchOpen(false)}

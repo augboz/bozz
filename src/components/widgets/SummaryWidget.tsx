@@ -2,15 +2,21 @@ import { Widget, MiniStat, Divider } from '../shared/Widget';
 import type { WidgetCtx } from './context';
 
 export default function SummaryWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, musicItems, lifeItems, cvItems, otherItems, applications } = ctx;
-  const allItems = [...musicItems, ...lifeItems, ...cvItems, ...otherItems];
+  const { t, topics } = ctx;
 
-  const totalDoing = allItems.filter(i => i.status === 'doing').length +
-    applications.filter(a => a.status === 'interview').length;
-  const totalTodo = allItems.filter(i => i.status === 'todo').length +
-    applications.filter(a => a.status === 'need to apply' || a.status === 'applied').length;
-  const totalDone = allItems.filter(i => i.status === 'done').length +
-    applications.filter(a => a.status === 'offer').length;
+  let totalDoing = 0, totalTodo = 0, totalDone = 0;
+  for (const topic of topics) {
+    const doneStageIds = new Set(topic.stages.filter(s => s.done).map(s => s.id));
+    // "Doing" = any non-first, non-done active stage; first active stage = "to do".
+    const activeStages = topic.stages.filter(s => !s.done);
+    const todoStageId = activeStages[0]?.id;
+    const doingStageIds = new Set(activeStages.slice(1).map(s => s.id));
+    for (const item of topic.items) {
+      if (doneStageIds.has(item.stageId)) totalDone++;
+      else if (doingStageIds.has(item.stageId)) totalDoing++;
+      else if (item.stageId === todoStageId) totalTodo++;
+    }
+  }
 
   return (
     <Widget t={t} accent={t.borderStrong} compact>

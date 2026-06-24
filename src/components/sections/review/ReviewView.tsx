@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { Check, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import type {
-  Application, BudgetData, ListItem, TaskListKey, Theme, Topic, WeeklyReview,
+  BudgetData, Theme, Topic, WeeklyReview,
 } from '../../../lib/types';
 import { SectionHeader } from '../../shared/ui';
 import { formatMoney } from '../../../lib/budget';
@@ -15,15 +15,9 @@ interface ReviewViewProps {
   t: Theme;
   reviews: WeeklyReview[];
   setReviews: React.Dispatch<React.SetStateAction<WeeklyReview[]>>;
-  lists: Record<TaskListKey, ListItem[]>;
-  applications: Application[];
   budget: BudgetData;
   topics?: Topic[];
 }
-
-const LIST_LABEL: Record<TaskListKey, string> = {
-  music: 'Music', life: 'Life', cv: 'CV', other: 'Other',
-};
 
 function Panel({ t, title, children }: { t: Theme; title: string; children: React.ReactNode }) {
   return (
@@ -117,7 +111,7 @@ function TopicsPanel({ t, topics, weekStart, weekEnd }: {
   );
 }
 
-export default function ReviewView({ t, reviews, setReviews, lists, applications, budget, topics }: ReviewViewProps) {
+export default function ReviewView({ t, reviews, setReviews, budget, topics }: ReviewViewProps) {
   const pending = useMemo(() => reviews.find(r => r.reviewedAt == null), [reviews]);
 
   // The pending entry may target a week other than the one currently in
@@ -142,7 +136,7 @@ export default function ReviewView({ t, reviews, setReviews, lists, applications
 
   const stats = weeklyStats({
     weekStart: window.start, weekEnd: window.end,
-    lists, applications, budget,
+    budget,
   });
 
   const setNote = (note: string) => {
@@ -198,14 +192,6 @@ export default function ReviewView({ t, reviews, setReviews, lists, applications
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem',
         }}>
-          <StatBlock t={t} label="tasks done" rows={(Object.keys(stats.doneBySection) as TaskListKey[])
-            .map(k => ({ label: LIST_LABEL[k], value: String(stats.doneBySection[k]) }))} />
-          <StatBlock t={t} label="applications" rows={[
-            { label: 'open', value: String(stats.applicationsSnapshot.open) },
-            { label: 'interviews', value: String(stats.applicationsSnapshot.interviewing) },
-            { label: 'offers', value: String(stats.applicationsSnapshot.offers) },
-            { label: 'rejected', value: String(stats.applicationsSnapshot.rejected) },
-          ]} />
           <StatBlock t={t} label="spend"
             big={formatMoney(stats.spend, budget.currency)}
             rows={stats.spendByCategory.map(c => ({ label: c.category, value: formatMoney(c.amount, budget.currency) }))}
@@ -216,19 +202,6 @@ export default function ReviewView({ t, reviews, setReviews, lists, applications
       {topics && topics.length > 0 && (
         <TopicsPanel t={t} topics={topics} weekStart={window.start} weekEnd={window.end} />
       )}
-
-      <Panel t={t} title="Scheduled vs done">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <ItemColumn t={t} icon={<Check size={12} strokeWidth={2} color={t.doneAccent} />} label={`Done (${stats.scheduledDone.length})`} items={stats.scheduledDone} />
-          <ItemColumn t={t} icon={<X size={12} strokeWidth={2} color={t.alert} />} label={`Missed (${stats.scheduledMissed.length})`} items={stats.scheduledMissed} />
-        </div>
-      </Panel>
-
-      <Panel t={t} title={`Rolled over (${stats.rolledOver.length})`}>
-        {stats.rolledOver.length === 0
-          ? <span style={{ fontSize: '0.82rem', color: t.textDim, fontStyle: 'italic' }}>nothing trailing — clean slate</span>
-          : <ItemColumn t={t} label="" items={stats.rolledOver} />}
-      </Panel>
 
       {effectiveMode === 'pending' && pending && (
         <Panel t={t} title="How did this week feel?">
@@ -283,39 +256,6 @@ function StatBlock({ t, label, rows, big }: {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function ItemColumn({ t, icon, label, items }: {
-  t: Theme; icon?: React.ReactNode; label: string;
-  items: Array<{ list: TaskListKey; item: ListItem }>;
-}) {
-  return (
-    <div>
-      {label && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.35rem',
-          fontSize: '0.7rem', color: t.textMuted, letterSpacing: '0.08em', marginBottom: '0.4rem',
-        }}>
-          {icon}{label}
-        </div>
-      )}
-      {items.length === 0
-        ? <span style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>—</span>
-        : (
-          <div style={{ display: 'grid', gap: '0.3rem' }}>
-            {items.map(({ list, item }) => (
-              <div key={`${list}:${item.id}`} style={{
-                fontSize: '0.8rem', color: t.text,
-                display: 'flex', alignItems: 'center', gap: '0.4rem',
-              }}>
-                <span style={{ color: t.textDim, fontSize: '0.7rem', width: '46px' }}>{LIST_LABEL[list]}</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
     </div>
   );
 }

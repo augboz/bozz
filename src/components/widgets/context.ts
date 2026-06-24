@@ -1,23 +1,16 @@
 import type React from 'react';
 import type {
-  Application, BudgetData, CalendarEvent, CalendarNote, DailyPlan, EmailMessage, Habit, ListItem,
+  BudgetData, CalendarEvent, CalendarNote, DailyPlan, EmailMessage, Habit,
   Theme, Topic,
 } from '../../lib/types';
 
 /** Everything a home widget might need. Passed uniformly to every widget. */
 export interface WidgetCtx {
   t: Theme;
-  musicItems: ListItem[];
-  lifeItems: ListItem[];
-  cvItems: ListItem[];
-  otherItems: ListItem[];
-  applications: Application[];
   budget: BudgetData;
   emails: EmailMessage[];
   /** No-op while the home grid is in edit mode (prevents accidental nav). */
   setActiveSection: (id: string) => void;
-  /** Push a new task into one of the legacy four lists (kept for calendar etc). */
-  addTask: (list: 'music' | 'life' | 'cv' | 'other', text: string, deadline: number | null) => void;
   /** The user's topics — used by QuickAdd and any topic-aware widget. */
   topics: Topic[];
   /** Add an item to a topic's first non-done stage (or the specified stageId). */

@@ -1,6 +1,5 @@
 export type Status = 'todo' | 'doing' | 'done';
-export type ApplicationStatus = 'need to apply' | 'applied' | 'interview' | 'offer' | 'rejected';
-export type SectionId = 'home' | 'music' | 'applications' | 'life' | 'cv' | 'other' | 'calendar' | 'budget' | 'inbox' | 'review' | 'email' | 'settings' | 'planner' | 'dailyPlanner' | 'habits' | 'health' | 'apps';
+export type SectionId = 'home' | 'calendar' | 'budget' | 'inbox' | 'review' | 'email' | 'settings' | 'planner' | 'dailyPlanner' | 'habits' | 'health' | 'apps';
 
 // ── User-defined topics ─────────────────────────────────────────────────────
 // A "topic" is a user-created task list with custom stages (e.g. To do /
@@ -155,9 +154,6 @@ export interface InboxItem {
   deadline?: number | null;
   deadlineLabel?: string | null;
 }
-
-/** Where an inbox item can be routed when triaged. */
-export type InboxDestination = TaskListKey | 'applications';
 
 export type TransactionType = 'income' | 'expense' | 'owed-to-me' | 'i-owe';
 export type RecurFrequency = 'weekly' | 'fortnightly' | 'monthly' | 'yearly';
@@ -318,11 +314,7 @@ export interface CalendarCache {
 
 export type SortMode = 'manual' | 'deadline' | 'status';
 
-/** The four ListItem-backed lists that support archive/deadline/sort. */
-export type TaskListKey = 'music' | 'life' | 'cv' | 'other';
-
 export type WidgetType =
-  | 'applications' | 'nextMusic' | 'nextLife' | 'nextCv' | 'nextOther'
   | 'summary' | 'miniCalendar' | 'upcomingDeadlines'
   | 'weather' | 'pomodoro' | 'quickCapture' | 'nowPlaying'
   | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd'
@@ -495,12 +487,6 @@ export interface ListItem {
   completedAt: number | null;
   /** Optional due date, unix ms at local midnight. */
   deadline: number | null;
-}
-
-export interface Application {
-  id: number;
-  name: string;
-  status: ApplicationStatus;
 }
 
 export interface Theme {

@@ -1,11 +1,9 @@
 import type { HomeWidgetItem, WidgetType } from '../../lib/types';
 import type { WidgetComponent } from './context';
-import ApplicationsWidget from './ApplicationsWidget';
 import SummaryWidget from './SummaryWidget';
 import MiniCalendarWidget from './MiniCalendarWidget';
 import UpcomingDeadlinesWidget from './UpcomingDeadlinesWidget';
 import BudgetWidget from './BudgetWidget';
-import { makeNextTaskWidget } from './NextTaskWidget';
 import { makePlaceholderWidget } from './PlaceholderWidget';
 import EmailsWidget from './EmailsWidget';
 import PomodoroWidget from './PomodoroWidget';
@@ -60,11 +58,6 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
   // All default h values are doubled from the pre-v2 grid (ROW_H 64→32) so
   // existing layouts look identical after migration. minH values are kept
   // smaller on flexible widgets to allow compact sizing.
-  applications: ready('applications', 'Applications', 'Open applications & status counts', { w: 8, h: 6 }, { w: 4, h: 2 }, ApplicationsWidget),
-  nextMusic: ready('nextMusic', 'Next: Music', 'Your next music task', { w: 4, h: 6 }, { w: 3, h: 2 }, makeNextTaskWidget('music')),
-  nextLife: ready('nextLife', 'Next: Life', 'Your next life task', { w: 4, h: 6 }, { w: 3, h: 2 }, makeNextTaskWidget('life')),
-  nextCv: ready('nextCv', 'Next: CV', 'Your next CV task', { w: 4, h: 6 }, { w: 3, h: 2 }, makeNextTaskWidget('cv')),
-  nextOther: ready('nextOther', 'Next: Other', 'Your next misc task', { w: 4, h: 6 }, { w: 3, h: 2 }, makeNextTaskWidget('other')),
   summary: ready('summary', 'Summary strip', 'Doing / to-do / done totals', { w: 12, h: 4 }, { w: 6, h: 2 }, SummaryWidget),
   miniCalendar: ready('miniCalendar', 'Mini calendar', 'This month with deadline dots', { w: 5, h: 10 }, { w: 4, h: 4 }, MiniCalendarWidget),
   upcomingDeadlines: ready('upcomingDeadlines', 'Upcoming deadlines', 'Everything due in the next 7 days', { w: 4, h: 8 }, { w: 3, h: 2 }, UpcomingDeadlinesWidget),
@@ -90,7 +83,6 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
 
 /** Widgets shown in the home Add Widget panel. */
 const HIDDEN_FROM_HOME_PANEL = new Set([
-  'applications', 'nextMusic', 'nextLife', 'nextCv', 'nextOther',
   'summary', 'quickCapture', 'todaySchedule', 'dailyPlanner',
   'topicTodos', 'topicLinks', 'topicNote',   // topic-only widgets
 ]);
@@ -100,7 +92,6 @@ export const WIDGET_LIST: WidgetMeta[] = Object.values(WIDGET_REGISTRY).filter(
 
 /** Widgets available on topic pages (excludes home-only and mandatory topic widgets). */
 const HIDDEN_FROM_TOPIC_PANEL = new Set([
-  'applications', 'nextMusic', 'nextLife', 'nextCv', 'nextOther',
   'summary', 'quickCapture', 'todaySchedule', 'dailyPlanner',
   'topicTodos', // mandatory — can't add a second one
 ]);

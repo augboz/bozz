@@ -546,10 +546,10 @@ export default function SettingsView({
             Reset
           </button>
         </Field>
-        <Field label="Clear topics & old sections" hint={`Delete every topic and folder${topics.length ? ` (${topics.length} topic${topics.length !== 1 ? 's' : ''})` : ''} and hide the old built-in lists (Music, Applications, Life, CV, Other). Topics can't be undone; sections can be re-shown with the eye in edit mode.`} t={t}>
+        <Field label="Clear all topics & folders" hint={`Delete every topic and folder${topics.length ? ` (${topics.length} topic${topics.length !== 1 ? 's' : ''})` : ''}. Tasks inside them are removed. Can't be undone.`} t={t}>
           <button
             onClick={() => {
-              if (!window.confirm(`Delete all ${topics.length} topic${topics.length !== 1 ? 's' : ''} + folders and hide the old built-in lists? Topic deletion can't be undone.`)) return;
+              if (!window.confirm(`Delete all ${topics.length} topic${topics.length !== 1 ? 's' : ''} and their folders? This cannot be undone.`)) return;
               onClearTopics();
             }}
             style={{

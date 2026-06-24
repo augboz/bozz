@@ -16,8 +16,7 @@ import { getItem, setItem, deleteItem, listKeysByPrefix } from './storage';
 /** All keys that are synced. Add new ones here when new state appears. */
 export const SYNCED_KEYS = [
   'appearance', 'topics', 'topicFolders', 'inbox',
-  'musicItems', 'lifeItems', 'cvItems', 'otherItems', 'applications',
-  'taskSortPrefs', 'homeLayout', 'homeBackground',
+  'homeLayout', 'homeBackground',
   'calendarFeeds', 'calendarCache', 'calendarConnections', 'calendarNotes',
   'budget',
   'reviews', 'reviewSettings',

@@ -61,11 +61,6 @@ export const THEME_COLOR_BANKS: Record<MoodId, string[]> = {
 
 export const sectionAccents: Record<SectionId, string> = {
   home:        '#5ec4d8',
-  music:       '#8ab4d4',
-  applications:'#c8a87a',
-  life:        '#7fc8a9',
-  cv:          '#a4b87c',
-  other:       '#e0a16b',
   calendar:    '#7fa8e0',
   budget:      '#86b89a',
   inbox:       '#c8845c',
