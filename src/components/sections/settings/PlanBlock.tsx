@@ -33,17 +33,17 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       {/* Current plan + explore (explore opens the website, not an in-app page) */}
       <div style={{
-        border: `1px solid ${t.border}`, borderRadius: '12px', padding: '1rem 1.1rem',
+        background: t.doingBg, border: `1px solid ${t.doingBorder}`, borderRadius: '12px', padding: '1rem 1.1rem',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
       }}>
         <div>
-          <div style={{ fontSize: '0.7rem', color: t.textDim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: '0.7rem', color: t.doingAccent, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
             Your plan
           </div>
-          <div style={{ fontSize: '1rem', color: t.text, fontWeight: 500, marginTop: '0.15rem' }}>
+          <div style={{ fontSize: '1.05rem', color: t.text, fontWeight: 600, marginTop: '0.15rem' }}>
             {getPlanLabel()}
           </div>
-          <div style={{ fontSize: '0.74rem', color: t.textMuted, marginTop: '0.25rem' }}>
+          <div style={{ fontSize: '0.74rem', color: t.text, opacity: 0.75, marginTop: '0.25rem' }}>
             {BETA_UNLOCK
               ? 'Bozz is free forever. Plus is free while in beta.'
               : 'Bozz is free forever. Plus adds Worlds, priority alerts and more.'}
@@ -62,7 +62,7 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
             Explore plans <ExternalLink size={13} strokeWidth={1.8} />
           </button>
           {plansSoon && (
-            <span style={{ fontSize: '0.7rem', color: t.textDim }}>Coming soon — free in beta</span>
+            <span style={{ fontSize: '0.7rem', color: t.textDim }}>Coming soon, free in beta</span>
           )}
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
         <Palette size={15} strokeWidth={1.6} color={t.textMuted} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '0.86rem', color: t.text }}>Browse Worlds</div>
-          <div style={{ fontSize: '0.72rem', color: t.textMuted }}>One-tap looks — theme, wallpaper and mood.</div>
+          <div style={{ fontSize: '0.72rem', color: t.textMuted }}>One-tap looks: theme, wallpaper and mood.</div>
         </div>
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} />
       </button>

@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ChevronRight, Palette,
+  ChevronRight, ChevronDown, Palette,
   Plug, NotebookPen, Power, RotateCcw, LogOut, Plus, X,
-  Bell, Sparkles,
+  Sparkles, HelpCircle,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
   AppearancePrefs, FontChoice, FontSize,
-  MoodId, OAuthAccount, PriorityAlertSettings, ReviewSettings, SectionId, Theme, Topic,
+  MoodId, ReviewSettings, SectionId, Theme, Topic,
 } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import { MOODS, THEME_COLOR_BANKS } from '../../lib/themes';
 import { DEFAULT_COLOR_BANK } from '../../lib/appearance';
-import PriorityAlertsBlock from './settings/PriorityAlertsBlock';
 import PlanBlock from './settings/PlanBlock';
 
 interface SettingsViewProps {
@@ -33,33 +32,53 @@ interface SettingsViewProps {
   hiddenTopicIds: string[];
   accountEmail: string | null;
   onSignOut: () => Promise<void>;
-  priorityAlerts: PriorityAlertSettings;
-  onPriorityAlertsChange: (s: PriorityAlertSettings) => void;
-  oauthAccounts: OAuthAccount[];
   onOpenWorlds: () => void;
 }
 
-// Flat section — content is always shown (no accordion). Keeps the page
-// scannable as plain information rather than a stack of dropdowns.
-function Block({ title, t, icon: Icon, children }: {
+// A settings section. Flat by default (content always shown); pass
+// `collapsible` to make it a dropdown that opens on click.
+function Block({ title, t, icon: Icon, children, collapsible, defaultOpen }: {
   title: string; t: Theme; icon?: React.ElementType;
-  children: React.ReactNode;
+  children: React.ReactNode; collapsible?: boolean; defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  const heading = (
+    <>
+      {Icon && <Icon size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />}
+      <h3 style={{
+        flex: 1, fontSize: '0.78rem', color: t.textMuted, fontWeight: 500, margin: 0,
+        letterSpacing: '0.04em', textTransform: 'uppercase', textAlign: 'left',
+      }}>{title}</h3>
+    </>
+  );
+  if (!collapsible) {
+    return (
+      <section style={{ borderTop: `1px solid ${t.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '1.1rem 0.25rem 0.4rem' }}>
+          {heading}
+        </div>
+        <div style={{ padding: '0.25rem 0.25rem 1.5rem 2.4rem' }}>{children}</div>
+      </section>
+    );
+  }
   return (
     <section style={{ borderTop: `1px solid ${t.border}` }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '0.7rem',
-        padding: '1.1rem 0.25rem 0.4rem',
-      }}>
-        {Icon && <Icon size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />}
-        <h3 style={{
-          fontSize: '0.78rem', color: t.textMuted, fontWeight: 500, margin: 0,
-          letterSpacing: '0.04em', textTransform: 'uppercase',
-        }}>{title}</h3>
-      </div>
-      <div style={{ padding: '0.25rem 0.25rem 1.5rem 2.4rem' }}>
-        {children}
-      </div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
+          padding: '1.1rem 0.25rem', background: 'transparent', border: 'none',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        {heading}
+        <ChevronDown
+          size={15} strokeWidth={1.5} color={t.textDim}
+          style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.18s ease', flexShrink: 0, marginRight: '0.25rem' }}
+        />
+      </button>
+      {open && <div style={{ padding: '0.25rem 0.25rem 1.5rem 2.4rem' }}>{children}</div>}
     </section>
   );
 }
@@ -128,6 +147,37 @@ function Toggle({ on, onClick, t, disabled }: { on: boolean; onClick: () => void
     </button>
   );
 }
+
+function Faq({ t, q, a, action }: {
+  t: Theme; q: string; a: string; action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: '0.84rem', color: t.text, fontWeight: 500, marginBottom: '0.2rem' }}>{q}</div>
+      <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>{a}</div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          style={{
+            marginTop: '0.45rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+            background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px',
+            padding: '0.3rem 0.7rem', color: t.textMuted, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: '0.74rem',
+          }}
+        >
+          {action.label} <ChevronRight size={12} strokeWidth={1.6} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Orange reset buttons shown just above sign out.
+const resetBtn: React.CSSProperties = {
+  background: 'transparent', border: '1px solid #e0892b', color: '#e0892b',
+  borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.8rem',
+  fontFamily: 'inherit', cursor: 'pointer', fontWeight: 400,
+};
 
 // ── Colour bank editor ────────────────────────────────────────────────────────
 
@@ -265,7 +315,7 @@ function ColorBankEditor({ t, bank, onChange, currentMood }: {
       {/* Current bank swatches */}
       {bank.length === 0 ? (
         <p style={{ fontSize: '0.75rem', color: t.textDim, fontStyle: 'italic', margin: 0 }}>
-          No colours in the bank — add some above, or load a theme palette.
+          No colours in the bank yet. Add some above, or load a theme palette.
         </p>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
@@ -331,8 +381,7 @@ export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, onClearTopics, sections,
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, hiddenTopicIds,
-  accountEmail, onSignOut,
-  priorityAlerts, onPriorityAlertsChange, oauthAccounts, onOpenWorlds,
+  accountEmail, onSignOut, onOpenWorlds,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -372,38 +421,11 @@ export default function SettingsView({
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
       </button>
 
-      {/* Replay the new-user getting-started walkthroughs */}
-      <button
-        onClick={onReplayWalkthroughs}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
-          padding: '0.95rem 0.25rem',
-          background: 'transparent', border: 'none', borderTop: `1px solid ${t.border}`,
-          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          transition: 'background 0.12s ease',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = t.bgAlt)}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-      >
-        <RotateCcw size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: '0.9rem', color: t.text, fontWeight: 500 }}>Replay walkthroughs</span>
-        <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
-      </button>
-
       <Block title="Bozz Plus" t={t} icon={Sparkles}>
         <PlanBlock t={t} onOpenWorlds={onOpenWorlds} />
       </Block>
 
-      <Block title="Priority alerts" t={t} icon={Bell}>
-        <PriorityAlertsBlock
-          t={t}
-          settings={priorityAlerts}
-          onChange={onPriorityAlertsChange}
-          accounts={oauthAccounts}
-        />
-      </Block>
-
-      <Block title="Appearance" t={t} icon={Palette}>
+      <Block title="Appearance" t={t} icon={Palette} collapsible>
         <Field label="Theme" t={t}>
           <Segmented<MoodId>
             value={appearance.mood} t={t}
@@ -468,7 +490,7 @@ export default function SettingsView({
           <div style={{ fontSize: '0.78rem', color: t.text, fontWeight: 400, marginBottom: '0.6rem' }}>
             Colour bank
             <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', color: t.textDim, fontWeight: 300 }}>
-              — the colours used everywhere in the app
+              the colours used across the app
             </span>
           </div>
           <ColorBankEditor
@@ -515,56 +537,59 @@ export default function SettingsView({
         </Field>
       </Block>
 
-      <Block title="Startup" t={t} icon={Power}>
-        <Field label="Launch at startup" hint="Open BOZZ automatically when you log in" t={t}>
+      <Block title="Launcher" t={t} icon={Power}>
+        <Field label="Launch Bozz when you open your laptop" t={t}>
           <Toggle on={autostartOn} onClick={toggleAutostart} t={t} disabled={checking} />
         </Field>
       </Block>
 
-      <Block title="Reset" t={t} icon={RotateCcw}>
-        <Field label="Reset appearance to defaults" hint="Mood, font, text size, nav — your data is untouched" t={t}>
+      <Block title="Help" t={t} icon={HelpCircle} collapsible>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <button
-            onClick={resetAppearance}
+            onClick={onReplayWalkthroughs}
             style={{
-              background: 'transparent', border: `1px solid ${t.alertBorder}`,
-              color: t.alert, borderRadius: '8px', padding: '0.4rem 0.9rem',
-              fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', alignSelf: 'flex-start',
+              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
+              padding: '0.45rem 0.85rem', color: t.text, cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '0.8rem',
             }}
           >
-            Reset
+            <RotateCcw size={14} strokeWidth={1.6} color={t.textMuted} /> Replay walkthroughs
           </button>
-        </Field>
-        <Field label="Reset home layout" hint="Restore the default widgets & arrangement" t={t}>
-          <button
-            onClick={resetHomeLayout}
-            style={{
-              background: 'transparent', border: `1px solid ${t.alertBorder}`,
-              color: t.alert, borderRadius: '8px', padding: '0.4rem 0.9rem',
-              fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
-            }}
-          >
-            Reset
-          </button>
-        </Field>
-        <Field label="Clear all topics & folders" hint={`Delete every topic and folder${topics.length ? ` (${topics.length} topic${topics.length !== 1 ? 's' : ''})` : ''}. Tasks inside them are removed. Can't be undone.`} t={t}>
+          <Faq t={t} q="How do I connect Gmail or Outlook?"
+            a="Open Connected apps and follow the short setup guide for your provider, then paste the keys it gives you."
+            action={{ label: 'Connected apps', onClick: onOpenApps }} />
+          <Faq t={t} q="How do I change the theme or wallpaper?"
+            a="Browse Worlds to apply a theme, or a ready-made template page, in one tap. You can revert anytime."
+            action={{ label: 'Browse Worlds', onClick: onOpenWorlds }} />
+          <Faq t={t} q="How do I add or edit topics and folders?"
+            a="In the sidebar, click Edit, then the plus to add or the pencil to edit. Drag to reorder, and the eye to hide." />
+          <Faq t={t} q="How do priority alerts work?"
+            a="Open the Email page and tap Priority alerts to watch senders or keywords. Bozz pings you when a matching email lands, even when it is tucked away in the tray." />
+          <Faq t={t} q="Is my data private?"
+            a="Your data syncs across your own devices and is never sold. You can clear topics anytime below, and reset the look without touching your data." />
+        </div>
+      </Block>
+
+      {/* Reset — plain orange buttons, just above sign out */}
+      <div style={{ borderTop: `1px solid ${t.border}`, padding: '1.2rem 0.25rem 0.4rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <button onClick={resetAppearance} style={resetBtn}>Reset appearance</button>
+          <button onClick={resetHomeLayout} style={resetBtn}>Reset home layout</button>
           <button
             onClick={() => {
               if (!window.confirm(`Delete all ${topics.length} topic${topics.length !== 1 ? 's' : ''} and their folders? This cannot be undone.`)) return;
               onClearTopics();
             }}
-            style={{
-              background: 'transparent', border: `1px solid ${t.alertBorder}`,
-              color: t.alert, borderRadius: '8px', padding: '0.4rem 0.9rem',
-              fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
-            }}
+            style={resetBtn}
           >
-            Clear all
+            Clear all topics and folders
           </button>
-        </Field>
-      </Block>
+        </div>
+      </div>
 
-      {/* Sign out — bottom of the page, no dropdown */}
-      <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+      {/* Sign out — bottom of the page */}
+      <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1.2rem', marginTop: '0.5rem' }}>
         {accountEmail && (
           <div style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: '0.75rem' }}>
             Signed in as <span style={{ color: t.text }}>{accountEmail}</span> · your data syncs across devices.

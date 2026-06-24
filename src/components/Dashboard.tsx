@@ -1458,6 +1458,8 @@ export default function Dashboard() {
               onArchive={onEmailArchive}
               onDelete={onEmailDelete}
               onOpen={onEmailOpen}
+              priorityAlerts={priorityAlerts}
+              onPriorityAlertsChange={setPriorityAlerts}
             />
           )}
           {activeSection === 'inbox' && (
@@ -1571,9 +1573,6 @@ export default function Dashboard() {
               onOpenApps={() => setActiveSection('apps')}
               onReplayWalkthroughs={replayWalkthroughs}
               topics={topics}
-              priorityAlerts={priorityAlerts}
-              onPriorityAlertsChange={setPriorityAlerts}
-              oauthAccounts={oauthAccounts}
               onOpenWorlds={() => setActiveSection('worlds')}
             />
           )}

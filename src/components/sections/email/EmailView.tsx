@@ -1,7 +1,9 @@
-import { RefreshCw, ExternalLink, MailOpen, Archive, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { RefreshCw, ExternalLink, MailOpen, Archive, Trash2, Bell, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
-import type { EmailMessage, OAuthAccount, Theme } from '../../../lib/types';
+import type { EmailMessage, OAuthAccount, PriorityAlertSettings, Theme } from '../../../lib/types';
 import { SectionHeader, EmptyState } from '../../shared/ui';
+import PriorityAlertsBlock from '../settings/PriorityAlertsBlock';
 
 interface EmailViewProps {
   t: Theme;
@@ -14,6 +16,45 @@ interface EmailViewProps {
   onArchive: (m: EmailMessage) => void;
   onDelete: (m: EmailMessage) => void;
   onOpen: (m: EmailMessage) => void;
+  priorityAlerts: PriorityAlertSettings;
+  onPriorityAlertsChange: (s: PriorityAlertSettings) => void;
+}
+
+function PriorityAlertsToggle({ t, accounts, settings, onChange }: {
+  t: Theme; accounts: OAuthAccount[]; settings: PriorityAlertSettings;
+  onChange: (s: PriorityAlertSettings) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const activeRules = settings.rules.filter(r => r.enabled).length;
+  return (
+    <div style={{ marginBottom: '1rem' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.55rem', width: '100%',
+          background: open ? t.bgAlt : 'transparent', border: `1px solid ${t.border}`,
+          borderRadius: open ? '10px 10px 0 0' : '10px', padding: '0.7rem 0.9rem',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        }}
+      >
+        <Bell size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.86rem', color: t.text }}>Priority alerts</div>
+          <div style={{ fontSize: '0.72rem', color: t.textMuted }}>
+            {settings.enabled && activeRules > 0
+              ? `Watching ${activeRules} rule${activeRules !== 1 ? 's' : ''}`
+              : 'Get pinged when an email that matters lands'}
+          </div>
+        </div>
+        {open ? <ChevronDown size={15} strokeWidth={1.5} color={t.textDim} /> : <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} />}
+      </button>
+      {open && (
+        <div style={{ border: `1px solid ${t.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '0.9rem' }}>
+          <PriorityAlertsBlock t={t} settings={settings} onChange={onChange} accounts={accounts} />
+        </div>
+      )}
+    </div>
+  );
 }
 
 function getInitials(name: string): string {
@@ -33,6 +74,7 @@ function getAvatarColor(name: string, provider: string): string {
 
 export default function EmailView({
   t, accounts, messages, syncing, lastSync, onRefresh, onMarkRead, onArchive, onDelete, onOpen,
+  priorityAlerts, onPriorityAlertsChange,
 }: EmailViewProps) {
   const unreadCount = messages.filter(m => m.unread).length;
 
@@ -41,7 +83,7 @@ export default function EmailView({
       <div>
         <SectionHeader title="Email" t={t} />
         <p style={{ color: t.textDim, fontSize: '0.85rem', fontStyle: 'italic' }}>
-          No accounts connected. Open Settings → Connected accounts to connect Gmail or Outlook.
+          No accounts connected. Open Settings then Connected apps to connect Gmail or Outlook.
         </p>
       </div>
     );
@@ -83,6 +125,8 @@ export default function EmailView({
           </div>
         }
       />
+
+      <PriorityAlertsToggle t={t} accounts={accounts} settings={priorityAlerts} onChange={onPriorityAlertsChange} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         {messages.map(m => {
