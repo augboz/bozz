@@ -1663,6 +1663,11 @@ export default function Dashboard() {
               patchAppearance={patchAppearance}
               resetAppearance={resetAppearance}
               resetHomeLayout={resetHomeLayout}
+              onClearTopics={() => {
+                setTopics([]);
+                setTopicFolders([]);
+                patchAppearance({ hiddenTopicIds: [], hiddenFolderIds: [] });
+              }}
               sections={allSections
                 .filter(s => ['budget','calendar','email','review'].includes(s.id))
                 .map(s => ({ id: s.id, label: s.label }))}

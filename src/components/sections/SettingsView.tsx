@@ -21,6 +21,7 @@ interface SettingsViewProps {
   patchAppearance: (patch: Partial<AppearancePrefs>) => void;
   resetAppearance: () => void;
   resetHomeLayout: () => void;
+  onClearTopics: () => void;
   sections: Array<{ id: SectionId; label: string }>;
   reviewSettings: ReviewSettings;
   onReviewSettingsChange: (s: ReviewSettings) => void;
@@ -327,7 +328,7 @@ function ColorBankEditor({ t, bank, onChange, currentMood }: {
 }
 
 export default function SettingsView({
-  t, appearance, patchAppearance, resetAppearance, resetHomeLayout, sections,
+  t, appearance, patchAppearance, resetAppearance, resetHomeLayout, onClearTopics, sections,
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, hiddenTopicIds,
   accountEmail, onSignOut,
@@ -543,6 +544,21 @@ export default function SettingsView({
             }}
           >
             Reset
+          </button>
+        </Field>
+        <Field label="Clear all topics & folders" hint={`Delete every topic and folder${topics.length ? ` (${topics.length} topic${topics.length !== 1 ? 's' : ''})` : ''}. Tasks inside them are removed. Can't be undone.`} t={t}>
+          <button
+            onClick={() => {
+              if (!window.confirm(`Delete all ${topics.length} topic${topics.length !== 1 ? 's' : ''} and their folders? This cannot be undone.`)) return;
+              onClearTopics();
+            }}
+            style={{
+              background: 'transparent', border: `1px solid ${t.alertBorder}`,
+              color: t.alert, borderRadius: '8px', padding: '0.4rem 0.9rem',
+              fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 300,
+            }}
+          >
+            Clear all
           </button>
         </Field>
       </Block>
