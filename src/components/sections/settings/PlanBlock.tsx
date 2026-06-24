@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Palette, Heart, Coffee, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Theme } from '../../../lib/types';
 import { getPlanLabel, BETA_UNLOCK } from '../../../lib/plus';
-import { activateLicense, openDonate, openPlansPage } from '../../../lib/billing';
+import { activateLicense, openDonate, openPlansPage, isLinkLive } from '../../../lib/billing';
 
 interface Props {
   t: Theme;
@@ -14,6 +14,9 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
   const [keyOpen, setKeyOpen] = useState(false);
   const [key, setKey] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [plansSoon, setPlansSoon] = useState(false);
+
+  const donateLive = isLinkLive('sponsors') || isLinkLive('kofi');
 
   const ghost: React.CSSProperties = {
     background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
@@ -46,17 +49,22 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
               : 'Bozz is free forever. Plus adds Worlds, priority alerts and more.'}
           </div>
         </div>
-        <button
-          onClick={openPlansPage}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-            background: 'transparent', color: t.text, border: `1px solid ${t.borderStrong}`,
-            borderRadius: '9px', padding: '0.55rem 1rem', fontSize: '0.82rem', fontWeight: 500,
-            fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          Explore plans <ExternalLink size={13} strokeWidth={1.8} />
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem', flexShrink: 0 }}>
+          <button
+            onClick={() => { if (!openPlansPage()) setPlansSoon(true); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              background: 'transparent', color: t.text, border: `1px solid ${t.borderStrong}`,
+              borderRadius: '9px', padding: '0.55rem 1rem', fontSize: '0.82rem', fontWeight: 500,
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}
+          >
+            Explore plans <ExternalLink size={13} strokeWidth={1.8} />
+          </button>
+          {plansSoon && (
+            <span style={{ fontSize: '0.7rem', color: t.textDim }}>Coming soon — free in beta</span>
+          )}
+        </div>
       </div>
 
       {/* Worlds — an in-app feature, reachable from the plan area */}
@@ -119,14 +127,22 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
         <div style={{ fontSize: '0.74rem', color: t.textMuted, lineHeight: 1.5, marginBottom: '0.6rem' }}>
           Built by one person. If it makes your mornings calmer, you can chip in.
         </div>
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          <button onClick={() => openDonate('sponsors')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <ExternalLink size={13} strokeWidth={1.6} /> GitHub Sponsors
-          </button>
-          <button onClick={() => openDonate('kofi')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Coffee size={13} strokeWidth={1.6} /> Ko-fi
-          </button>
-        </div>
+        {donateLive ? (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {isLinkLive('sponsors') && (
+              <button onClick={() => openDonate('sponsors')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <ExternalLink size={13} strokeWidth={1.6} /> GitHub Sponsors
+              </button>
+            )}
+            {isLinkLive('kofi') && (
+              <button onClick={() => openDonate('kofi')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Coffee size={13} strokeWidth={1.6} /> Ko-fi
+              </button>
+            )}
+          </div>
+        ) : (
+          <span style={{ fontSize: '0.72rem', color: t.textDim }}>Support links coming soon.</span>
+        )}
       </div>
     </div>
   );

@@ -19,48 +19,62 @@ import { setEntitlement, BETA_UNLOCK } from './plus';
 export type Product = 'worldsLifetime' | 'plusMonthly' | 'plusAnnual';
 export type DonateMethod = 'sponsors' | 'kofi' | 'tip';
 
-// Public links. Checkout/portal URLs are placeholders until the MoR store is
-// live; the donation links are real and shippable today.
-const LINKS = {
-  plans: 'https://bozz.app/plus',
-  waitlist: 'https://bozz.app/plus',
-  worldsLifetime: 'https://bozz.app/plus',
-  plusMonthly: 'https://bozz.app/plus',
-  plusAnnual: 'https://bozz.app/plus',
-  managePortal: 'https://bozz.app/plus',
-  sponsors: 'https://github.com/sponsors/augboz',
-  kofi: 'https://ko-fi.com/bozz',
-  tip: 'https://bozz.app/plus',
-} as const;
+// External links. ALL EMPTY until the real pages/handles exist — an empty value
+// means "not live yet", so the UI shows a calm "coming soon" instead of opening
+// a dead URL (a non-resolving domain gets hijacked by the browser's default
+// search, which is how a placeholder produced a 403). Fill these in when the
+// website + merchant-of-record + sponsor handles are real:
+//   plans:    the promo site's pricing page, e.g. https://yoursite.com/plus
+//   sponsors: https://github.com/sponsors/<handle>
+//   kofi:     https://ko-fi.com/<handle>
+const LINKS: Record<string, string> = {
+  plans: '',
+  worldsLifetime: '',
+  plusMonthly: '',
+  plusAnnual: '',
+  managePortal: '',
+  sponsors: '',
+  kofi: '',
+  tip: '',
+};
 
-async function open(url: string): Promise<void> {
-  try {
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
-    await openUrl(url);
-  } catch {
-    // Web fallback.
-    try { window.open(url, '_blank', 'noopener'); } catch { /* ignore */ }
-  }
+/** Try to open a URL in the system browser. Returns false if not configured. */
+function open(url: string): boolean {
+  if (!url) return false;
+  void (async () => {
+    try {
+      const { openUrl } = await import('@tauri-apps/plugin-opener');
+      await openUrl(url);
+    } catch {
+      try { window.open(url, '_blank', 'noopener'); } catch { /* ignore */ }
+    }
+  })();
+  return true;
 }
 
-/** Open the web plans/pricing page in the system browser. */
-export function openPlansPage(): void {
-  void open(LINKS.plans);
+/** Whether a given link is live (has a real URL configured). */
+export function isLinkLive(key: 'plans' | DonateMethod): boolean {
+  return !!LINKS[key];
 }
 
-/** Open the merchant-of-record checkout (or the beta waitlist) in the browser. */
-export function openCheckout(product: Product): void {
-  void open(BETA_UNLOCK ? LINKS.waitlist : LINKS[product]);
+/** Open the web plans/pricing page. Returns false if it's not live yet. */
+export function openPlansPage(): boolean {
+  return open(LINKS.plans);
+}
+
+/** Open the merchant-of-record checkout. Returns false if not live yet. */
+export function openCheckout(product: Product): boolean {
+  return open(LINKS[product]);
 }
 
 /** Open the MoR customer portal to manage a subscription. */
-export function openManageSubscription(): void {
-  void open(LINKS.managePortal);
+export function openManageSubscription(): boolean {
+  return open(LINKS.managePortal);
 }
 
-/** Open a donation link. Pure goodwill — never gated, never mixed with Plus. */
-export function openDonate(method: DonateMethod): void {
-  void open(LINKS[method]);
+/** Open a donation link. Returns false if not live yet. */
+export function openDonate(method: DonateMethod): boolean {
+  return open(LINKS[method]);
 }
 
 /**
