@@ -384,6 +384,105 @@ export interface AppearancePrefs {
   colorBank: string[];
   /** Ordered list of nav item IDs (topic IDs, folder IDs, section IDs). Controls full nav order. */
   navOrder?: string[];
+  /** Global app background (wallpaper) — set by an applied Bozz World. */
+  appBackground?: { url: string; dim: number; blur?: number };
+  /** The currently-applied Bozz World (gallery 'applied' state + revert). */
+  activeWorldId?: string;
+  /** Ambient-sound state for the active World's looping audio. */
+  ambient?: { worldId: string; volume: number; muted: boolean };
+}
+
+// ── Priority alerts (Bozz Plus — "Watch" pillar) ─────────────────────────────
+
+export type AlertMatchType = 'sender' | 'keyword';
+
+export interface AlertRule {
+  id: string;
+  /** User-facing name, e.g. "Lloyds". */
+  label: string;
+  type: AlertMatchType;
+  /** sender: email/domain · keyword: word/phrase. */
+  value: string;
+  /** Only fire on unread messages. Default true. */
+  unreadOnly: boolean;
+  /** Empty = all connected accounts. */
+  accountEmails: string[];
+  enabled: boolean;
+  createdAt: number;
+}
+
+export interface PriorityAlertSettings {
+  /** Master switch. */
+  enabled: boolean;
+  rules: AlertRule[];
+  /** Poll cadence in minutes. Default 3, floor 1. */
+  pollMinutes: number;
+  /** Local hour 0-23 quiet-hours start, or null = off. */
+  quietFrom: number | null;
+  quietTo: number | null;
+  /** Whether notifications play a sound. Default true. */
+  sound: boolean;
+}
+
+/** Dedup state — local-only, never synced (keeps the sync blob small). */
+export interface AlertWatchState {
+  /** Ring buffer of already-notified message ids, capped ~500. */
+  notifiedIds: string[];
+  lastCheck: number;
+}
+
+// ── Bozz Worlds (Bozz Plus — flagship "Looks/Moods" drops) ───────────────────
+
+export interface BozzWorld {
+  id: string;                  // "cozy-autumn"
+  name: string;                // "Cozy Autumn"
+  description: string;
+  author: string;              // "Bozz"
+  free: boolean;               // a few are free
+  // The look — maps onto AppearancePrefs:
+  mood: MoodId;
+  colorBank: string[];         // palette this World installs (<=30)
+  accent: string;              // primary accent hex
+  font: FontChoice;
+  widgetShape?: WidgetShape;
+  widgetBorder?: WidgetBorder;
+  background: { url: string; dim: number; blur?: number };   // wallpaper
+  ambientSound?: { url: string; name: string };              // looping audio, optional
+  previewUrl: string;          // gallery thumbnail
+  version: number;
+}
+
+// ── Templates / starter packs (Bozz Plus — "Build" pillar) ───────────────────
+
+export interface BozzTemplate {
+  id: string;
+  name: string;            // "Student", "Founder", "Job hunt", "Calm minimal"
+  description: string;
+  tags: string[];
+  topics: Topic[];
+  folders?: TopicFolder[];
+  homeWidgetLayout: HomeWidgetItem[];
+  appearance?: Partial<AppearancePrefs>;
+  starterHabits?: Habit[];
+  budgetCategories?: string[];
+  createdBy?: string;
+}
+
+// ── Entitlement / billing (Bozz Plus — money model) ──────────────────────────
+
+export type PlanTier = 'free' | 'plusMonthly' | 'plusAnnual' | 'worldsLifetime' | 'founding';
+
+export interface Entitlement {
+  tier: PlanTier;
+  /** Can use the premium World library. */
+  worldsAccess: boolean;
+  /** Alert power-features, sync depth, etc. */
+  plusFeatures: boolean;
+  /** Subs only; renew resets it; undefined = perpetual. */
+  expiresAt?: number;
+  licenseKey?: string;
+  source?: 'lemonsqueezy' | 'gumroad' | 'manual' | 'beta';
+  activatedAt?: number;
 }
 
 export interface ListItem {

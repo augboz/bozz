@@ -2,16 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronDown, ChevronRight, Palette, Menu,
   Plug, NotebookPen, Power, RotateCcw, ListTree, LogOut, Plus, X,
+  Bell, Sparkles, Package,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
-  AppearancePrefs, FontChoice, FontSize,
-  MoodId, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
+  AppearancePrefs, BozzTemplate, FontChoice, FontSize,
+  MoodId, OAuthAccount, PriorityAlertSettings, ReviewSettings, SectionId, Theme, Topic, TopicFolder,
 } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import { MOODS, THEME_COLOR_BANKS } from '../../lib/themes';
 import { DEFAULT_COLOR_BANK } from '../../lib/appearance';
 import TopicsBlock from './settings/TopicsBlock';
+import PriorityAlertsBlock from './settings/PriorityAlertsBlock';
+import PlanBlock from './settings/PlanBlock';
+import StarterPacksBlock from './settings/StarterPacksBlock';
 
 interface SettingsViewProps {
   t: Theme;
@@ -34,6 +38,11 @@ interface SettingsViewProps {
   onResetNavigation: () => void;
   accountEmail: string | null;
   onSignOut: () => Promise<void>;
+  priorityAlerts: PriorityAlertSettings;
+  onPriorityAlertsChange: (s: PriorityAlertSettings) => void;
+  oauthAccounts: OAuthAccount[];
+  onApplyTemplate: (tpl: BozzTemplate) => void;
+  onOpenPlus: () => void;
 }
 
 function Block({ title, t, icon: Icon, children, defaultOpen = false }: {
@@ -352,6 +361,7 @@ export default function SettingsView({
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, onTopicsChange, topicFolders, onTopicFoldersChange, hiddenTopicIds, onResetNavigation,
   accountEmail, onSignOut,
+  priorityAlerts, onPriorityAlertsChange, oauthAccounts, onApplyTemplate, onOpenPlus,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -426,6 +436,23 @@ export default function SettingsView({
         <span style={{ flex: 1, fontSize: '0.9rem', color: t.text, fontWeight: 500 }}>Replay walkthroughs</span>
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
       </button>
+
+      <Block title="Bozz Plus" t={t} icon={Sparkles} defaultOpen>
+        <PlanBlock t={t} onOpenPlus={onOpenPlus} />
+      </Block>
+
+      <Block title="Priority alerts" t={t} icon={Bell}>
+        <PriorityAlertsBlock
+          t={t}
+          settings={priorityAlerts}
+          onChange={onPriorityAlertsChange}
+          accounts={oauthAccounts}
+        />
+      </Block>
+
+      <Block title="Starter packs" t={t} icon={Package}>
+        <StarterPacksBlock t={t} onApply={onApplyTemplate} />
+      </Block>
 
       <Block title="Appearance" t={t} icon={Palette}>
         <Field label="Theme" t={t}>

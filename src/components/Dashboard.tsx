@@ -32,8 +32,16 @@ import type {
   ListItem, Application, Status, SectionId, SortMode, TaskListKey, AppearancePrefs, HomeWidgetItem,
   CalendarFeed, CalendarCache, CalendarEvent, CalendarConnection, CalendarNote, BudgetData, InboxItem,
   WeeklyReview, ReviewSettings, OAuthAccount, EmailMessage, EmailProvider,
-  Topic, TopicFolder,
+  Topic, TopicFolder, PriorityAlertSettings, BozzTemplate,
 } from '../lib/types';
+import {
+  DEFAULT_ALERT_SETTINGS, startAlertWatcher, stopAlertWatcher, seedWatchState,
+} from '../lib/alerts';
+import { loadEntitlement } from '../lib/plus';
+import { applyTemplate } from '../lib/templates';
+import { BgLayer } from './shared/BackgroundControls';
+import PlusView from './sections/PlusView';
+import WorldsView from './sections/WorldsView';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
 import SimpleListView from './sections/SimpleListView';
@@ -118,6 +126,8 @@ export default function Dashboard() {
   const [dailyPlan, setDailyPlan] = useState<import('../lib/types').DailyPlan>({});
   const [habits, setHabits] = useState<import('../lib/types').Habit[]>([]);
   const [healthDays, setHealthDays] = useState<import('../lib/types').HealthDay[]>([]);
+  const [priorityAlerts, setPriorityAlerts] = useState<PriorityAlertSettings>(DEFAULT_ALERT_SETTINGS);
+  const alertsSeededRef = useRef(false);
   // Phone-width auto-collapse: on viewports under 768px (iPhone-ish), the
   // 232px sidebar would swallow most of the screen. Force-collapse it and
   // re-evaluate on resize so the sidebar pops back open on orientation
@@ -176,6 +186,7 @@ export default function Dashboard() {
         'reviews', 'reviewSettings', 'oauthAccounts', 'emailsCache', 'sidebarCollapsed',
         'topics', 'topicFolders',
         'calendarNotes', 'dailyPlan', 'habits', 'healthDays',
+        'priorityAlerts',
       ];
       let musicLoaded = false;
       let appr: AppearancePrefs = { ...DEFAULT_APPEARANCE };
@@ -294,6 +305,8 @@ export default function Dashboard() {
               setHabits(val as import('../lib/types').Habit[]);
             } else if (key === 'healthDays' && Array.isArray(val)) {
               setHealthDays(val as import('../lib/types').HealthDay[]);
+            } else if (key === 'priorityAlerts' && val && typeof val === 'object') {
+              setPriorityAlerts({ ...DEFAULT_ALERT_SETTINGS, ...(val as Partial<PriorityAlertSettings>), rules: (val as PriorityAlertSettings).rules ?? [] });
             }
           }
         } catch { /* ignore individual key errors */ }
@@ -433,6 +446,48 @@ export default function Dashboard() {
   useEffect(() => { if (!loading) save('dailyPlan', dailyPlan); }, [dailyPlan, loading]);
   useEffect(() => { if (!loading) save('habits', habits); }, [habits, loading]);
   useEffect(() => { if (!loading) save('healthDays', healthDays); }, [healthDays, loading]);
+  useEffect(() => { if (!loading) save('priorityAlerts', priorityAlerts); }, [priorityAlerts, loading]);
+
+  // Hydrate the Plus entitlement (license) into the sync cache once on mount.
+  useEffect(() => { void loadEntitlement(); }, []);
+
+  // ── Priority-alert watcher ─────────────────────────────────────────────────
+  // Start/stop/restart the background email watcher as auth, settings (rules /
+  // cadence) and connected accounts change. On first enable, seed the watch
+  // state so only genuinely new mail fires (no back-dump of existing inbox).
+  useEffect(() => {
+    if (loading) { stopAlertWatcher(); return; }
+    const active = priorityAlerts.enabled
+      && priorityAlerts.rules.some(r => r.enabled)
+      && oauthAccounts.length > 0;
+    if (!active) {
+      alertsSeededRef.current = false;
+      stopAlertWatcher();
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      if (!alertsSeededRef.current) {
+        alertsSeededRef.current = true;
+        await seedWatchState(oauthAccounts);
+      }
+      if (cancelled) return;
+      startAlertWatcher({
+        settings: priorityAlerts,
+        accounts: oauthAccounts,
+        onCaught: () => {
+          // Bring the main window forward when a watched email is caught.
+          if (isTauri()) {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+              try { const w = getCurrentWindow(); void w.show(); void w.setFocus(); } catch { /* ignore */ }
+            }).catch(() => {});
+          }
+        },
+      });
+    })();
+    return () => { cancelled = true; stopAlertWatcher(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, priorityAlerts, oauthAccounts]);
 
   const lastEmailSync = useMemo(() => {
     if (oauthAccounts.length === 0) return null;
@@ -618,6 +673,19 @@ export default function Dashboard() {
   const resetAppearance = () => setAppearance(DEFAULT_APPEARANCE);
   const resetHomeLayout = () => setHomeItems(DEFAULT_HOME);
 
+  // Apply a free starter pack: merge topics/folders/habits, set the home layout
+  // and the matching look. Never clobbers existing data (applyTemplate appends
+  // with fresh ids). Then jump home so the user sees the result immediately.
+  const onApplyTemplate = (tpl: BozzTemplate) => {
+    const result = applyTemplate(tpl, { topics, topicFolders, habits });
+    setTopics(result.topics);
+    setTopicFolders(result.topicFolders);
+    setHabits(result.habits);
+    setHomeItems(result.homeWidgetLayout);
+    if (result.appearance) patchAppearance(result.appearance);
+    setActiveSection('home');
+  };
+
   const addTaskToList = (list: TaskListKey, text: string, deadline: number | null) => {
     const item: ListItem = {
       id: Date.now(), text, status: 'todo', completedAt: null, deadline,
@@ -797,7 +865,8 @@ export default function Dashboard() {
   // Built-in sections (email, calendar, budget, etc.) remain valid even when hidden from
   // the sidebar — only bounce if it's a topic ID that no longer exists.
   const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps', 'music', 'life', 'cv', 'other',
-    'applications', 'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health']);
+    'applications', 'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
+    'plus', 'worlds']);
   useEffect(() => {
     if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
     const stillVisible = navItems.some(n => n.id === activeSection);
@@ -825,7 +894,7 @@ export default function Dashboard() {
 
   return (
     <div style={{
-      display: 'flex', minHeight: '100vh', background: t.bg, color: t.text,
+      display: 'flex', minHeight: '100vh', backgroundColor: t.bg, color: t.text,
       backgroundImage: 'var(--app-gradient)',
       backgroundAttachment: 'fixed',
       fontFamily: 'var(--app-font)',
@@ -835,6 +904,9 @@ export default function Dashboard() {
     }}>
       {/* Custom frameless title bar — renders only inside Tauri */}
       <TitleBar theme={t} />
+
+      {/* Global app background — set by an applied Bozz World (appearance-only). */}
+      {appearance.appBackground && <BgLayer bg={appearance.appBackground} t={t} />}
 
       {/* No mobile sidebar backdrop — sidebar is hidden on mobile.
           Navigation is handled by BottomTabBar on small viewports. */}
@@ -1478,6 +1550,21 @@ export default function Dashboard() {
               onHealthConnectionsChange={() => {}}
             />
           )}
+          {activeSection === 'plus' && (
+            <PlusView
+              t={t}
+              onBack={() => setActiveSection('settings')}
+              onOpenWorlds={() => setActiveSection('worlds')}
+            />
+          )}
+          {activeSection === 'worlds' && (
+            <WorldsView
+              t={t}
+              appearance={appearance}
+              patchAppearance={patchAppearance}
+              onBack={() => setActiveSection('plus')}
+            />
+          )}
           {activeSection === 'settings' && (
             <SettingsView
               t={t}
@@ -1517,6 +1604,11 @@ export default function Dashboard() {
               onTopicsChange={setTopics}
               topicFolders={topicFolders}
               onTopicFoldersChange={setTopicFolders}
+              priorityAlerts={priorityAlerts}
+              onPriorityAlertsChange={setPriorityAlerts}
+              oauthAccounts={oauthAccounts}
+              onApplyTemplate={onApplyTemplate}
+              onOpenPlus={() => setActiveSection('plus')}
             />
           )}
           </ErrorBoundary>

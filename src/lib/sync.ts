@@ -29,6 +29,9 @@ export const SYNCED_KEYS = [
   'healthConnections', 'healthDays',
   'sidebarCollapsed',
   'weatherLocation',
+  // Bozz Plus — priority-alert settings are synced (small); the alert watch
+  // state (notifiedIds) and the entitlement license are deliberately local-only.
+  'priorityAlerts',
 ] as const;
 
 export type SyncedKey = typeof SYNCED_KEYS[number];
