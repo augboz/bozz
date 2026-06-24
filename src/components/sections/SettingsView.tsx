@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ChevronDown, ChevronRight, Palette, Menu,
+  ChevronRight, Palette, Menu,
   Plug, NotebookPen, Power, RotateCcw, ListTree, LogOut, Plus, X,
   Bell, Sparkles,
 } from 'lucide-react';
@@ -43,50 +43,27 @@ interface SettingsViewProps {
   onOpenWorlds: () => void;
 }
 
-function Block({ title, t, icon: Icon, children, defaultOpen = false }: {
+// Flat section — content is always shown (no accordion). Keeps the page
+// scannable as plain information rather than a stack of dropdowns.
+function Block({ title, t, icon: Icon, children }: {
   title: string; t: Theme; icon?: React.ElementType;
-  children: React.ReactNode; defaultOpen?: boolean;
+  children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [hover, setHover] = useState(false);
   return (
-    <section style={{
-      borderTop: `1px solid ${t.border}`,
-    }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        aria-expanded={open}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: '0.7rem',
-          padding: '0.85rem 0.25rem',
-          background: hover ? t.bgAlt : 'transparent',
-          border: 'none', cursor: 'pointer',
-          fontFamily: 'inherit', textAlign: 'left',
-          transition: 'background 0.12s ease',
-        }}
-      >
+    <section style={{ borderTop: `1px solid ${t.border}` }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.7rem',
+        padding: '1.1rem 0.25rem 0.4rem',
+      }}>
         {Icon && <Icon size={15} strokeWidth={1.6} color={t.textMuted} style={{ flexShrink: 0 }} />}
         <h3 style={{
-          flex: 1,
-          fontSize: '0.9rem', color: t.text, fontWeight: 500, margin: 0,
-          letterSpacing: 'normal', textTransform: 'none',
+          fontSize: '0.78rem', color: t.textMuted, fontWeight: 500, margin: 0,
+          letterSpacing: '0.04em', textTransform: 'uppercase',
         }}>{title}</h3>
-        <ChevronDown
-          size={14} strokeWidth={1.5} color={t.textDim}
-          style={{
-            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
-            transition: 'transform 0.18s ease',
-            flexShrink: 0, marginRight: '0.25rem',
-          }}
-        />
-      </button>
-      {open && (
-        <div style={{ padding: '0.25rem 0.25rem 1.5rem 2.4rem' }}>
-          {children}
-        </div>
-      )}
+      </div>
+      <div style={{ padding: '0.25rem 0.25rem 1.5rem 2.4rem' }}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -435,7 +412,7 @@ export default function SettingsView({
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
       </button>
 
-      <Block title="Bozz Plus" t={t} icon={Sparkles} defaultOpen>
+      <Block title="Bozz Plus" t={t} icon={Sparkles}>
         <PlanBlock t={t} onOpenWorlds={onOpenWorlds} />
       </Block>
 

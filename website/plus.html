@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bozz Plus · A little more, to keep it alive</title>
+<meta name="description" content="Bozz is free forever. Plus adds aesthetic Worlds, ready-made templates, priority email alerts and sync depth — and keeps a one-person project alive. Free while in beta.">
+<meta name="theme-color" content="#171721">
+<link rel="canonical" href="https://bozz-app.vercel.app/plus.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235266eb'/%3E%3Ctext x='16' y='23' font-size='21' font-weight='700' text-anchor='middle' fill='white' font-family='system-ui,sans-serif'%3EB%3C/text%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bozz-app.vercel.app/plus.html">
+<meta property="og:title" content="Bozz Plus">
+<meta property="og:description" content="Bozz is free forever. Plus is for people who want a little more — and want to keep a one-person project alive.">
+<meta property="og:image" content="https://bozz-app.vercel.app/assets/hero-dark.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:#5266eb; --ghost-blue:#cdddff; --abyss:#171721; --surface:#1e1e2a;
+  --interactive:#272735; --lead:#70707d; --starlight:#ededf3; --silver:#c3c3cc; --white:#fff;
+  --display:'Geist',sans-serif; --body:'Inter',sans-serif;
+  --spring:cubic-bezier(0.22,1,0.36,1); --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --muted:#9292a0;
+}
+[data-theme="light"] {
+  --abyss:#f7f7f9; --surface:#fff; --interactive:#ececf1; --lead:#c7c7d1;
+  --starlight:#17171f; --silver:#46464f; --muted:#6b6b76;
+}
+html { scroll-behavior:smooth; }
+::selection { background:rgba(82,102,235,0.28); }
+body {
+  font-family:var(--body); background:var(--abyss); color:var(--starlight);
+  transition:background 250ms var(--ease-out), color 250ms var(--ease-out);
+  overflow-x:hidden; font-weight:400; line-height:1.6;
+}
+a { color:inherit; }
+
+/* Nav */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:100; height:64px;
+  display:flex; align-items:center; justify-content:space-between; padding:0 2.5rem;
+  transition:background 200ms var(--ease-out), border-color 200ms var(--ease-out);
+  border-bottom:1px solid transparent;
+}
+nav.scrolled { background:rgba(23,23,33,0.82); backdrop-filter:blur(20px) saturate(130%); border-bottom-color:var(--lead); }
+[data-theme="light"] nav.scrolled { background:rgba(247,247,249,0.88); }
+.nav-logo { font-family:var(--display); font-size:1.05rem; font-weight:600; letter-spacing:-0.01em; color:var(--starlight); text-decoration:none; display:inline-flex; align-items:center; gap:0.6rem; }
+.nav-logo .mark { width:26px; height:26px; border-radius:50%; background:var(--starlight); color:var(--abyss); display:grid; place-items:center; font-weight:700; font-size:0.8rem; }
+.nav-links { display:flex; list-style:none; }
+.nav-links a { font-family:var(--body); font-size:13px; color:var(--muted); text-decoration:none; padding:6px 16px; transition:color 150ms var(--ease-out); }
+.nav-links a:hover, .nav-links a.active { color:var(--starlight); }
+.nav-right { display:flex; align-items:center; gap:0.85rem; }
+.theme-toggle { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; flex-shrink:0; background:transparent; border:1px solid var(--lead); color:var(--silver); cursor:pointer; transition:color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 180ms var(--spring); }
+.theme-toggle svg { width:17px; height:17px; }
+.theme-toggle .icon-moon { display:none; }
+[data-theme="light"] .theme-toggle .icon-sun { display:none; }
+[data-theme="light"] .theme-toggle .icon-moon { display:block; }
+.nav-cta { font-family:var(--body); font-size:13px; font-weight:500; background:rgba(205,221,255,0.14); color:var(--starlight); border-radius:40px; padding:8px 20px; text-decoration:none; transition:background 150ms var(--ease-out); }
+
+/* Layout */
+.wrap { max-width:1080px; margin:0 auto; padding:0 2rem; }
+section.block { padding:5.5rem 0; }
+.eyebrow { font-family:var(--body); font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:var(--blue); font-weight:500; margin-bottom:1rem; }
+h1 { font-family:var(--display); font-weight:600; font-size:clamp(2.6rem,6vw,4.4rem); line-height:1.04; letter-spacing:-0.02em; }
+h2 { font-family:var(--display); font-weight:600; font-size:clamp(1.8rem,3.5vw,2.6rem); letter-spacing:-0.02em; }
+h3 { font-family:var(--display); font-weight:500; font-size:1.15rem; letter-spacing:-0.01em; }
+.lead { font-size:clamp(1.05rem,2vw,1.3rem); color:var(--silver); max-width:42ch; line-height:1.5; }
+.muted { color:var(--muted); }
+
+/* Hero */
+.hero { padding:9rem 0 4rem; }
+.beta-badge { display:inline-flex; align-items:center; gap:0.5rem; font-size:13px; color:var(--blue); background:rgba(82,102,235,0.12); border:1px solid rgba(82,102,235,0.35); border-radius:999px; padding:6px 14px; margin-bottom:1.6rem; }
+.hero-cta { display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:2.2rem; }
+
+/* Buttons */
+.btn-primary { display:inline-flex; align-items:center; gap:8px; font-family:var(--body); font-size:15px; font-weight:500; background:var(--blue); color:var(--white); border-radius:32px; padding:14px 30px; text-decoration:none; border:none; cursor:pointer; transition:opacity 150ms var(--ease-out), transform 200ms var(--spring); }
+.btn-primary:hover { opacity:0.9; transform:translateY(-2px) scale(1.02); }
+.btn-ghost { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:400; color:var(--silver); text-decoration:none; padding:14px 26px; border-radius:32px; border:1px solid var(--lead); transition:color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 200ms var(--spring); }
+.btn-ghost:hover { color:var(--starlight); border-color:var(--starlight); transform:translateY(-2px); }
+
+/* Feature grid */
+.grid3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1.2rem; margin-top:3rem; }
+.card { background:var(--surface); border:1px solid var(--lead); border-radius:20px; padding:1.8rem; transition:transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.card:hover { transform:translateY(-3px); box-shadow:0 14px 40px rgba(0,0,0,0.3); }
+.card .ico { width:42px; height:42px; border-radius:12px; background:rgba(82,102,235,0.14); color:var(--blue); display:grid; place-items:center; margin-bottom:1.1rem; }
+.card .ico svg { width:21px; height:21px; }
+.card h3 { margin-bottom:0.5rem; }
+.card p { color:var(--muted); font-size:0.95rem; }
+
+/* Themes vs Templates split */
+.split { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.2rem; margin-top:2.5rem; }
+.split .card h3 { display:flex; align-items:center; gap:0.5rem; }
+.tag { font-size:11px; letter-spacing:0.05em; text-transform:uppercase; color:var(--blue); border:1px solid rgba(82,102,235,0.4); border-radius:999px; padding:2px 9px; }
+.split ul { list-style:none; margin-top:1rem; display:flex; flex-direction:column; gap:0.55rem; }
+.split li { font-size:0.95rem; color:var(--silver); display:flex; gap:0.6rem; }
+.split li::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--blue); margin-top:0.55rem; flex-shrink:0; }
+
+/* Pricing */
+.prices { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:1.2rem; margin-top:3rem; }
+.price { background:var(--surface); border:1px solid var(--lead); border-radius:22px; padding:2rem; display:flex; flex-direction:column; }
+.price.hero-card { border-color:var(--blue); box-shadow:0 0 0 1px var(--blue), 0 20px 60px rgba(82,102,235,0.18); }
+.price .ptop { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; }
+.price h3 { font-size:1.05rem; }
+.best { font-size:11px; letter-spacing:0.04em; color:var(--white); background:var(--blue); border-radius:999px; padding:3px 10px; }
+.price .amount { font-family:var(--display); font-size:2.4rem; font-weight:600; letter-spacing:-0.02em; margin:0.3rem 0 0.1rem; }
+.price .per { color:var(--muted); font-size:0.95rem; }
+.price p.desc { color:var(--muted); font-size:0.93rem; margin:0.8rem 0 1.4rem; flex:1; }
+.price .btn-primary, .price .btn-ghost { justify-content:center; width:100%; }
+
+/* Comparison */
+.cmp { margin-top:3rem; border:1px solid var(--lead); border-radius:18px; overflow:hidden; }
+.cmp .row { display:grid; grid-template-columns:1.1fr 1.2fr 1.6fr; padding:0.9rem 1.2rem; font-size:0.92rem; align-items:center; }
+.cmp .row + .row { border-top:1px solid var(--lead); }
+.cmp .head { background:var(--interactive); font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+.cmp .feat { color:var(--silver); }
+.cmp .free { color:var(--muted); }
+.cmp .plus { color:var(--starlight); display:flex; gap:0.45rem; align-items:flex-start; }
+.cmp .plus svg { width:15px; height:15px; color:var(--blue); flex-shrink:0; margin-top:3px; }
+
+/* Support + footer */
+.support { background:var(--surface); border:1px solid var(--lead); border-radius:20px; padding:2.2rem; margin-top:3rem; text-align:center; }
+.support h3 { margin-bottom:0.6rem; }
+.support p { color:var(--muted); max-width:48ch; margin:0 auto 1.4rem; }
+.fineprint { text-align:center; color:var(--muted); font-size:0.85rem; margin-top:2.5rem; }
+footer { border-top:1px solid var(--lead); padding:2.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+.footer-logo { font-family:var(--display); font-weight:600; }
+.footer-links { display:flex; gap:1.4rem; }
+.footer-links a { color:var(--muted); text-decoration:none; font-size:0.9rem; transition:color 150ms var(--ease-out); }
+.footer-links a:hover { color:var(--starlight); }
+.footer-copy { color:var(--muted); font-size:0.85rem; }
+
+@media (max-width:680px) {
+  nav { padding:0 1.25rem; }
+  .nav-links { display:none; }
+  .cmp .row { grid-template-columns:1fr 1fr; }
+  .cmp .free { display:none; }
+  .cmp .head .free { display:none; }
+}
+</style>
+</head>
+<body>
+
+<nav id="nav" aria-label="Main navigation">
+  <a class="nav-logo" href="index.html"><span class="mark">B</span>BOZZ</a>
+  <ul class="nav-links">
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="index.html#integrations">Integrations</a></li>
+    <li><a href="plus.html" class="active">Plus</a></li>
+    <li><a href="index.html#download">Download</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light / dark mode" title="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <a class="nav-cta" href="index.html#download">Get Bozz</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="wrap">
+    <span class="beta-badge">✦ Free while in beta — everything below is unlocked in the app</span>
+    <p class="eyebrow">Bozz Plus</p>
+    <h1>A little more,<br>to keep it alive.</h1>
+    <p class="lead" style="margin-top:1.6rem;">Bozz is free and always will be. Plus is for people who want a bit more — and want to keep a one-person project going.</p>
+    <div class="hero-cta">
+      <a class="btn-primary" href="#pricing">See the plans <span>→</span></a>
+      <a class="btn-ghost" href="index.html#download">Download Bozz</a>
+    </div>
+  </div>
+</header>
+
+<!-- What's in Plus -->
+<section class="block">
+  <div class="wrap">
+    <p class="eyebrow">What you get</p>
+    <h2>Made yours, watched for you.</h2>
+    <div class="grid3">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 0 0 0 20c1 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.5-1.1-.3-.3-.5-.7-.5-1.1 0-.8.7-1.3 1.5-1.3H16a4 4 0 0 0 4-4 10 10 0 0 0-8-9z"/></svg></div>
+        <h3>Bozz Worlds</h3>
+        <p>One-tap looks. <strong style="color:var(--silver)">Themes</strong> restyle Bozz — colour, wallpaper, font. <strong style="color:var(--silver)">Templates</strong> drop a ready-made page of widgets for a job: Shopping, Deep Work, Travel.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <h3>Priority alerts</h3>
+        <p>Bozz pings you the moment an email that matters lands — your bank, a landlord, "interview" — even tucked away in the tray. Unlimited watches, quiet hours, multi-account.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h3>Sync &amp; safekeeping</h3>
+        <p>Your stuff, safe and everywhere. Encrypted sync is free for everyone; Plus adds the depth — version history, restore, more devices.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Worlds detail -->
+<section class="block" style="padding-top:0;">
+  <div class="wrap">
+    <p class="eyebrow">Worlds</p>
+    <h2>Two kinds of one-tap.</h2>
+    <div class="split">
+      <div class="card">
+        <h3>Themes <span class="tag">Look</span></h3>
+        <p class="muted" style="margin-top:0.5rem;">Pure aesthetic — restyle the whole of Bozz in a tap, and revert just as fast.</p>
+        <ul>
+          <li>Matching colour, wallpaper and font</li>
+          <li>A few ship free; fresh looks land over time</li>
+          <li>Apply to all of Bozz, or just one topic</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Templates <span class="tag">Page</span></h3>
+        <p class="muted" style="margin-top:0.5rem;">Ready-made pages — widgets and layout already set up for a specific job.</p>
+        <ul>
+          <li>Add as a new topic, folder, or your whole dashboard</li>
+          <li>Shopping, Deep Work, Job Hunt, Study, Travel</li>
+          <li>Your own data is never touched — just tidied into place</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="block" id="pricing">
+  <div class="wrap">
+    <p class="eyebrow">Pricing</p>
+    <h2>Pick once, or pay small.</h2>
+    <p class="lead muted" style="margin-top:1rem;">No countdowns, no fake scarcity. An honest "best value" tag is the only nudge you'll get.</p>
+    <div class="prices">
+      <div class="price hero-card">
+        <div class="ptop"><h3>Worlds All-Access</h3><span class="best">Best value</span></div>
+        <div class="amount">£15–20</div>
+        <div class="per">one-time</div>
+        <p class="desc">Buy once, unlock every World — themes and templates — plus every future drop, forever. Best for the sub-averse.</p>
+        <a class="btn-primary" href="mailto:ab5324@ic.ac.uk?subject=Bozz%20Plus%20waitlist%20%E2%80%94%20Lifetime">Join the waitlist</a>
+      </div>
+      <div class="price">
+        <div class="ptop"><h3>Bozz Plus</h3></div>
+        <div class="amount">£3</div>
+        <div class="per">per month · or £25/year</div>
+        <p class="desc">Unlocks all Worlds while active, plus priority alerts and sync depth. Cancel anytime, one click.</p>
+        <a class="btn-ghost" href="mailto:ab5324@ic.ac.uk?subject=Bozz%20Plus%20waitlist%20%E2%80%94%20Subscription">Join the waitlist</a>
+      </div>
+    </div>
+    <p class="fineprint">Checkout isn't live yet — Plus is <strong>free while in beta</strong>, so everything is already unlocked in the app. Leave your email and we'll tell you when paid plans open (and early supporters get a better price).</p>
+  </div>
+</section>
+
+<!-- Comparison -->
+<section class="block" style="padding-top:0;">
+  <div class="wrap">
+    <p class="eyebrow">Free vs Plus</p>
+    <h2>Free stays whole.</h2>
+    <p class="lead muted" style="margin-top:1rem;">The core — your whole morning in one window — is free forever. Plus sells depth, not the basics.</p>
+    <div class="cmp">
+      <div class="row head"><span>&nbsp;</span><span class="free">Free</span><span>Plus</span></div>
+      <div class="row"><span class="feat">Priority alerts</span><span class="free">1 rule, desktop</span><span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited · senders + keywords · quiet hours</span></div>
+      <div class="row"><span class="feat">Worlds</span><span class="free">a few free</span><span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Full library + every future drop</span></div>
+      <div class="row"><span class="feat">Templates</span><span class="free">free starter templates</span><span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Full gallery + create &amp; share your own</span></div>
+      <div class="row"><span class="feat">Accounts</span><span class="free">1 email + 1 calendar</span><span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Several of each</span></div>
+      <div class="row"><span class="feat">Backups</span><span class="free">local backup</span><span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Cloud backups + 90-day history</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Support -->
+<section class="block" style="padding-top:0;">
+  <div class="wrap">
+    <div class="support">
+      <h3>Support Bozz</h3>
+      <p>Bozz is free and open source, built by one person. If it makes your mornings calmer, you can chip in — no nag, no gate.</p>
+      <a class="btn-ghost" href="https://github.com/augboz/bozz" target="_blank" rel="noopener">★ Star on GitHub</a>
+    </div>
+    <p class="fineprint">Bozz is free forever, with or without Plus.</p>
+  </div>
+</section>
+
+<footer>
+  <span class="footer-logo">BOZZ</span>
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="https://github.com/augboz/bozz" target="_blank" rel="noopener">GitHub</a>
+    <a href="mailto:ab5324@ic.ac.uk">Contact</a>
+  </div>
+  <span class="footer-copy">© 2026 BOZZ.</span>
+</footer>
+
+<script>
+const THEME_KEY = 'bozz-theme';
+const themeToggle = document.getElementById('themeToggle');
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', '#f7f7f9');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', '#171721');
+  }
+}
+const storedTheme = localStorage.getItem(THEME_KEY);
+applyTheme(storedTheme ?? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+themeToggle?.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+  localStorage.setItem(THEME_KEY, next);
+});
+const nav = document.getElementById('nav');
+addEventListener('scroll', () => { nav.classList.toggle('scrolled', window.scrollY > 8); }, { passive: true });
+</script>
+</body>
+</html>

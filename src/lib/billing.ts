@@ -28,7 +28,7 @@ export type DonateMethod = 'sponsors' | 'kofi' | 'tip';
 //   sponsors: https://github.com/sponsors/<handle>
 //   kofi:     https://ko-fi.com/<handle>
 const LINKS: Record<string, string> = {
-  plans: '',
+  plans: 'https://bozz-app.vercel.app/plus.html',
   worldsLifetime: '',
   plusMonthly: '',
   plusAnnual: '',
