@@ -1666,7 +1666,15 @@ export default function Dashboard() {
               onClearTopics={() => {
                 setTopics([]);
                 setTopicFolders([]);
-                patchAppearance({ hiddenTopicIds: [], hiddenFolderIds: [] });
+                // Also hide the deprecated built-in task-list sections (the
+                // pre-topics "Music / Applications / Life / CV / Other"). They
+                // can't be deleted, but hiding them clears the old clutter; they
+                // stay re-showable via the eye toggle in edit mode.
+                const legacy: SectionId[] = ['music', 'applications', 'life', 'cv', 'other'];
+                patchAppearance({
+                  hiddenTopicIds: [], hiddenFolderIds: [],
+                  hiddenSections: Array.from(new Set([...appearance.hiddenSections, ...legacy])),
+                });
               }}
               sections={allSections
                 .filter(s => ['budget','calendar','email','review'].includes(s.id))
