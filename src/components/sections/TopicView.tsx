@@ -19,7 +19,9 @@ const COLS = 12;
 const ROW_H = 32;
 
 const DEFAULT_TOPIC_LAYOUT: HomeWidgetItem[] = [
-  { i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 12, h: 16 },
+  // Compact by default — much smaller than the old full-width 12×16 todo. Users
+  // can drag it bigger; new topic pages just don't open with a giant task list.
+  { i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 4, h: 6 },
 ];
 
 interface Props {
