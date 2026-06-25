@@ -73,7 +73,9 @@ export async function fetchGCalEvents(overrideColor?: string): Promise<CalendarE
     items?: Array<{ id: string; backgroundColor?: string; summary?: string }>;
   };
 
-  const timeMin = new Date().toISOString();
+  // Fetch a window around today so the calendar shows past events too — not
+  // just upcoming ones. Matches the .ics feed's 60-day look-back.
+  const timeMin = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   const timeMax = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
 
   const events: CalendarEvent[] = [];
@@ -84,7 +86,9 @@ export async function fetchGCalEvents(overrideColor?: string): Promise<CalendarE
       timeMin, timeMax,
       singleEvents: 'true',
       orderBy: 'startTime',
-      maxResults: '250',
+      // Raised from 250 now that the window spans ~4 months (past + future) so
+      // past events don't crowd upcoming ones out of the result page.
+      maxResults: '500',
     });
 
     const evRes = await get(

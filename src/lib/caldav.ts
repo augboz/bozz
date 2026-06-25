@@ -358,8 +358,9 @@ export async function fetchAppleCalEvents(email: string, overrideColor?: string)
   const calendars = await listCalendars(homeUrl, auth);
   if (calendars.length === 0) return [];
 
-  // 4. Fetch events — next 60 days
-  const timeMin = new Date();
+  // 4. Fetch events — past 60 days through the next 60 days, so the calendar
+  // shows recent past events as well as upcoming ones.
+  const timeMin = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
   const timeMax = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
 
   const allEvents: CalendarEvent[] = [];
