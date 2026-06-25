@@ -186,10 +186,7 @@ export default function WorldsView({
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <div style={{ position: 'relative', height: '110px' }}>
-                <img
-                  src={world.previewUrl} alt={world.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
+                <MiniLayout t={t} world={world} blurred={!world.free} compact height={110} />
                 {active && (
                   <span style={badge(t.doneAccent)}><Check size={13} strokeWidth={2.5} /></span>
                 )}
@@ -467,13 +464,58 @@ function uniqueWidgetTypes(world: BozzWorld): WidgetType[] {
   return out;
 }
 
+/** A tiny, realistic representation of a widget drawn in the World's accent, so
+ *  the preview reads like an actual dashboard rather than labelled boxes. */
+function WidgetGlyph({ type, accent, light }: { type: WidgetType; accent: string; light: boolean }) {
+  const line = light ? 'rgba(20,22,28,0.34)' : 'rgba(255,255,255,0.36)';
+  const faint = light ? 'rgba(20,22,28,0.15)' : 'rgba(255,255,255,0.15)';
+  const col: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '3px', width: '100%' };
+  const bar = (w: string, c = line, h = 4, key?: number) => <div key={key} style={{ width: w, height: h, borderRadius: 3, background: c }} />;
+  const row = (children: React.ReactNode, key?: number) => <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>{children}</div>;
+  const dot = (c = accent, s = 5) => <div style={{ width: s, height: s, borderRadius: '50%', background: c, flexShrink: 0 }} />;
+  const ring = (border: React.CSSProperties) => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}><div style={border} /></div>;
+
+  switch (type) {
+    case 'topicTodos': case 'today': case 'upcomingDeadlines': case 'dailyPlanner': case 'todaySchedule':
+      return <div style={col}>{[0, 1, 2].map(i => row(<>{dot([accent, line, faint][i])}{bar(['72%', '88%', '56%'][i])}</>, i))}</div>;
+    case 'topicNote':
+      return <div style={col}>{['92%', '100%', '78%', '60%'].map((w, i) => bar(w, i ? faint : line, 4, i))}</div>;
+    case 'topicLinks': case 'notion':
+      return <div style={col}>{[0, 1].map(i => row(<><div style={{ width: 7, height: 7, borderRadius: 2, background: accent, opacity: 0.7 }} />{bar(['62%', '78%'][i])}</>, i))}</div>;
+    case 'miniCalendar':
+      return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', width: '100%' }}>{Array.from({ length: 21 }).map((_, i) => <div key={i} style={{ aspectRatio: '1', borderRadius: 1.5, background: [4, 10, 15].includes(i) ? accent : faint }} />)}</div>;
+    case 'budget':
+      return <div style={col}>{bar('48%', accent, 6, 0)}{bar('82%', line, 4, 1)}{bar('34%', faint, 4, 2)}</div>;
+    case 'habits':
+      return <div style={col}>{[0, 1, 2].map(r => row(Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i <= r + 1 ? accent : faint }} />), r))}</div>;
+    case 'recentEmails': case 'whatsapp':
+      return <div style={col}>{[0, 1].map(i => row(<>{dot(accent, 6)}<div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>{bar('58%')}{bar('92%', faint, 3)}</div></>, i))}</div>;
+    case 'weather':
+      return row(<><div style={{ width: 16, height: 16, borderRadius: '50%', background: accent, opacity: 0.8 }} /><div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>{bar('22px')}{bar('14px', faint, 3)}</div></>);
+    case 'nowPlaying':
+      return row(<><div style={{ width: 18, height: 18, borderRadius: 4, background: accent, opacity: 0.75 }} /><div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>{bar('70%')}{bar('45%', faint, 3)}<div style={{ width: '100%', height: 3, borderRadius: 2, background: faint }}><div style={{ width: '40%', height: '100%', borderRadius: 2, background: accent }} /></div></div></>);
+    case 'pomodoro':
+      return ring({ width: 24, height: 24, borderRadius: '50%', border: `3px solid ${faint}`, borderTopColor: accent, borderRightColor: accent });
+    case 'clock':
+      return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}><div style={{ position: 'relative', width: 24, height: 24, borderRadius: '50%', border: `2px solid ${line}` }}><div style={{ position: 'absolute', left: '50%', top: '28%', width: 2, height: '24%', background: accent, transform: 'translateX(-50%)' }} /><div style={{ position: 'absolute', left: '50%', top: '50%', width: '28%', height: 2, background: accent }} /></div></div>;
+    case 'photo':
+      return <div style={{ width: '100%', height: '100%', minHeight: 22, borderRadius: 4, background: `linear-gradient(135deg, ${accent}66, ${faint})`, display: 'flex', alignItems: 'flex-end', padding: 3 }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: accent, opacity: 0.85 }} /></div>;
+    case 'quickAdd': case 'quickCapture':
+      return row(<><div style={{ flex: 1, height: 9, borderRadius: 5, border: `1px solid ${faint}` }} /><div style={{ width: 16, height: 9, borderRadius: 5, background: accent }} /></>);
+    case 'summary':
+      return row(<>{bar('30%', accent, 8)}{bar('30%', line, 8)}{bar('30%', faint, 8)}</>);
+    default:
+      return <div style={col}>{bar('70%', faint, 4, 0)}{bar('45%', faint, 4, 1)}</div>;
+  }
+}
+
 /**
  * A scaled, labelled mock of the World's page — the real widget arrangement, in
  * the World's own colours / shape / font, over its wallpaper. `blurred` is the
  * Plus teaser: legible enough to entice, not a crisp giveaway (names still come
  * through clearly on the "what's inside" chips below).
  */
-function MiniLayout({ t, world, blurred, home, height = 210 }: { t: Theme; world: BozzWorld; blurred?: boolean; home?: boolean; height?: number }) {
+function MiniLayout({ t, world, blurred, home, compact, height = 210 }: { t: Theme; world: BozzWorld; blurred?: boolean; home?: boolean; compact?: boolean; height?: number }) {
   const radius = SHAPE_RADIUS[world.widgetShape ?? 'rounded'];
   const font = FONT_STACK[world.font] ?? FONT_STACK.inter;
   const accent = world.accent;
@@ -483,7 +525,7 @@ function MiniLayout({ t, world, blurred, home, height = 210 }: { t: Theme; world
     : THEME_HOME_MOCK;
   const rows = Math.max(...tiles.map(tl => tl.y + tl.h), 1);
   return (
-    <div style={{ position: 'relative', height: `${height}px`, borderRadius: '14px', overflow: 'hidden', border: `1px solid ${t.border}` }}>
+    <div style={{ position: 'relative', height: `${height}px`, borderRadius: compact ? '0' : '14px', overflow: 'hidden', border: compact ? 'none' : `1px solid ${t.border}` }}>
       <img src={world.background.url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       <div style={{ position: 'absolute', inset: 0, background: light ? '#f4f4f6' : '#0e0e10', opacity: world.background.dim }} />
       <div style={{ position: 'absolute', inset: 0, padding: '6px', filter: blurred ? 'blur(3.5px)' : undefined }}>
@@ -495,16 +537,22 @@ function MiniLayout({ t, world, blurred, home, height = 210 }: { t: Theme; world
           }}>
             <div style={{
               width: '100%', height: '100%', boxSizing: 'border-box',
-              background: light ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.09)',
+              background: light ? 'rgba(255,255,255,0.62)' : 'rgba(255,255,255,0.1)',
               backdropFilter: 'blur(6px)', border: `1px solid ${accent}66`, borderRadius: radius,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', overflow: 'hidden',
+              display: 'flex', flexDirection: 'column', gap: compact ? '0' : '3px', padding: compact ? '3px 4px' : '4px 5px', overflow: 'hidden',
             }}>
-              <span style={{
-                fontFamily: font, fontSize: '0.58rem', fontWeight: 500, textAlign: 'center', lineHeight: 1.1,
-                color: light ? '#33373c' : 'rgba(255,255,255,0.92)',
-              }}>
-                {WIDGET_REGISTRY[tl.type]?.label ?? tl.type}
-              </span>
+              {!compact && (
+                <span style={{
+                  fontFamily: font, fontSize: '0.5rem', fontWeight: 600, lineHeight: 1.1, letterSpacing: '0.01em',
+                  color: light ? '#33373c' : 'rgba(255,255,255,0.88)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0,
+                }}>
+                  {WIDGET_REGISTRY[tl.type]?.label ?? tl.type}
+                </span>
+              )}
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'flex-start' }}>
+                <WidgetGlyph type={tl.type} accent={accent} light={light} />
+              </div>
             </div>
           </div>
         ))}
