@@ -1,531 +1,572 @@
-# Graph Report - C:/Users/augbo/1.Personal/ClaudesPlayground/Aug-dashboard  (2026-05-26)
+# Graph Report - .  (2026-06-15)
 
 ## Corpus Check
-- 138 files · ~82,348 words
+- 194 files · ~146,538 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1064 nodes · 1935 edges · 106 communities (96 shown, 10 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.8)
-- Token cost: 50,705 input · 0 output
+- 1363 nodes · 2552 edges · 161 communities (90 shown, 71 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.82)
+- Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Dashboard & Email Views|Dashboard & Email Views]]
-- [[_COMMUNITY_Platform Utils & Storage|Platform Utils & Storage]]
-- [[_COMMUNITY_Package Dependencies (npm)|Package Dependencies (npm)]]
-- [[_COMMUNITY_Budget Views & Charts|Budget Views & Charts]]
-- [[_COMMUNITY_Tauri ACL Permissions (bytes)|Tauri ACL Permissions (bytes)]]
-- [[_COMMUNITY_Quick Capture & Themes|Quick Capture & Themes]]
-- [[_COMMUNITY_Tauri ACL Permissions (text)|Tauri ACL Permissions (text)]]
-- [[_COMMUNITY_Appearance & Budget Config|Appearance & Budget Config]]
-- [[_COMMUNITY_Tauri ACL Permissions (store)|Tauri ACL Permissions (store)]]
-- [[_COMMUNITY_Tauri ACL Permissions (app)|Tauri ACL Permissions (app)]]
-- [[_COMMUNITY_Calendar & Review Views|Calendar & Review Views]]
-- [[_COMMUNITY_Bank Import & CSV|Bank Import & CSV]]
-- [[_COMMUNITY_Shared Widgets & Theme Accents|Shared Widgets & Theme Accents]]
-- [[_COMMUNITY_Tauri Config (tauri.conf.json)|Tauri Config (tauri.conf.json)]]
-- [[_COMMUNITY_TypeScript Config|TypeScript Config]]
-- [[_COMMUNITY_Applications & Inbox Views|Applications & Inbox Views]]
-- [[_COMMUNITY_Home Grid & Widget Types|Home Grid & Widget Types]]
-- [[_COMMUNITY_Desktop Schema Definitions|Desktop Schema Definitions]]
-- [[_COMMUNITY_Windows Schema Definitions|Windows Schema Definitions]]
-- [[_COMMUNITY_Task List & Sort System|Task List & Sort System]]
-- [[_COMMUNITY_Community 20|Community 20]]
-- [[_COMMUNITY_Community 21|Community 21]]
-- [[_COMMUNITY_Community 22|Community 22]]
-- [[_COMMUNITY_Community 23|Community 23]]
-- [[_COMMUNITY_Community 24|Community 24]]
-- [[_COMMUNITY_Community 25|Community 25]]
-- [[_COMMUNITY_Community 26|Community 26]]
-- [[_COMMUNITY_Community 27|Community 27]]
-- [[_COMMUNITY_Community 28|Community 28]]
-- [[_COMMUNITY_Community 29|Community 29]]
-- [[_COMMUNITY_Community 30|Community 30]]
-- [[_COMMUNITY_Community 31|Community 31]]
-- [[_COMMUNITY_Community 32|Community 32]]
-- [[_COMMUNITY_Community 33|Community 33]]
-- [[_COMMUNITY_Community 34|Community 34]]
-- [[_COMMUNITY_Community 35|Community 35]]
-- [[_COMMUNITY_Community 36|Community 36]]
-- [[_COMMUNITY_Community 37|Community 37]]
-- [[_COMMUNITY_Community 38|Community 38]]
-- [[_COMMUNITY_Community 39|Community 39]]
-- [[_COMMUNITY_Community 40|Community 40]]
-- [[_COMMUNITY_Community 41|Community 41]]
-- [[_COMMUNITY_Community 42|Community 42]]
-- [[_COMMUNITY_Community 43|Community 43]]
-- [[_COMMUNITY_Community 44|Community 44]]
-- [[_COMMUNITY_Community 45|Community 45]]
-- [[_COMMUNITY_Community 46|Community 46]]
-- [[_COMMUNITY_Community 47|Community 47]]
-- [[_COMMUNITY_Community 48|Community 48]]
-- [[_COMMUNITY_Community 49|Community 49]]
-- [[_COMMUNITY_Community 50|Community 50]]
-- [[_COMMUNITY_Community 51|Community 51]]
-- [[_COMMUNITY_Community 52|Community 52]]
-- [[_COMMUNITY_Community 53|Community 53]]
-- [[_COMMUNITY_Community 54|Community 54]]
-- [[_COMMUNITY_Community 55|Community 55]]
-- [[_COMMUNITY_Community 56|Community 56]]
-- [[_COMMUNITY_Community 57|Community 57]]
-- [[_COMMUNITY_Community 58|Community 58]]
-- [[_COMMUNITY_Community 59|Community 59]]
-- [[_COMMUNITY_Community 60|Community 60]]
-- [[_COMMUNITY_Community 61|Community 61]]
-- [[_COMMUNITY_Community 62|Community 62]]
-- [[_COMMUNITY_Community 63|Community 63]]
-- [[_COMMUNITY_Community 64|Community 64]]
-- [[_COMMUNITY_Community 65|Community 65]]
-- [[_COMMUNITY_Community 66|Community 66]]
-- [[_COMMUNITY_Community 67|Community 67]]
-- [[_COMMUNITY_Community 68|Community 68]]
-- [[_COMMUNITY_Community 69|Community 69]]
-- [[_COMMUNITY_Community 70|Community 70]]
-- [[_COMMUNITY_Community 71|Community 71]]
-- [[_COMMUNITY_Community 72|Community 72]]
-- [[_COMMUNITY_Community 73|Community 73]]
-- [[_COMMUNITY_Community 74|Community 74]]
-- [[_COMMUNITY_Community 75|Community 75]]
-- [[_COMMUNITY_Community 76|Community 76]]
-- [[_COMMUNITY_Community 77|Community 77]]
-- [[_COMMUNITY_Community 78|Community 78]]
-- [[_COMMUNITY_Community 79|Community 79]]
-- [[_COMMUNITY_Community 80|Community 80]]
-- [[_COMMUNITY_Community 81|Community 81]]
-- [[_COMMUNITY_Community 82|Community 82]]
-- [[_COMMUNITY_Community 83|Community 83]]
-- [[_COMMUNITY_Community 84|Community 84]]
-- [[_COMMUNITY_Community 85|Community 85]]
-- [[_COMMUNITY_Community 86|Community 86]]
-- [[_COMMUNITY_Community 87|Community 87]]
-- [[_COMMUNITY_Community 88|Community 88]]
-- [[_COMMUNITY_Community 89|Community 89]]
-- [[_COMMUNITY_Community 90|Community 90]]
-- [[_COMMUNITY_Community 91|Community 91]]
-- [[_COMMUNITY_Community 92|Community 92]]
-- [[_COMMUNITY_Community 93|Community 93]]
-- [[_COMMUNITY_Community 96|Community 96]]
-- [[_COMMUNITY_Community 97|Community 97]]
-- [[_COMMUNITY_Community 100|Community 100]]
-- [[_COMMUNITY_Community 101|Community 101]]
-- [[_COMMUNITY_Community 102|Community 102]]
-- [[_COMMUNITY_Community 103|Community 103]]
-- [[_COMMUNITY_Community 104|Community 104]]
-- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Package Dependencies|Package Dependencies]]
+- [[_COMMUNITY_GoCardless Bank API|GoCardless Bank API]]
+- [[_COMMUNITY_Calendar View|Calendar View]]
+- [[_COMMUNITY_Bank Import Modal|Bank Import Modal]]
+- [[_COMMUNITY_Budget Charts & Analytics|Budget Charts & Analytics]]
+- [[_COMMUNITY_Platform & Settings Integrations|Platform & Settings Integrations]]
+- [[_COMMUNITY_Email Sync Engine|Email Sync Engine]]
+- [[_COMMUNITY_Calendar & Review Logic|Calendar & Review Logic]]
+- [[_COMMUNITY_Vercel API Config|Vercel API Config]]
+- [[_COMMUNITY_Widget Registry|Widget Registry]]
+- [[_COMMUNITY_App Shell & Auth|App Shell & Auth]]
+- [[_COMMUNITY_Shared UI Primitives|Shared UI Primitives]]
+- [[_COMMUNITY_Budget View & Tasks|Budget View & Tasks]]
+- [[_COMMUNITY_Tauri Backend Commands|Tauri Backend Commands]]
+- [[_COMMUNITY_Themes & Appearance Types|Themes & Appearance Types]]
+- [[_COMMUNITY_Auth Gate Component|Auth Gate Component]]
+- [[_COMMUNITY_Date Utilities|Date Utilities]]
+- [[_COMMUNITY_Topic & List Views|Topic & List Views]]
+- [[_COMMUNITY_Tauri Config|Tauri Config]]
+- [[_COMMUNITY_Bottom Tab Bar|Bottom Tab Bar]]
+- [[_COMMUNITY_Module Group 20|Module Group 20]]
+- [[_COMMUNITY_Module Group 21|Module Group 21]]
+- [[_COMMUNITY_Module Group 22|Module Group 22]]
+- [[_COMMUNITY_Module Group 23|Module Group 23]]
+- [[_COMMUNITY_Module Group 24|Module Group 24]]
+- [[_COMMUNITY_Module Group 25|Module Group 25]]
+- [[_COMMUNITY_Module Group 26|Module Group 26]]
+- [[_COMMUNITY_Module Group 27|Module Group 27]]
+- [[_COMMUNITY_Module Group 28|Module Group 28]]
+- [[_COMMUNITY_Module Group 29|Module Group 29]]
+- [[_COMMUNITY_Module Group 30|Module Group 30]]
+- [[_COMMUNITY_Module Group 31|Module Group 31]]
+- [[_COMMUNITY_Module Group 32|Module Group 32]]
+- [[_COMMUNITY_Module Group 33|Module Group 33]]
+- [[_COMMUNITY_Module Group 34|Module Group 34]]
+- [[_COMMUNITY_Module Group 35|Module Group 35]]
+- [[_COMMUNITY_Module Group 36|Module Group 36]]
+- [[_COMMUNITY_Module Group 37|Module Group 37]]
+- [[_COMMUNITY_Module Group 38|Module Group 38]]
+- [[_COMMUNITY_Module Group 39|Module Group 39]]
+- [[_COMMUNITY_Module Group 40|Module Group 40]]
+- [[_COMMUNITY_Module Group 41|Module Group 41]]
+- [[_COMMUNITY_Module Group 42|Module Group 42]]
+- [[_COMMUNITY_Module Group 43|Module Group 43]]
+- [[_COMMUNITY_Module Group 44|Module Group 44]]
+- [[_COMMUNITY_Module Group 45|Module Group 45]]
+- [[_COMMUNITY_Module Group 46|Module Group 46]]
+- [[_COMMUNITY_Module Group 47|Module Group 47]]
+- [[_COMMUNITY_Module Group 48|Module Group 48]]
+- [[_COMMUNITY_Module Group 49|Module Group 49]]
+- [[_COMMUNITY_Module Group 50|Module Group 50]]
+- [[_COMMUNITY_Module Group 51|Module Group 51]]
+- [[_COMMUNITY_Module Group 52|Module Group 52]]
+- [[_COMMUNITY_Module Group 53|Module Group 53]]
+- [[_COMMUNITY_Module Group 54|Module Group 54]]
+- [[_COMMUNITY_Module Group 55|Module Group 55]]
+- [[_COMMUNITY_Module Group 56|Module Group 56]]
+- [[_COMMUNITY_Module Group 57|Module Group 57]]
+- [[_COMMUNITY_Module Group 58|Module Group 58]]
+- [[_COMMUNITY_Module Group 59|Module Group 59]]
+- [[_COMMUNITY_Module Group 60|Module Group 60]]
+- [[_COMMUNITY_Module Group 61|Module Group 61]]
+- [[_COMMUNITY_Module Group 62|Module Group 62]]
+- [[_COMMUNITY_Module Group 63|Module Group 63]]
+- [[_COMMUNITY_Module Group 64|Module Group 64]]
+- [[_COMMUNITY_Module Group 65|Module Group 65]]
+- [[_COMMUNITY_Module Group 66|Module Group 66]]
+- [[_COMMUNITY_Module Group 67|Module Group 67]]
+- [[_COMMUNITY_Module Group 68|Module Group 68]]
+- [[_COMMUNITY_Module Group 69|Module Group 69]]
+- [[_COMMUNITY_Module Group 70|Module Group 70]]
+- [[_COMMUNITY_Module Group 71|Module Group 71]]
+- [[_COMMUNITY_Module Group 72|Module Group 72]]
+- [[_COMMUNITY_Module Group 73|Module Group 73]]
+- [[_COMMUNITY_Module Group 74|Module Group 74]]
+- [[_COMMUNITY_Module Group 75|Module Group 75]]
+- [[_COMMUNITY_Module Group 76|Module Group 76]]
+- [[_COMMUNITY_Module Group 77|Module Group 77]]
+- [[_COMMUNITY_Module Group 78|Module Group 78]]
+- [[_COMMUNITY_Module Group 79|Module Group 79]]
+- [[_COMMUNITY_Module Group 80|Module Group 80]]
+- [[_COMMUNITY_Module Group 81|Module Group 81]]
+- [[_COMMUNITY_Module Group 82|Module Group 82]]
+- [[_COMMUNITY_Module Group 83|Module Group 83]]
+- [[_COMMUNITY_Module Group 84|Module Group 84]]
+- [[_COMMUNITY_Module Group 85|Module Group 85]]
+- [[_COMMUNITY_Module Group 86|Module Group 86]]
+- [[_COMMUNITY_Module Group 87|Module Group 87]]
+- [[_COMMUNITY_Module Group 88|Module Group 88]]
+- [[_COMMUNITY_Module Group 89|Module Group 89]]
+- [[_COMMUNITY_Module Group 90|Module Group 90]]
+- [[_COMMUNITY_Module Group 91|Module Group 91]]
+- [[_COMMUNITY_Module Group 92|Module Group 92]]
+- [[_COMMUNITY_Module Group 94|Module Group 94]]
+- [[_COMMUNITY_Module Group 97|Module Group 97]]
+- [[_COMMUNITY_Module Group 98|Module Group 98]]
+- [[_COMMUNITY_Module Group 99|Module Group 99]]
+- [[_COMMUNITY_Module Group 100|Module Group 100]]
+- [[_COMMUNITY_Module Group 101|Module Group 101]]
+- [[_COMMUNITY_Module Group 102|Module Group 102]]
+- [[_COMMUNITY_Module Group 103|Module Group 103]]
+- [[_COMMUNITY_Module Group 104|Module Group 104]]
+- [[_COMMUNITY_Module Group 105|Module Group 105]]
+- [[_COMMUNITY_Module Group 106|Module Group 106]]
+- [[_COMMUNITY_Module Group 107|Module Group 107]]
+- [[_COMMUNITY_Module Group 108|Module Group 108]]
+- [[_COMMUNITY_Module Group 109|Module Group 109]]
+- [[_COMMUNITY_Module Group 110|Module Group 110]]
+- [[_COMMUNITY_Module Group 111|Module Group 111]]
+- [[_COMMUNITY_Module Group 112|Module Group 112]]
+- [[_COMMUNITY_Module Group 113|Module Group 113]]
+- [[_COMMUNITY_Module Group 114|Module Group 114]]
+- [[_COMMUNITY_Module Group 115|Module Group 115]]
+- [[_COMMUNITY_Module Group 116|Module Group 116]]
+- [[_COMMUNITY_Module Group 117|Module Group 117]]
+- [[_COMMUNITY_Module Group 118|Module Group 118]]
+- [[_COMMUNITY_Module Group 119|Module Group 119]]
+- [[_COMMUNITY_Module Group 120|Module Group 120]]
+- [[_COMMUNITY_Module Group 121|Module Group 121]]
+- [[_COMMUNITY_Module Group 122|Module Group 122]]
+- [[_COMMUNITY_Module Group 123|Module Group 123]]
+- [[_COMMUNITY_Module Group 124|Module Group 124]]
+- [[_COMMUNITY_Module Group 125|Module Group 125]]
+- [[_COMMUNITY_Module Group 126|Module Group 126]]
+- [[_COMMUNITY_Module Group 127|Module Group 127]]
+- [[_COMMUNITY_Module Group 128|Module Group 128]]
+- [[_COMMUNITY_Module Group 129|Module Group 129]]
+- [[_COMMUNITY_Module Group 130|Module Group 130]]
+- [[_COMMUNITY_Module Group 131|Module Group 131]]
+- [[_COMMUNITY_Module Group 132|Module Group 132]]
+- [[_COMMUNITY_Module Group 133|Module Group 133]]
+- [[_COMMUNITY_Module Group 134|Module Group 134]]
+- [[_COMMUNITY_Module Group 135|Module Group 135]]
+- [[_COMMUNITY_Module Group 136|Module Group 136]]
+- [[_COMMUNITY_Module Group 137|Module Group 137]]
+- [[_COMMUNITY_Module Group 138|Module Group 138]]
+- [[_COMMUNITY_Module Group 140|Module Group 140]]
+- [[_COMMUNITY_Module Group 141|Module Group 141]]
+- [[_COMMUNITY_Module Group 142|Module Group 142]]
+- [[_COMMUNITY_Module Group 143|Module Group 143]]
+- [[_COMMUNITY_Module Group 144|Module Group 144]]
+- [[_COMMUNITY_Module Group 145|Module Group 145]]
+- [[_COMMUNITY_Module Group 146|Module Group 146]]
+- [[_COMMUNITY_Module Group 147|Module Group 147]]
+- [[_COMMUNITY_Module Group 148|Module Group 148]]
+- [[_COMMUNITY_Module Group 149|Module Group 149]]
+- [[_COMMUNITY_Module Group 150|Module Group 150]]
+- [[_COMMUNITY_Module Group 151|Module Group 151]]
+- [[_COMMUNITY_Module Group 152|Module Group 152]]
+- [[_COMMUNITY_Module Group 153|Module Group 153]]
+- [[_COMMUNITY_Module Group 154|Module Group 154]]
+- [[_COMMUNITY_Module Group 155|Module Group 155]]
+- [[_COMMUNITY_Module Group 156|Module Group 156]]
+- [[_COMMUNITY_Module Group 157|Module Group 157]]
+- [[_COMMUNITY_Module Group 159|Module Group 159]]
+- [[_COMMUNITY_Module Group 160|Module Group 160]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `allow` - 73 edges
-2. `deny` - 73 edges
-3. `Theme` - 49 edges
-4. `permissions` - 31 edges
-5. `WidgetCtx` - 24 edges
-6. `ListItem` - 24 edges
-7. `permissions` - 23 edges
-8. `TaskListKey` - 18 edges
-9. `compilerOptions` - 17 edges
-10. `BudgetData` - 17 edges
+1. `Theme` - 74 edges
+2. `WidgetCtx` - 40 edges
+3. `isTauri()` - 36 edges
+4. `Topic` - 32 edges
+5. `platformFetch()` - 26 edges
+6. `Widget()` - 23 edges
+7. `ListItem` - 22 edges
+8. `BudgetData` - 21 edges
+9. `getItem()` - 19 edges
+10. `setItem()` - 19 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Life Bozz App (index.html)` --references--> `Main Entry Point`  [EXTRACTED]
-  index.html → src/main.tsx
-- `Tauri Logo SVG` --conceptually_related_to--> `Tauri Framework`  [EXTRACTED]
-  public/tauri.svg → README.md
-- `React Logo SVG` --conceptually_related_to--> `React Framework`  [EXTRACTED]
-  src/assets/react.svg → README.md
-- `Vite Logo SVG` --conceptually_related_to--> `Vite Build Tool`  [EXTRACTED]
-  public/vite.svg → README.md
-- `Props` --references--> `Theme`  [EXTRACTED]
-  src/components/shared/DatePicker.tsx → src/lib/types.ts
+- `index.html Entry Point` --references--> `Vite Config`  [INFERRED]
+  index.html → vite.config.ts
+- `macOS App Icon (ICNS)` --semantically_similar_to--> `App Icon PNG (Primary)`  [INFERRED] [semantically similar]
+  src-tauri/icons/icon.icns → src-tauri/icons/icon.png
+- `Windows App Icon (ICO)` --semantically_similar_to--> `App Icon PNG (Primary)`  [INFERRED] [semantically similar]
+  src-tauri/icons/icon.ico → src-tauri/icons/icon.png
+- `Tauri Config (Life Bozz)` --references--> `index.html Entry Point`  [EXTRACTED]
+  src-tauri/tauri.conf.json → index.html
+- `Torii Gate Background Image` --conceptually_related_to--> `App Icon 128x128 - LB Logo`  [INFERRED]
+  background_image.jpeg → src-tauri/icons/128x128.png
 
-## Communities (106 total, 10 thin omitted)
+## Import Cycles
+- None detected.
 
-### Community 0 - "Dashboard & Email Views"
-Cohesion: 0.07
-Nodes (50): Dashboard(), EMPTY_CACHE, FEED_COLORS, PROVIDER_CFG, EmailViewProps, PROVIDER_DOT, applyAppearanceVars(), archive() (+42 more)
+## Hyperedges (group relationships)
+- **GoCardless Bank Integration API Handlers** — api_gc_callback, api_gc_institutions, api_gc_link, api_gc_transactions [EXTRACTED 1.00]
+- **Topic Sharing & Invite Flow** — api_send_topic_invite, api_topic_invite, db_topic_members, db_shared_topics, sql_supabase_fix [EXTRACTED 0.95]
+- **Tauri Native Backend Commands** — tauri_cmd_secret_set, tauri_cmd_secret_get, tauri_cmd_secret_delete, tauri_cmd_oauth_run, tauri_cmd_imap_fetch, tauri_cmd_create_backup [EXTRACTED 1.00]
+- **Terra Apple Health Integration** — api_terra_widget, api_terra_webhook, db_health_days, ext_terra_api [EXTRACTED 1.00]
+- **OAuth Loopback Redirect Pattern** — tauri_cmd_oauth_run, api_notion_redirect, api_gc_callback, loopback_oauth_server [INFERRED 0.85]
+- **App entry-point routing (QuickCapture / OAuth / Dashboard)** — app_App, quickcapture_QuickCapture, app_OAuthCallbackPage, app_DashboardKeyed, authgate_AuthGate [EXTRACTED 1.00]
+- **Dashboard renders all section views** — dashboard_Dashboard, homeview_HomeView, simplelistview_SimpleListView, calendarview_CalendarView, budgetview_BudgetView, inboxview_InboxView, reviewview_ReviewView, topicview_TopicView, settingsview_SettingsView [EXTRACTED 1.00]
+- **Mobile navigation: BottomTabBar + VoiceButton** — dashboard_Dashboard, bottomtabbar_BottomTabBar, voicebutton_VoiceButton, bottomtabbar_NavTab [EXTRACTED 0.95]
+- **Auth & session context flow** — authgate_AuthGate, authgate_SessionContext, authgate_useSession, dashboard_Dashboard, app_DashboardKeyed [EXTRACTED 1.00]
+- **Voice capture pipeline (QuickCapture / Dashboard → VoiceButton)** — quickcapture_QuickCapture, dashboard_Dashboard, voicebutton_VoiceButton, inboxview_InboxView [INFERRED 0.85]
 
-### Community 1 - "Platform Utils & Storage"
-Cohesion: 0.09
-Nodes (38): applyRoute(), isMobileViewport(), isTauri(), isWeb(), Window, deleteItem(), getDb(), getItem() (+30 more)
+## Communities (161 total, 71 thin omitted)
 
-### Community 2 - "Package Dependencies (npm)"
-Cohesion: 0.05
-Nodes (42): dependencies, date-fns, @dnd-kit/core, @dnd-kit/modifiers, @dnd-kit/sortable, @dnd-kit/utilities, @fontsource-variable/fraunces, @fontsource-variable/inter (+34 more)
+### Community 0 - "Package Dependencies"
+Cohesion: 0.04
+Nodes (48): dependencies, date-fns, @dnd-kit/core, @dnd-kit/modifiers, @dnd-kit/sortable, @dnd-kit/utilities, @fontsource-variable/fraunces, @fontsource-variable/geist (+40 more)
 
-### Community 3 - "Budget Views & Charts"
-Cohesion: 0.07
-Nodes (28): BudgetCharts(), PIE_PALETTE, FormStyles, GoalBar(), Overview(), Props, Tab, TX_LABEL (+20 more)
-
-### Community 4 - "Tauri ACL Permissions (bytes)"
-Cohesion: 0.05
-Nodes (40): commands, description, identifier, commands, description, identifier, commands, description (+32 more)
-
-### Community 5 - "Quick Capture & Themes"
-Cohesion: 0.08
-Nodes (21): TASK_KEY, DEFAULT_APPEARANCE, DEFAULT_BUDGET, themes, TransactionType, getSRClass(), isVoiceSupported(), SR (+13 more)
-
-### Community 6 - "Tauri ACL Permissions (text)"
+### Community 1 - "GoCardless Bank API"
 Cohesion: 0.06
-Nodes (33): commands, description, identifier, commands, description, identifier, commands, description (+25 more)
+Nodes (26): getToken(), handler(), getToken(), handler(), getToken(), handler(), health_days Supabase Table, shared_topics Supabase Table (+18 more)
 
-### Community 7 - "Appearance & Budget Config"
+### Community 2 - "Calendar View"
+Cohesion: 0.06
+Nodes (23): CalendarView(), CreateEventForm(), DayPanel(), ghostBtn(), iconBtnStyle(), inputStyle(), minToLabel(), WEEK_OPTS (+15 more)
+
+### Community 3 - "Bank Import Modal"
 Cohesion: 0.10
-Nodes (23): BORDER_WIDTH, DARK_MOODS, FONT_PX, FONT_STACK, SHAPE_RADIUS, CURRENCIES, relativeCompleted(), fetchFeed() (+15 more)
+Nodes (33): BankConnectModal(), ghostBtn(), Institution, primaryBtn(), PRIORITY_BANKS, Props, Stage, BankImportModal() (+25 more)
 
-### Community 8 - "Tauri ACL Permissions (store)"
-Cohesion: 0.06
-Nodes (32): commands, description, identifier, commands, description, identifier, commands, description (+24 more)
-
-### Community 9 - "Tauri ACL Permissions (app)"
+### Community 4 - "Budget Charts & Analytics"
 Cohesion: 0.08
-Nodes (30): commands, description, identifier, commands, description, identifier, commands, description (+22 more)
+Nodes (35): BudgetCharts(), PIE_PALETTE, categoryBreakdown, CATEGORIES, categoryBreakdown(), CategorySlice, CURRENCIES, FREQUENCIES (+27 more)
 
-### Community 10 - "Calendar & Review Views"
-Cohesion: 0.14
-Nodes (22): CalendarViewProps, deadlineEvents(), LIST_SECTION, pendingWeekStart(), triggerTimeForWeekStart(), WEEK_OPTS, weeklyStats, WeeklyStatsInput (+14 more)
+### Community 5 - "Platform & Settings Integrations"
+Cohesion: 0.07
+Nodes (16): isWeb(), AppleCalendarCard(), AvailablePage, connectNotionOAuth(), ENV, ICLOUD_DOMAINS, ICloudCard(), IMAP_PRESETS (+8 more)
 
-### Community 11 - "Bank Import & CSV"
+### Community 6 - "Email Sync Engine"
+Cohesion: 0.13
+Nodes (28): archive(), CONFIG, deleteEmail(), ensureAccessToken(), markRead(), scoreMessages(), syncAllAccounts(), archiveGmail() (+20 more)
+
+### Community 7 - "Calendar & Review Logic"
+Cohesion: 0.13
+Nodes (22): CalendarViewProps, deadlineEvents(), LIST_SECTION, pendingWeekStart(), triggerTimeForWeekStart(), WEEK_OPTS, WeeklyStatsInput, buildSearchIndex() (+14 more)
+
+### Community 8 - "Vercel API Config"
+Cohesion: 0.06
+Nodes (30): maxDuration, memory, maxDuration, memory, maxDuration, memory, maxDuration, memory (+22 more)
+
+### Community 9 - "Widget Registry"
+Cohesion: 0.12
+Nodes (30): ApplicationsWidget, BudgetWidget, EmailsWidget, NotionWidget, NowPlayingWidget, PomodoroWidget, QuickAddWidget, UpcomingDeadlinesWidget (+22 more)
+
+### Community 10 - "App Shell & Auth"
+Cohesion: 0.10
+Nodes (28): App (Root Component), DashboardKeyed (session-keyed wrapper), OAuthCallbackPage, AuthGate (Supabase auth gate), SessionContext (React context), useSession (hook), BankImportModal, BottomTabBar (mobile nav) (+20 more)
+
+### Community 11 - "Shared UI Primitives"
 Cohesion: 0.16
-Nodes (25): BankImportModal(), ghostBtn(), primaryBtn(), Props, Stage, BankFormat, colIdx(), detectFormat() (+17 more)
+Nodes (7): DailyPlan, Divider(), MiniStat(), Widget(), ClockWidget(), pad(), WidgetCtx
 
-### Community 12 - "Shared Widgets & Theme Accents"
-Cohesion: 0.15
-Nodes (12): sectionAccents, Divider(), EmptyWidget(), MiniStat(), NextItemDisplay(), Stat(), Widget(), WidgetHeader() (+4 more)
+### Community 12 - "Budget View & Tasks"
+Cohesion: 0.12
+Nodes (15): Props, SortableTaskRow(), SortableTaskRowProps, EmailViewProps, PROVIDER_DOT, SyncResult, ApplicationStatus, EmailMessage (+7 more)
 
-### Community 13 - "Tauri Config (tauri.conf.json)"
+### Community 13 - "Tauri Backend Commands"
+Cohesion: 0.11
+Nodes (24): Tauri Command: create_backup, Global Shortcut (Ctrl+B → Quick Capture), Tauri Command: imap_fetch, IPC Invoke Handler (frontend↔backend boundary), Keychain Integration (keyring crate), Main WebviewWindow, Minimize-to-tray on Close (main window), Tauri Event: oauth:port (+16 more)
+
+### Community 14 - "Themes & Appearance Types"
+Cohesion: 0.13
+Nodes (15): MOODS, THEME_COLOR_BANKS, AppearancePrefs, CalendarConnection, EmailProvider, HealthConnection, OAuthAccount, ReviewSettings (+7 more)
+
+### Community 15 - "Auth Gate Component"
+Cohesion: 0.12
+Nodes (14): AuthGate(), inputStyle(), Mode, Props, SessionContext, SessionContextValue, useSession(), Dashboard() (+6 more)
+
+### Community 16 - "Date Utilities"
+Cohesion: 0.16
+Nodes (12): deadlineLabel(), isOverdue(), relativeCompleted(), Status, statusRank, DeadlineControl(), DonePileProps, StatusPill() (+4 more)
+
+### Community 17 - "Topic & List Views"
+Cohesion: 0.12
+Nodes (15): isMobileViewport(), TopicLink, SimpleListView(), DEFAULT_TOPIC_LAYOUT, Grid, linkInput(), Props, TopicDashboard() (+7 more)
+
+### Community 18 - "Tauri Config"
 Cohesion: 0.10
 Nodes (20): app, security, windows, build, beforeBuildCommand, beforeDevCommand, devUrl, frontendDist (+12 more)
 
-### Community 14 - "TypeScript Config"
+### Community 19 - "Bottom Tab Bar"
+Cohesion: 0.15
+Nodes (13): NavTab, Props, Theme, InboxView(), InboxViewProps, Choice, Props, DatePicker() (+5 more)
+
+### Community 20 - "Module Group 20"
+Cohesion: 0.14
+Nodes (18): applyAppearanceVars(), BORDER_WIDTH, FONT_PX, FONT_STACK, SHAPE_RADIUS, CalendarProvider, FeedCacheEntry, FontChoice (+10 more)
+
+### Community 21 - "Module Group 21"
+Cohesion: 0.11
+Nodes (12): EmptyWidget(), EmailFilter, EmailsWidget(), getDisplayEmails(), maxEmailsForHeight(), PROVIDER_DOT, NotionConfig, NotionPage (+4 more)
+
+### Community 22 - "Module Group 22"
 Cohesion: 0.10
 Nodes (19): compilerOptions, allowImportingTsExtensions, esModuleInterop, isolatedModules, jsx, lib, module, moduleResolution (+11 more)
 
-### Community 15 - "Applications & Inbox Views"
-Cohesion: 0.17
-Nodes (11): ApplicationStatus, InboxDestination, ApplicationsViewProps, StatusMeta, DESTS, InboxViewProps, addBtnStyle(), EmptyState() (+3 more)
+### Community 23 - "Module Group 23"
+Cohesion: 0.14
+Nodes (10): ImapAccount, EmailFilter, ghostBtn(), Grid, HomeView(), loadPhotos(), photoKey(), PhotoWidgetConfig() (+2 more)
 
-### Community 16 - "Home Grid & Widget Types"
-Cohesion: 0.18
-Nodes (12): HomeWidgetItem, WidgetType, ghostBtn(), Grid, HomeView(), HomeViewProps, WidgetComponent, makePlaceholderWidget() (+4 more)
+### Community 24 - "Module Group 24"
+Cohesion: 0.11
+Nodes (17): dependencies, cors, express, @hapi/boom, pino, qrcode, @whiskeysockets/baileys, description (+9 more)
 
-### Community 17 - "Desktop Schema Definitions"
-Cohesion: 0.12
-Nodes (16): anyOf, description, definitions, Application, Number, PermissionEntry, Target, Value (+8 more)
-
-### Community 18 - "Windows Schema Definitions"
-Cohesion: 0.12
-Nodes (16): anyOf, description, definitions, Application, Number, PermissionEntry, Target, Value (+8 more)
-
-### Community 19 - "Task List & Sort System"
-Cohesion: 0.20
-Nodes (9): SortMode, Status, SimpleListViewProps, statusRank, StatusPill(), StatusToggle(), iconBtn(), rowStyle() (+1 more)
-
-### Community 20 - "Community 20"
+### Community 25 - "Module Group 25"
 Cohesion: 0.24
-Nodes (10): GROUP_ORDER, SearchModalProps, SearchEntry, SectionId, WidgetCtx, MiniCalendarWidget(), WEEKDAYS, UpcomingDeadlinesWidget() (+2 more)
+Nodes (16): AppHandle, HashMap, Option, Result, create_backup(), decode_imap_bytes(), imap_fetch(), oauth_run() (+8 more)
 
-### Community 21 - "Community 21"
+### Community 26 - "Module Group 26"
+Cohesion: 0.17
+Nodes (15): EMPTY_CACHE, FEED_COLORS, PROVIDER_CFG, weekEndFromStart(), cancelPendingPush(), clearLocalSnapshot(), pullSnapshot(), pushSnapshot() (+7 more)
+
+### Community 27 - "Module Group 27"
+Cohesion: 0.19
+Nodes (14): QuickAddModalProps, cleanTaskText(), InboxItem, TransactionType, cleanTaskText(), describeRoute(), DOMAIN_KEYWORDS, expandTopicKeywords() (+6 more)
+
+### Community 28 - "Module Group 28"
+Cohesion: 0.18
+Nodes (15): DEFAULT_COLOR_BANK, TopicStage, COLOR_PRESETS, FolderRow(), genId(), iconForTopic(), lbl(), makeBlankTopic() (+7 more)
+
+### Community 29 - "Module Group 29"
 Cohesion: 0.27
-Nodes (12): autostart, default_permission, global_scope_schema, permission_sets, default_permission, default_permission, default_permission, core:menu (+4 more)
+Nodes (16): AppleCalendar, basicAuth(), caldavRequest(), discoverPrincipal(), FALLBACK_COLORS, fetchAppleCalEvents(), fetchCalendarEvents(), getCalendarHome() (+8 more)
 
-### Community 22 - "Community 22"
-Cohesion: 0.15
-Nodes (13): commands, description, identifier, commands, description, identifier, deny, commands (+5 more)
-
-### Community 23 - "Community 23"
-Cohesion: 0.15
-Nodes (13): properties, Identifier, default, description, type, description, oneOf, type (+5 more)
-
-### Community 24 - "Community 24"
-Cohesion: 0.15
-Nodes (13): properties, Identifier, default, description, type, description, oneOf, type (+5 more)
-
-### Community 25 - "Community 25"
+### Community 30 - "Module Group 30"
 Cohesion: 0.21
-Nodes (10): Topic, TopicStage, COLOR_PRESETS, genId(), lbl(), makeBlankTopic(), Props, smallBtn() (+2 more)
+Nodes (12): dark, light, sectionAccents, warm, SectionId, Stat(), ApplicationsWidget(), MiniCalendarWidget() (+4 more)
 
-### Community 26 - "Community 26"
+### Community 31 - "Module Group 31"
+Cohesion: 0.15
+Nodes (10): getSRClass(), isVoiceSupported(), SR, SRClass, SREvent, SRResult, VoiceCallbacks, VoiceCapture (+2 more)
+
+### Community 32 - "Module Group 32"
+Cohesion: 0.29
+Nodes (15): applyRoute(), isTauri(), deleteItem(), getDb(), getItem(), getTauriStore(), idbDelete(), idbGet() (+7 more)
+
+### Community 33 - "Module Group 33"
+Cohesion: 0.19
+Nodes (12): TopicItem, AssignedItem, DailyPlannerView(), DayColProps, DayColumn(), dayDateStr(), dayLabel(), localMidnight() (+4 more)
+
+### Community 34 - "Module Group 34"
 Cohesion: 0.18
-Nodes (6): CalendarView(), ghost(), WEEK_OPTS, WEEKDAYS, eventsOnDay(), CalendarViewMode
+Nodes (10): WidgetType, NextItemDisplay(), WidgetComponent, CONFIG, makeNextTaskWidget(), makePlaceholderWidget(), HIDDEN_FROM_HOME_PANEL, HIDDEN_FROM_TOPIC_PANEL (+2 more)
 
-### Community 27 - "Community 27"
+### Community 35 - "Module Group 35"
 Cohesion: 0.22
-Nodes (7): SortableTaskRowProps, Theme, Choice, Props, DeadlineControlProps, DonePileProps, WidgetProps
+Nodes (12): bridgeBase(), bridgeFetch(), bridgeKey(), deleteWASession(), getWAChats(), getWASessionStatus(), isWAConfigured(), startWASession() (+4 more)
 
-### Community 28 - "Community 28"
+### Community 36 - "Module Group 36"
+Cohesion: 0.28
+Nodes (12): connectGoogle(), GoogleTokenResult, browserOAuthFlow(), connectProvider(), loopbackRedirectUri(), TokenResponse, secretSet(), TokenKind (+4 more)
+
+### Community 37 - "Module Group 37"
+Cohesion: 0.23
+Nodes (13): PlannerItem, actionBtnStyle(), addDays(), BASE_COLORS, fmtMin(), formatDateLabel(), localMidnight(), minToY() (+5 more)
+
+### Community 38 - "Module Group 38"
+Cohesion: 0.13
+Nodes (14): anyOf, anyOf, description, definitions, Application, Target, Value, description (+6 more)
+
+### Community 39 - "Module Group 39"
+Cohesion: 0.13
+Nodes (14): anyOf, anyOf, description, definitions, Application, Target, Value, description (+6 more)
+
+### Community 40 - "Module Group 40"
+Cohesion: 0.21
+Nodes (13): DAYS, DeadlineResult, DOMAIN_KEYWORDS, extractDeadline(), FILLER_PREFIXES, MONTHS, nextWeekday(), parseVoiceTasks() (+5 more)
+
+### Community 41 - "Module Group 41"
+Cohesion: 0.16
+Nodes (9): HealthDay, BarChart(), ConnectStage, dayKey(), HealthView(), last7(), ManualEntryForm(), Props (+1 more)
+
+### Community 42 - "Module Group 42"
+Cohesion: 0.15
+Nodes (4): SortMode, SimpleListViewProps, WidgetHeader(), TodoRowProps
+
+### Community 43 - "Module Group 43"
+Cohesion: 0.22
+Nodes (7): Props, SectionDef, Props, ParsedTask, Topic, TopicFolder, Props
+
+### Community 44 - "Module Group 44"
 Cohesion: 0.18
-Nodes (10): candy, coffee, forest, light, linen, midnight, MOODS, ocean (+2 more)
+Nodes (5): disconnectAccount(), secretDelete(), LoadedPage, NotionConfig, NotionPageRef
 
-### Community 29 - "Community 29"
+### Community 45 - "Module Group 45"
+Cohesion: 0.21
+Nodes (12): SYNCED_KEYS, deleteItem (storage), getItem (storage), initBackup, listKeysByPrefix (storage), setItem (storage), supabase client, clearLocalSnapshot (+4 more)
+
+### Community 46 - "Module Group 46"
+Cohesion: 0.27
+Nodes (10): SpotifyAccount, SpotifyTrack, tokenKey(), getCurrentlyPlaying(), refreshSpotifyToken(), SCOPES, SpotifyPlaybackState, msToTime() (+2 more)
+
+### Community 47 - "Module Group 47"
+Cohesion: 0.24
+Nodes (9): app, AUTH_BASE, __dirname, getMessageText(), getOrCreate(), newSession(), sessions, startSession() (+1 more)
+
+### Community 48 - "Module Group 48"
 Cohesion: 0.20
 Nodes (10): $ref, description, items, type, uniqueItems, description, items, type (+2 more)
 
-### Community 30 - "Community 30"
+### Community 49 - "Module Group 49"
 Cohesion: 0.20
 Nodes (10): type, webviews, windows, items, description, items, type, description (+2 more)
 
-### Community 31 - "Community 31"
+### Community 50 - "Module Group 50"
 Cohesion: 0.20
 Nodes (10): $ref, description, items, type, uniqueItems, description, items, type (+2 more)
 
-### Community 32 - "Community 32"
+### Community 51 - "Module Group 51"
 Cohesion: 0.20
 Nodes (10): type, webviews, windows, items, description, items, type, description (+2 more)
 
-### Community 33 - "Community 33"
+### Community 52 - "Module Group 52"
 Cohesion: 0.22
-Nodes (9): commands, description, identifier, permissions, commands, description, identifier, allow-emit (+1 more)
+Nodes (9): Android Launcher Foreground Icon (mdpi) - LB Logo, Android Launcher Icon (mdpi) - LB Logo, Auth Background - Desert Dune Moon Reflection, Torii Gate Background Image, App Icon 128x128@2x - LB Logo, App Icon 128x128 - LB Logo, App Icon 32x32 - LB Logo, App Icon 64x64 - LB Logo (+1 more)
 
-### Community 34 - "Community 34"
+### Community 53 - "Module Group 53"
+Cohesion: 0.39
+Nodes (8): CLIENT_ID, CLIENT_SECRET, FALLBACK_COLORS, fetchGCalEvents(), getAccessToken(), refreshAccessToken(), storageKey(), secretGet()
+
+### Community 54 - "Module Group 54"
+Cohesion: 0.22
+Nodes (9): properties, Identifier, description, oneOf, type, identifier, remote, anyOf (+1 more)
+
+### Community 55 - "Module Group 55"
+Cohesion: 0.22
+Nodes (9): properties, Identifier, description, oneOf, type, identifier, remote, anyOf (+1 more)
+
+### Community 56 - "Module Group 56"
+Cohesion: 0.25
+Nodes (6): FONT_STACK Map, applyAppearanceVars, DEFAULT_APPEARANCE, DEFAULT_BUDGET, themes, VoiceRoute
+
+### Community 57 - "Module Group 57"
+Cohesion: 0.32
+Nodes (5): CtrlBtnProps, Props, TitleBar(), isMacOS(), Window
+
+### Community 58 - "Module Group 58"
+Cohesion: 0.32
+Nodes (8): archive (email), deleteEmail, ensureAccessToken, markRead (email), scoreMessages, syncAllAccounts, EmailMessage (type), OAuthAccount (type)
+
+### Community 59 - "Module Group 59"
+Cohesion: 0.36
+Nodes (6): platformFetch(), fetchFeed(), parseICal(), CalendarFeed, releaseNotionPort(), searchNotionPages()
+
+### Community 60 - "Module Group 60"
+Cohesion: 0.25
+Nodes (8): description, properties, required, type, CapabilityRemote, urls, description, type
+
+### Community 61 - "Module Group 61"
+Cohesion: 0.25
+Nodes (8): description, properties, required, type, CapabilityRemote, urls, description, type
+
+### Community 62 - "Module Group 62"
 Cohesion: 0.25
 Nodes (7): compilerOptions, allowSyntheticDefaultImports, composite, module, moduleResolution, skipLibCheck, include
 
-### Community 35 - "Community 35"
-Cohesion: 0.25
-Nodes (8): description, properties, required, type, CapabilityRemote, urls, description, type
-
-### Community 36 - "Community 36"
-Cohesion: 0.25
-Nodes (8): description, properties, required, type, CapabilityRemote, urls, description, type
-
-### Community 38 - "Community 38"
+### Community 63 - "Module Group 63"
 Cohesion: 0.29
 Nodes (7): Android Launcher Foreground Icon, Android Launcher Icon (ic_launcher), Android Launcher Round Icon, iOS App Icon, Windows Square 71x71 Logo, Windows Square 89x89 Logo, Windows Store Logo
 
-### Community 39 - "Community 39"
-Cohesion: 0.29
-Nodes (6): default, description, identifier, local, permissions, windows
+### Community 64 - "Module Group 64"
+Cohesion: 0.33
+Nodes (7): Cargo.toml (aug-dashboard), index.html Entry Point, isMobileViewport, isTauri, isWeb, Tauri Config (Life Bozz), Vite Config
 
-### Community 40 - "Community 40"
-Cohesion: 0.62
-Nodes (5): dateInputValue(), deadlineLabel(), isOverdue(), parseDateInput(), DeadlineControl()
-
-### Community 41 - "Community 41"
-Cohesion: 0.29
-Nodes (3): NotionConfig, NotionPage, NotionPageRef
-
-### Community 42 - "Community 42"
+### Community 65 - "Module Group 65"
 Cohesion: 0.33
 Nodes (5): description, identifier, permissions, $schema, windows
 
-### Community 43 - "Community 43"
-Cohesion: 0.33
-Nodes (3): SavedLocation, Status, WeatherData
-
-### Community 44 - "Community 44"
+### Community 67 - "Module Group 67"
 Cohesion: 0.40
 Nodes (5): DURATIONS, fmt(), Mode, MODE_LABEL, PomodoroWidget()
 
-### Community 45 - "Community 45"
+### Community 68 - "Module Group 68"
+Cohesion: 0.50
+Nodes (3): GROUP_ORDER, SearchModalProps, SearchEntry
+
+### Community 69 - "Module Group 69"
 Cohesion: 0.40
-Nodes (4): anyOf, description, $schema, title
+Nodes (5): HomeWidgetItem (type), Topic (type), TopicFolder (type), TopicItem (type), TopicStage (type)
 
-### Community 46 - "Community 46"
-Cohesion: 0.40
-Nodes (4): anyOf, description, $schema, title
+### Community 70 - "Module Group 70"
+Cohesion: 0.70
+Nodes (4): currentStreak(), dow(), HabitsWidget(), localMidnightKey()
 
-### Community 47 - "Community 47"
-Cohesion: 0.60
-Nodes (4): DatePicker(), navBtn(), Props, textBtn()
-
-### Community 48 - "Community 48"
+### Community 71 - "Module Group 71"
 Cohesion: 0.50
-Nodes (4): Life Bozz App (index.html), Main Entry Point, Tauri Framework, Tauri Logo SVG
+Nodes (4): Windows Store Icon Square107x107 - LB Logo, Windows Store Icon Square142x142 - LB Logo, Windows Store Icon Square284x284 - LB Logo, Windows Store Icon Square310x310 - LB Logo
 
-### Community 49 - "Community 49"
+### Community 72 - "Module Group 72"
 Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-unlisten
+Nodes (4): Android HDPI Launcher Icon, macOS App Icon (ICNS), Windows App Icon (ICO), App Icon PNG (Primary)
 
-### Community 50 - "Community 50"
+### Community 73 - "Module Group 73"
+Cohesion: 0.67
+Nodes (3): formatMoney(), ReviewView(), BudgetWidget()
+
+### Community 74 - "Module Group 74"
 Cohesion: 0.50
-Nodes (4): core:event, default_permission, global_scope_schema, permission_sets
+Nodes (4): DEFAULT_REVIEW_SETTINGS, pendingWeekStart, ReviewSettings Type, WeeklyReview (type)
 
-### Community 51 - "Community 51"
-Cohesion: 0.50
-Nodes (4): core, global_scope_schema, permission_sets, permissions
-
-### Community 52 - "Community 52"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-emit
-
-### Community 53 - "Community 53"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-unlisten
-
-### Community 54 - "Community 54"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-emit-to
-
-### Community 55 - "Community 55"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-listen
-
-### Community 56 - "Community 56"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-listen
-
-### Community 57 - "Community 57"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-bundle-type
-
-### Community 58 - "Community 58"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-insert
-
-### Community 59 - "Community 59"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-remove-at
-
-### Community 60 - "Community 60"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-remove-data-store
-
-### Community 61 - "Community 61"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-remove-listener
-
-### Community 62 - "Community 62"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-accelerator
-
-### Community 63 - "Community 63"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-supports-multiple-windows
-
-### Community 64 - "Community 64"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-app-hide
-
-### Community 65 - "Community 65"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-app-show
-
-### Community 66 - "Community 66"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-identifier
-
-### Community 67 - "Community 67"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-name
-
-### Community 68 - "Community 68"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-new
-
-### Community 69 - "Community 69"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-set-dock-visibility
-
-### Community 70 - "Community 70"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-default-window-icon
-
-### Community 71 - "Community 71"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-append
-
-### Community 72 - "Community 72"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-create-default
-
-### Community 73 - "Community 73"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-get
-
-### Community 74 - "Community 74"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-identifier
-
-### Community 75 - "Community 75"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-items
-
-### Community 76 - "Community 76"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-popup
-
-### Community 77 - "Community 77"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-app-theme
-
-### Community 78 - "Community 78"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-as-app-menu
-
-### Community 79 - "Community 79"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-as-window-menu
-
-### Community 80 - "Community 80"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-dock-visibility
-
-### Community 81 - "Community 81"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-enabled
-
-### Community 82 - "Community 82"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, allow-set-text
-
-### Community 83 - "Community 83"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-bundle-type
-
-### Community 84 - "Community 84"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-default-window-icon
-
-### Community 85 - "Community 85"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-register-listener
-
-### Community 86 - "Community 86"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-remove-data-store
-
-### Community 87 - "Community 87"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-set-app-theme
-
-### Community 88 - "Community 88"
-Cohesion: 0.50
-Nodes (4): commands, description, identifier, deny-supports-multiple-windows
-
-### Community 89 - "Community 89"
+### Community 75 - "Module Group 75"
 Cohesion: 0.50
 Nodes (4): description, required, type, Capability
 
-### Community 90 - "Community 90"
+### Community 76 - "Module Group 76"
+Cohesion: 0.50
+Nodes (4): default, description, type, description
+
+### Community 77 - "Module Group 77"
 Cohesion: 0.50
 Nodes (4): default, description, type, local
 
-### Community 91 - "Community 91"
+### Community 78 - "Module Group 78"
 Cohesion: 0.50
 Nodes (4): description, required, type, Capability
 
-### Community 92 - "Community 92"
+### Community 79 - "Module Group 79"
+Cohesion: 0.50
+Nodes (4): default, description, type, description
+
+### Community 80 - "Module Group 80"
 Cohesion: 0.50
 Nodes (4): default, description, type, local
+
+### Community 81 - "Module Group 81"
+Cohesion: 0.67
+Nodes (3): Number, anyOf, description
+
+### Community 82 - "Module Group 82"
+Cohesion: 0.67
+Nodes (3): PermissionEntry, anyOf, description
+
+### Community 83 - "Module Group 83"
+Cohesion: 0.67
+Nodes (3): Number, anyOf, description
+
+### Community 84 - "Module Group 84"
+Cohesion: 0.67
+Nodes (3): PermissionEntry, anyOf, description
+
+### Community 85 - "Module Group 85"
+Cohesion: 0.67
+Nodes (3): connectSpotify, refreshSpotifyToken, SpotifyAccount (type)
 
 ## Knowledge Gaps
-- **430 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+425 more)
+- **489 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+484 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **71 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `allow` connect `Tauri ACL Permissions (app)` to `Tauri ACL Permissions (bytes)`, `Tauri ACL Permissions (text)`, `Tauri ACL Permissions (store)`, `Community 22`, `Community 33`, `Community 49`, `Community 52`, `Community 53`, `Community 54`, `Community 55`, `Community 56`, `Community 57`, `Community 58`, `Community 59`, `Community 60`, `Community 61`, `Community 62`, `Community 63`, `Community 64`, `Community 65`, `Community 66`, `Community 67`, `Community 68`, `Community 69`, `Community 70`, `Community 71`, `Community 72`, `Community 73`, `Community 74`, `Community 75`, `Community 76`, `Community 77`, `Community 78`, `Community 79`, `Community 80`, `Community 81`, `Community 82`, `Community 83`, `Community 84`, `Community 85`, `Community 86`, `Community 87`, `Community 88`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
-- **Why does `deny` connect `Community 22` to `Tauri ACL Permissions (bytes)`, `Tauri ACL Permissions (text)`, `Tauri ACL Permissions (store)`, `Tauri ACL Permissions (app)`, `Community 33`, `Community 49`, `Community 52`, `Community 53`, `Community 54`, `Community 55`, `Community 56`, `Community 57`, `Community 58`, `Community 59`, `Community 60`, `Community 61`, `Community 62`, `Community 63`, `Community 64`, `Community 65`, `Community 66`, `Community 67`, `Community 68`, `Community 69`, `Community 70`, `Community 71`, `Community 72`, `Community 73`, `Community 74`, `Community 75`, `Community 76`, `Community 77`, `Community 78`, `Community 79`, `Community 80`, `Community 81`, `Community 82`, `Community 83`, `Community 84`, `Community 85`, `Community 86`, `Community 87`, `Community 88`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
-- **Why does `Theme` connect `Community 27` to `Dashboard & Email Views`, `Platform Utils & Storage`, `Budget Views & Charts`, `Quick Capture & Themes`, `Appearance & Budget Config`, `Community 40`, `Calendar & Review Views`, `Bank Import & CSV`, `Shared Widgets & Theme Accents`, `Applications & Inbox Views`, `Home Grid & Widget Types`, `Community 47`, `Task List & Sort System`, `Community 20`, `Community 25`, `Community 26`, `Community 28`?**
+- **Why does `Theme` connect `Bottom Tab Bar` to `Calendar View`, `Bank Import Modal`, `Budget Charts & Analytics`, `Platform & Settings Integrations`, `Calendar & Review Logic`, `Shared UI Primitives`, `Budget View & Tasks`, `Themes & Appearance Types`, `Date Utilities`, `Topic & List Views`, `Module Group 20`, `Module Group 23`, `Module Group 27`, `Module Group 28`, `Module Group 30`, `Module Group 31`, `Module Group 33`, `Module Group 35`, `Module Group 37`, `Module Group 41`, `Module Group 42`, `Module Group 43`, `Module Group 44`, `Module Group 56`, `Module Group 57`, `Module Group 68`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `WIDGET_REGISTRY` connect `Widget Registry` to `Topic & List Views`, `Module Group 26`, `Module Group 34`, `Module Group 23`?**
   _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `isTauri()` connect `Module Group 32` to `Module Group 35`, `Module Group 36`, `Platform & Settings Integrations`, `Shared UI Primitives`, `Module Group 46`, `Auth Gate Component`, `Topic & List Views`, `Bottom Tab Bar`, `Module Group 21`, `Module Group 23`, `Module Group 57`, `Module Group 26`, `Module Group 59`, `Module Group 29`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `version` to the rest of the system?**
-  _430 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Dashboard & Email Views` be split into smaller, more focused modules?**
-  _Cohesion score 0.0671602326811211 - nodes in this community are weakly interconnected._
-- **Should `Platform Utils & Storage` be split into smaller, more focused modules?**
-  _Cohesion score 0.0889894419306184 - nodes in this community are weakly interconnected._
-- **Should `Package Dependencies (npm)` be split into smaller, more focused modules?**
-  _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
+  _489 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Package Dependencies` be split into smaller, more focused modules?**
+  _Cohesion score 0.04081632653061224 - nodes in this community are weakly interconnected._
+- **Should `GoCardless Bank API` be split into smaller, more focused modules?**
+  _Cohesion score 0.05731707317073171 - nodes in this community are weakly interconnected._
+- **Should `Calendar View` be split into smaller, more focused modules?**
+  _Cohesion score 0.06341463414634146 - nodes in this community are weakly interconnected._

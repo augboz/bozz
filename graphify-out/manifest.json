@@ -1,8 +1,8 @@
 {
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\package.json": {
-    "mtime": 1779032362.3290393,
-    "ast_hash": "dcc0234760ffd72e32c065633fbea84e",
-    "semantic_hash": "dcc0234760ffd72e32c065633fbea84e"
+    "mtime": 1781462475.8621893,
+    "ast_hash": "573cd7ef9d0d1f3219cc333f52f83211",
+    "semantic_hash": "573cd7ef9d0d1f3219cc333f52f83211"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\tsconfig.json": {
     "mtime": 1778956643.5918546,
@@ -25,14 +25,14 @@
     "semantic_hash": "d1846e92ceedfa6eb08a69cbb38c190a"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\App.tsx": {
-    "mtime": 1779032427.2178605,
-    "ast_hash": "a7d2651d0838ce080bee59723519d8de",
-    "semantic_hash": "a7d2651d0838ce080bee59723519d8de"
+    "mtime": 1781532512.9991105,
+    "ast_hash": "d1a6082cd7e76762087f181cd8c303b0",
+    "semantic_hash": "d1a6082cd7e76762087f181cd8c303b0"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\main.tsx": {
-    "mtime": 1779301122.5563548,
-    "ast_hash": "0a091a727651328c91f00ca5372a4988",
-    "semantic_hash": "0a091a727651328c91f00ca5372a4988"
+    "mtime": 1781291651.7783358,
+    "ast_hash": "fc8f975d9d105a92412243cc566ea33e",
+    "semantic_hash": "fc8f975d9d105a92412243cc566ea33e"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\vite-env.d.ts": {
     "mtime": 1778782926.0579994,
@@ -40,19 +40,19 @@
     "semantic_hash": "8f68c27c3fc38817b2726b20e2d4f1ee"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\Dashboard.tsx": {
-    "mtime": 1779716660.207064,
-    "ast_hash": "4572e5f5ff73591a9a89e98db133e672",
-    "semantic_hash": "4572e5f5ff73591a9a89e98db133e672"
+    "mtime": 1781531815.0906258,
+    "ast_hash": "6421338481159aee6bf89961eab7a6f1",
+    "semantic_hash": "6421338481159aee6bf89961eab7a6f1"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\QuickCapture.tsx": {
-    "mtime": 1779363036.1457787,
-    "ast_hash": "d4abaea2cf38d78a0c17578369fa291b",
-    "semantic_hash": "d4abaea2cf38d78a0c17578369fa291b"
+    "mtime": 1780411194.215369,
+    "ast_hash": "cedfb3d5b221feecd983cb7972e212de",
+    "semantic_hash": "cedfb3d5b221feecd983cb7972e212de"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\SearchModal.tsx": {
-    "mtime": 1779032509.825384,
-    "ast_hash": "5ee822a301842c045f42119e055ff56e",
-    "semantic_hash": "5ee822a301842c045f42119e055ff56e"
+    "mtime": 1781290175.78702,
+    "ast_hash": "b3b9db80853b8f8fbbe6996b90b4895d",
+    "semantic_hash": "b3b9db80853b8f8fbbe6996b90b4895d"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\SortableTaskRow.tsx": {
     "mtime": 1778843965.8154266,
@@ -65,29 +65,29 @@
     "semantic_hash": "831783a53b12c976f4ebf6c9bd6b2339"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\HomeView.tsx": {
-    "mtime": 1779707623.3769925,
-    "ast_hash": "5a0bd2e30e45e4ed2d5ab3895542126d",
-    "semantic_hash": "5a0bd2e30e45e4ed2d5ab3895542126d"
+    "mtime": 1781532106.1840374,
+    "ast_hash": "7cd88ce0148ed505a986a4aca7698e2f",
+    "semantic_hash": "7cd88ce0148ed505a986a4aca7698e2f"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\InboxView.tsx": {
-    "mtime": 1779706849.76478,
-    "ast_hash": "4876f64f5b75706aa851ca13e2f9fe14",
-    "semantic_hash": "4876f64f5b75706aa851ca13e2f9fe14"
+    "mtime": 1781107185.2605004,
+    "ast_hash": "7eadfd9bdf457d129df03df0465261a3",
+    "semantic_hash": "7eadfd9bdf457d129df03df0465261a3"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\SettingsView.tsx": {
-    "mtime": 1779716685.9284582,
-    "ast_hash": "a36dfb69c01cea74838e0b22cb1372ff",
-    "semantic_hash": "a36dfb69c01cea74838e0b22cb1372ff"
+    "mtime": 1781198055.1355755,
+    "ast_hash": "b84d831288cfeeda04efa2727b9fe47b",
+    "semantic_hash": "b84d831288cfeeda04efa2727b9fe47b"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\SimpleListView.tsx": {
-    "mtime": 1779708168.3159847,
-    "ast_hash": "aa033413b1416ddd4acfeab630df483a",
-    "semantic_hash": "aa033413b1416ddd4acfeab630df483a"
+    "mtime": 1780412195.6388102,
+    "ast_hash": "a0b6f115e99c055b9d59fbad20305e42",
+    "semantic_hash": "a0b6f115e99c055b9d59fbad20305e42"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BankImportModal.tsx": {
-    "mtime": 1779374615.0112183,
-    "ast_hash": "07ebdce3851853326d6a3de863ea8086",
-    "semantic_hash": "07ebdce3851853326d6a3de863ea8086"
+    "mtime": 1780436092.8915699,
+    "ast_hash": "747488dbef088112dccddbc908d889ff",
+    "semantic_hash": "747488dbef088112dccddbc908d889ff"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BudgetCharts.tsx": {
     "mtime": 1779030311.038955,
@@ -95,14 +95,14 @@
     "semantic_hash": "17a24c40107de2792360e8e6433c7da0"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BudgetView.tsx": {
-    "mtime": 1779707102.5314724,
-    "ast_hash": "bd8c1a01585e2270056d720db59671ca",
-    "semantic_hash": "bd8c1a01585e2270056d720db59671ca"
+    "mtime": 1780915800.8562183,
+    "ast_hash": "91e442541a6656f691194de89bb10e6a",
+    "semantic_hash": "91e442541a6656f691194de89bb10e6a"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\calendar\\CalendarView.tsx": {
-    "mtime": 1778958585.6693313,
-    "ast_hash": "fdcf1c3c78fcdc77137f18370cedd719",
-    "semantic_hash": "fdcf1c3c78fcdc77137f18370cedd719"
+    "mtime": 1780414440.587509,
+    "ast_hash": "2bf87aa85a49813d99c3b1d0dcaaaf1a",
+    "semantic_hash": "2bf87aa85a49813d99c3b1d0dcaaaf1a"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\email\\EmailView.tsx": {
     "mtime": 1779370472.8026655,
@@ -110,9 +110,9 @@
     "semantic_hash": "a381757a8933d165c0e918745944e79e"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\review\\ReviewView.tsx": {
-    "mtime": 1779230706.168973,
-    "ast_hash": "be1dee234c175f0866c243c858ef1f7e",
-    "semantic_hash": "be1dee234c175f0866c243c858ef1f7e"
+    "mtime": 1780245342.7427847,
+    "ast_hash": "22b7f80b46eb345b9b4b9cbc1afab465",
+    "semantic_hash": "22b7f80b46eb345b9b4b9cbc1afab465"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\ConnectedAccountsBlock.tsx": {
     "mtime": 1779298630.0211263,
@@ -120,14 +120,14 @@
     "semantic_hash": "3f1a0fc44ce8f0fcf4b1b7b7c1ed3e0d"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\ConnectorsBlock.tsx": {
-    "mtime": 1779374717.066848,
-    "ast_hash": "27e4e054483597fd79bdcc1bafa0b1f3",
-    "semantic_hash": "27e4e054483597fd79bdcc1bafa0b1f3"
+    "mtime": 1780690912.0854795,
+    "ast_hash": "6ec64ac0c420a9a42911770e1f192c87",
+    "semantic_hash": "6ec64ac0c420a9a42911770e1f192c87"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\TopicsBlock.tsx": {
-    "mtime": 1779716609.020914,
-    "ast_hash": "fb59bcf89c53f5b29b54a23f85540a3f",
-    "semantic_hash": "fb59bcf89c53f5b29b54a23f85540a3f"
+    "mtime": 1781528394.0196605,
+    "ast_hash": "f537f8a17faa637ece6ab4e60c490ff6",
+    "semantic_hash": "f537f8a17faa637ece6ab4e60c490ff6"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\ChoicePicker.tsx": {
     "mtime": 1779708124.4297261,
@@ -135,14 +135,14 @@
     "semantic_hash": "2735d761dfa2c31343c5807e31c6bbe2"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\DatePicker.tsx": {
-    "mtime": 1779708097.709018,
-    "ast_hash": "edd6489fa286b4ec24ae518013bcbe2d",
-    "semantic_hash": "edd6489fa286b4ec24ae518013bcbe2d"
+    "mtime": 1781474761.0218227,
+    "ast_hash": "053ff57cd9e107d3b26e133b4c6af4fc",
+    "semantic_hash": "053ff57cd9e107d3b26e133b4c6af4fc"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\DeadlineControl.tsx": {
-    "mtime": 1778843914.557767,
-    "ast_hash": "0c9c6e32e13c4fd22f72fb4b9dd3ea05",
-    "semantic_hash": "0c9c6e32e13c4fd22f72fb4b9dd3ea05"
+    "mtime": 1781474777.6818335,
+    "ast_hash": "5da8da4542090b153646d24ceaed34c5",
+    "semantic_hash": "5da8da4542090b153646d24ceaed34c5"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\DonePile.tsx": {
     "mtime": 1778846449.7969487,
@@ -155,49 +155,49 @@
     "semantic_hash": "3950def36e3575b49412c01dd1dfea2e"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\StatusToggle.tsx": {
-    "mtime": 1778839133.8282905,
-    "ast_hash": "400d62807534c0278ef404167e2de76f",
-    "semantic_hash": "400d62807534c0278ef404167e2de76f"
+    "mtime": 1780414914.440194,
+    "ast_hash": "b69e200762c6955510c0d3b4f9236dca",
+    "semantic_hash": "b69e200762c6955510c0d3b4f9236dca"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\styles.ts": {
-    "mtime": 1778846390.704129,
-    "ast_hash": "927c1163da28dd37e7dc21946fb5b6a3",
-    "semantic_hash": "927c1163da28dd37e7dc21946fb5b6a3"
+    "mtime": 1780412650.4420497,
+    "ast_hash": "a262d3e8e631e456a950ff9488cfcede",
+    "semantic_hash": "a262d3e8e631e456a950ff9488cfcede"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\ui.tsx": {
-    "mtime": 1778846411.8225095,
-    "ast_hash": "9de437255629c6d751bdf81f8dd85c96",
-    "semantic_hash": "9de437255629c6d751bdf81f8dd85c96"
+    "mtime": 1780414887.9455242,
+    "ast_hash": "3ae54ef271f5feee138618f4da012cd2",
+    "semantic_hash": "3ae54ef271f5feee138618f4da012cd2"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\VoiceButton.tsx": {
-    "mtime": 1779362826.4343088,
-    "ast_hash": "2a43dddd485048fdf5824a410c203d5f",
-    "semantic_hash": "2a43dddd485048fdf5824a410c203d5f"
+    "mtime": 1780410309.588863,
+    "ast_hash": "f76832d73a53df4208ec1d2b5f61b88c",
+    "semantic_hash": "f76832d73a53df4208ec1d2b5f61b88c"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\Widget.tsx": {
-    "mtime": 1779706981.29645,
-    "ast_hash": "b80b3cbd04ad2c7a9d1d581eb39bd748",
-    "semantic_hash": "b80b3cbd04ad2c7a9d1d581eb39bd748"
+    "mtime": 1781474612.827366,
+    "ast_hash": "8b5056b87489b1c6aaa8db27ad41fc20",
+    "semantic_hash": "8b5056b87489b1c6aaa8db27ad41fc20"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\ApplicationsWidget.tsx": {
-    "mtime": 1778846846.596757,
-    "ast_hash": "b13d248584329c3d1a5c2764cdce5e84",
-    "semantic_hash": "b13d248584329c3d1a5c2764cdce5e84"
+    "mtime": 1781451797.7142575,
+    "ast_hash": "02a78fbfdd8428b83ae52abfda2c6eee",
+    "semantic_hash": "02a78fbfdd8428b83ae52abfda2c6eee"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\BudgetWidget.tsx": {
-    "mtime": 1779030145.0480516,
-    "ast_hash": "552423ce1da87d1799c049ee3fdc60c5",
-    "semantic_hash": "552423ce1da87d1799c049ee3fdc60c5"
+    "mtime": 1781451708.452817,
+    "ast_hash": "8c9819ff6be2adc755671ed3be39cb02",
+    "semantic_hash": "8c9819ff6be2adc755671ed3be39cb02"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\context.ts": {
-    "mtime": 1779706865.6080716,
-    "ast_hash": "f53bf15c547519dc5cc4005879391574",
-    "semantic_hash": "f53bf15c547519dc5cc4005879391574"
+    "mtime": 1781532016.4997175,
+    "ast_hash": "c4050bd2598b580ea283e35cba08c05a",
+    "semantic_hash": "c4050bd2598b580ea283e35cba08c05a"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\EmailsWidget.tsx": {
-    "mtime": 1779231246.763134,
-    "ast_hash": "838ebe4a8b61c71ccba89b188e0a8773",
-    "semantic_hash": "838ebe4a8b61c71ccba89b188e0a8773"
+    "mtime": 1781451703.3084965,
+    "ast_hash": "7677ceb60d8125407d5a6a655508c172",
+    "semantic_hash": "7677ceb60d8125407d5a6a655508c172"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\MiniCalendarWidget.tsx": {
     "mtime": 1778846902.7574737,
@@ -210,14 +210,14 @@
     "semantic_hash": "b79b906808e6e433042a471093d282fb"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\NotionWidget.tsx": {
-    "mtime": 1779301944.519354,
-    "ast_hash": "4d26cbec864bfea7a1de87fe8e69b9ca",
-    "semantic_hash": "4d26cbec864bfea7a1de87fe8e69b9ca"
+    "mtime": 1780260054.4461884,
+    "ast_hash": "482479643c8964daadb4b65cbc32e3af",
+    "semantic_hash": "482479643c8964daadb4b65cbc32e3af"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\NowPlayingWidget.tsx": {
-    "mtime": 1779301268.3296857,
-    "ast_hash": "91980e5481ee31f46a9e5dfb9b336081",
-    "semantic_hash": "91980e5481ee31f46a9e5dfb9b336081"
+    "mtime": 1781529614.7668276,
+    "ast_hash": "eabe4f904eaad87a6d630f0c2f8978f0",
+    "semantic_hash": "eabe4f904eaad87a6d630f0c2f8978f0"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\PlaceholderWidget.tsx": {
     "mtime": 1778846931.1732588,
@@ -225,19 +225,19 @@
     "semantic_hash": "235b23d8899b904bbcb7bace6a45c5e7"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\PomodoroWidget.tsx": {
-    "mtime": 1779287820.1930807,
-    "ast_hash": "2a6b9a8e225ac43a2b3c1b01b86be113",
-    "semantic_hash": "2a6b9a8e225ac43a2b3c1b01b86be113"
+    "mtime": 1781451774.8631568,
+    "ast_hash": "6195030c35c0388f16173258d4224845",
+    "semantic_hash": "6195030c35c0388f16173258d4224845"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\QuickAddWidget.tsx": {
-    "mtime": 1779706888.7136152,
-    "ast_hash": "3c8b1fb1bf17cb924476b2c1e5ef6906",
-    "semantic_hash": "3c8b1fb1bf17cb924476b2c1e5ef6906"
+    "mtime": 1781451775.4709036,
+    "ast_hash": "280592d7e2d27015325a3ef30336e892",
+    "semantic_hash": "280592d7e2d27015325a3ef30336e892"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\registry.tsx": {
-    "mtime": 1779706912.5184283,
-    "ast_hash": "208d698fbde4027bf9d542ca6f370ebc",
-    "semantic_hash": "208d698fbde4027bf9d542ca6f370ebc"
+    "mtime": 1780915782.9622893,
+    "ast_hash": "d0813ec9bcaeb4b7dbc270fbe188f0d8",
+    "semantic_hash": "d0813ec9bcaeb4b7dbc270fbe188f0d8"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\SummaryWidget.tsx": {
     "mtime": 1778846865.5455608,
@@ -245,24 +245,24 @@
     "semantic_hash": "1be3b2564d67ade5fe02b45af3011f77"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\UpcomingDeadlinesWidget.tsx": {
-    "mtime": 1778846915.1266794,
-    "ast_hash": "2420d17906d05de6bbbd53497304f8ab",
-    "semantic_hash": "2420d17906d05de6bbbd53497304f8ab"
+    "mtime": 1781451706.6868548,
+    "ast_hash": "83e11eccba4239f7261d0279cdbf602f",
+    "semantic_hash": "83e11eccba4239f7261d0279cdbf602f"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\util.ts": {
-    "mtime": 1778846887.447436,
-    "ast_hash": "2e9abdc12df44531ef2bded26136d832",
-    "semantic_hash": "2e9abdc12df44531ef2bded26136d832"
+    "mtime": 1780067651.0676713,
+    "ast_hash": "4a40cbc4c72c5db624b9de2961211c9e",
+    "semantic_hash": "4a40cbc4c72c5db624b9de2961211c9e"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\WeatherWidget.tsx": {
-    "mtime": 1779287854.692733,
-    "ast_hash": "a66e85c971c85df7c212cd8363bf8e21",
-    "semantic_hash": "a66e85c971c85df7c212cd8363bf8e21"
+    "mtime": 1781451750.146304,
+    "ast_hash": "bc7a01bf554dbe147f9b788c592babbf",
+    "semantic_hash": "bc7a01bf554dbe147f9b788c592babbf"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\appearance.ts": {
-    "mtime": 1779716538.5563557,
-    "ast_hash": "65cb3b193d6f9277ba4ee072f75e2fc7",
-    "semantic_hash": "65cb3b193d6f9277ba4ee072f75e2fc7"
+    "mtime": 1781528558.0654345,
+    "ast_hash": "96a773687bd6fdfedee3e8aa8d96a4e9",
+    "semantic_hash": "96a773687bd6fdfedee3e8aa8d96a4e9"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\bankCsv.ts": {
     "mtime": 1779374571.3662791,
@@ -275,9 +275,9 @@
     "semantic_hash": "c72305f70c5305fcb82691a550d440e6"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\calendar.ts": {
-    "mtime": 1778958168.2992692,
-    "ast_hash": "04ab7ac481f33c4b0e825a77a95384d3",
-    "semantic_hash": "04ab7ac481f33c4b0e825a77a95384d3"
+    "mtime": 1780149651.9833221,
+    "ast_hash": "8ebd6169f53bab094cd35d619bdce2b4",
+    "semantic_hash": "8ebd6169f53bab094cd35d619bdce2b4"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\dates.ts": {
     "mtime": 1778843899.6793175,
@@ -290,14 +290,14 @@
     "semantic_hash": "1a4eba430908f3db160a6329d1585d45"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\ical.ts": {
-    "mtime": 1778958409.5326388,
-    "ast_hash": "e98e4e96efcaa73eda43fa1331dcb63f",
-    "semantic_hash": "e98e4e96efcaa73eda43fa1331dcb63f"
+    "mtime": 1780414052.1184545,
+    "ast_hash": "d0ebd2c622a0d180b7793975cb28527f",
+    "semantic_hash": "d0ebd2c622a0d180b7793975cb28527f"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\platform.ts": {
-    "mtime": 1779523354.241366,
-    "ast_hash": "b4debc32b463cf6300f6946bb9cd9229",
-    "semantic_hash": "b4debc32b463cf6300f6946bb9cd9229"
+    "mtime": 1779797985.37667,
+    "ast_hash": "a1aa615c8fa98addee6c9c241d48e4af",
+    "semantic_hash": "a1aa615c8fa98addee6c9c241d48e4af"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\review.ts": {
     "mtime": 1779230130.1533332,
@@ -310,39 +310,39 @@
     "semantic_hash": "4651a75c5f99cc62629240ca8e3d1285"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\storage.ts": {
-    "mtime": 1779523375.4981077,
-    "ast_hash": "4a31de5b26cde6afab6ec9214ae8def4",
-    "semantic_hash": "4a31de5b26cde6afab6ec9214ae8def4"
+    "mtime": 1780414268.4322658,
+    "ast_hash": "f0fe70edfabf0ff122634e3bc3d48404",
+    "semantic_hash": "f0fe70edfabf0ff122634e3bc3d48404"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\themes.ts": {
-    "mtime": 1779302992.8212218,
-    "ast_hash": "dd5545a89b37066c92b60d10d9e52258",
-    "semantic_hash": "dd5545a89b37066c92b60d10d9e52258"
+    "mtime": 1781475563.6228952,
+    "ast_hash": "4df253ae3d39fa27fb435cbfe3bba4b1",
+    "semantic_hash": "4df253ae3d39fa27fb435cbfe3bba4b1"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\types.ts": {
-    "mtime": 1779716526.4227426,
-    "ast_hash": "7b08a1d97ad9f14163f0ba31a9a8c6f1",
-    "semantic_hash": "7b08a1d97ad9f14163f0ba31a9a8c6f1"
+    "mtime": 1781529095.0682397,
+    "ast_hash": "105e9e09ba5dfd127bbd8f4b0fa2b793",
+    "semantic_hash": "105e9e09ba5dfd127bbd8f4b0fa2b793"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\voice.ts": {
-    "mtime": 1779362778.254184,
-    "ast_hash": "243405d15559a26830b5afa0fc1b19c6",
-    "semantic_hash": "243405d15559a26830b5afa0fc1b19c6"
+    "mtime": 1780410160.5598502,
+    "ast_hash": "f3ff5ca9efa255c57c44f4308997a545",
+    "semantic_hash": "f3ff5ca9efa255c57c44f4308997a545"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\voiceRouter.ts": {
-    "mtime": 1779362808.1497967,
-    "ast_hash": "aa3b12ff3293387db8f273c92ab4578c",
-    "semantic_hash": "aa3b12ff3293387db8f273c92ab4578c"
+    "mtime": 1779979366.2974782,
+    "ast_hash": "5b64a779ed0876f85a13c8d7e24c1f1c",
+    "semantic_hash": "5b64a779ed0876f85a13c8d7e24c1f1c"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\gmail.ts": {
-    "mtime": 1779298543.6015475,
-    "ast_hash": "3f554e5b9187f848074602e1d60c977f",
-    "semantic_hash": "3f554e5b9187f848074602e1d60c977f"
+    "mtime": 1780414103.6173196,
+    "ast_hash": "8bacfb7c98919b13930e7b9393b4c991",
+    "semantic_hash": "8bacfb7c98919b13930e7b9393b4c991"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\index.ts": {
-    "mtime": 1779231089.2951286,
-    "ast_hash": "3052921ea7260db76a40491d141f2a55",
-    "semantic_hash": "3052921ea7260db76a40491d141f2a55"
+    "mtime": 1781101580.6186225,
+    "ast_hash": "e9ddb0943bb3f6051cef7a47a5b61f8d",
+    "semantic_hash": "e9ddb0943bb3f6051cef7a47a5b61f8d"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\keyring.ts": {
     "mtime": 1779373045.2061188,
@@ -350,9 +350,9 @@
     "semantic_hash": "2ae099c2d5e1fb0b0d89020455e7c635"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\outlook.ts": {
-    "mtime": 1779298549.947693,
-    "ast_hash": "f1f56889b9f884ef44733d999aad1246",
-    "semantic_hash": "f1f56889b9f884ef44733d999aad1246"
+    "mtime": 1780414103.6880977,
+    "ast_hash": "7873a619839d8b2fba5028a22781112e",
+    "semantic_hash": "7873a619839d8b2fba5028a22781112e"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\pkce.ts": {
     "mtime": 1779231038.0032365,
@@ -360,9 +360,9 @@
     "semantic_hash": "c2e896e7cff980dc2285fd57b33f4790"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\spotify.ts": {
-    "mtime": 1779288594.7396214,
-    "ast_hash": "8a2c487d3627d9590bf3510cb5aa43f6",
-    "semantic_hash": "8a2c487d3627d9590bf3510cb5aa43f6"
+    "mtime": 1781532522.0234835,
+    "ast_hash": "cc296b5b421b6824fcbf6058409ac16d",
+    "semantic_hash": "cc296b5b421b6824fcbf6058409ac16d"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\build.rs": {
     "mtime": 1778782926.0149534,
@@ -370,14 +370,14 @@
     "semantic_hash": "667702979da61fdc96948886b7cd7a33"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\tauri.conf.json": {
-    "mtime": 1779370413.682711,
-    "ast_hash": "2c61e49d6a4f55e1608a80f354c03896",
-    "semantic_hash": "2c61e49d6a4f55e1608a80f354c03896"
+    "mtime": 1779797978.601584,
+    "ast_hash": "041f04c0cc9958d5dc8fc268d4414510",
+    "semantic_hash": "041f04c0cc9958d5dc8fc268d4414510"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\capabilities\\default.json": {
-    "mtime": 1779032392.9850955,
-    "ast_hash": "1608ed5f5d1ea9a8c963ecd909cde2f1",
-    "semantic_hash": "1608ed5f5d1ea9a8c963ecd909cde2f1"
+    "mtime": 1780067177.9878972,
+    "ast_hash": "49ad0d17bab3df8e7a6ab4ef0ebb58f4",
+    "semantic_hash": "49ad0d17bab3df8e7a6ab4ef0ebb58f4"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\acl-manifests.json": {
     "mtime": 1779032391.5768528,
@@ -385,9 +385,9 @@
     "semantic_hash": "a4b9ab86ee060493d906620407523eb4"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\capabilities.json": {
-    "mtime": 1779032396.1063714,
-    "ast_hash": "6fa6fc985e75481f69f63beeff44dedc",
-    "semantic_hash": "6fa6fc985e75481f69f63beeff44dedc"
+    "mtime": 1780067183.0378726,
+    "ast_hash": "229b58d9ee61c6590df081e105cb62dc",
+    "semantic_hash": "229b58d9ee61c6590df081e105cb62dc"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\gen\\schemas\\desktop-schema.json": {
     "mtime": 1779032391.6590128,
@@ -400,9 +400,9 @@
     "semantic_hash": "4b3f078e5475e7304da471f7ecdca0ff"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\src\\lib.rs": {
-    "mtime": 1779370415.9427598,
-    "ast_hash": "e412b10bf44d0d48a3f9a0119f84d6a5",
-    "semantic_hash": "e412b10bf44d0d48a3f9a0119f84d6a5"
+    "mtime": 1779981596.2297928,
+    "ast_hash": "a5e139be2a106fc7aadce90f3e9273e5",
+    "semantic_hash": "a5e139be2a106fc7aadce90f3e9273e5"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src-tauri\\src\\main.rs": {
     "mtime": 1778782926.0443223,
@@ -410,9 +410,9 @@
     "semantic_hash": "1d6ff231a4fd14fe5c266f9487427fbc"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\index.html": {
-    "mtime": 1779523389.7957726,
-    "ast_hash": "dc81b063300202906f5214974f1982a0",
-    "semantic_hash": "dc81b063300202906f5214974f1982a0"
+    "mtime": 1781102169.3883708,
+    "ast_hash": "dfbd509ef5546ee88ff6886934546506",
+    "semantic_hash": "dfbd509ef5546ee88ff6886934546506"
   },
   "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\README.md": {
     "mtime": 1778782926.0478468,
@@ -688,5 +688,285 @@
     "mtime": 1779362641.7153404,
     "ast_hash": "ad445565856722888b2057ec116e2f23",
     "semantic_hash": "ad445565856722888b2057ec116e2f23"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\.claude\\launch.json": {
+    "mtime": 1780775171.6425648,
+    "ast_hash": "355bf67aca29b108252327cad2170197",
+    "semantic_hash": "355bf67aca29b108252327cad2170197"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\.claude\\settings.local.json": {
+    "mtime": 1780775830.5110998,
+    "ast_hash": "90b0e376c72d2ace3de3480ad0f7a0f0",
+    "semantic_hash": "90b0e376c72d2ace3de3480ad0f7a0f0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\SUPABASE_SQL_FIX.sql": {
+    "mtime": 1780743403.4502642,
+    "ast_hash": "d8dd92c5de356427fa82eb4a2d3b3b4d",
+    "semantic_hash": "d8dd92c5de356427fa82eb4a2d3b3b4d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\gc-callback.js": {
+    "mtime": 1780436753.801185,
+    "ast_hash": "6bb1ae6d62e910cf7187f29597618889",
+    "semantic_hash": "6bb1ae6d62e910cf7187f29597618889"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\gc-institutions.js": {
+    "mtime": 1780436717.6616082,
+    "ast_hash": "2f8554687d3a6ad629411e5d7f96cd4f",
+    "semantic_hash": "2f8554687d3a6ad629411e5d7f96cd4f"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\gc-link.js": {
+    "mtime": 1780436729.2561028,
+    "ast_hash": "f40f00ddf3a198c18acb2c3dab19c340",
+    "semantic_hash": "f40f00ddf3a198c18acb2c3dab19c340"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\gc-transactions.js": {
+    "mtime": 1780436741.4597397,
+    "ast_hash": "092f52802791f67e03877eb52fcc613d",
+    "semantic_hash": "092f52802791f67e03877eb52fcc613d"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\notion-redirect.js": {
+    "mtime": 1779984386.8956614,
+    "ast_hash": "1320c925c07801dc70a37dd53021bbc2",
+    "semantic_hash": "1320c925c07801dc70a37dd53021bbc2"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\send-topic-invite.js": {
+    "mtime": 1780513556.702555,
+    "ast_hash": "91de579a02b411086082ea90604272fb",
+    "semantic_hash": "91de579a02b411086082ea90604272fb"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\terra-webhook.js": {
+    "mtime": 1780436707.005445,
+    "ast_hash": "44437e67f2e355d770ff32b7ba9f7d6a",
+    "semantic_hash": "44437e67f2e355d770ff32b7ba9f7d6a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\terra-widget.js": {
+    "mtime": 1780436664.9723842,
+    "ast_hash": "95c761fcc8f0fbe379739f8d6a0dd032",
+    "semantic_hash": "95c761fcc8f0fbe379739f8d6a0dd032"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\api\\topic-invite.js": {
+    "mtime": 1780513576.632318,
+    "ast_hash": "ca34a2dd5d6f9a8c59849b0821f17fe5",
+    "semantic_hash": "ca34a2dd5d6f9a8c59849b0821f17fe5"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\scripts\\shoot.mjs": {
+    "mtime": 1781208398.6996028,
+    "ast_hash": "768cefdc5639ab9c74cc5f0a0858c222",
+    "semantic_hash": "768cefdc5639ab9c74cc5f0a0858c222"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\AuthGate.tsx": {
+    "mtime": 1781531614.389052,
+    "ast_hash": "b53c0ecc9983d2d8fbc1a26fd90354f8",
+    "semantic_hash": "b53c0ecc9983d2d8fbc1a26fd90354f8"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\BottomTabBar.tsx": {
+    "mtime": 1781033717.5037444,
+    "ast_hash": "7bcf1e51514089c9ad2e557c10b3e223",
+    "semantic_hash": "7bcf1e51514089c9ad2e557c10b3e223"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\QuickAddModal.tsx": {
+    "mtime": 1781290106.0691743,
+    "ast_hash": "e0792515c5f45a4c447c044a69ccb3ad",
+    "semantic_hash": "e0792515c5f45a4c447c044a69ccb3ad"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\SidebarEditNav.tsx": {
+    "mtime": 1781529211.4866204,
+    "ast_hash": "cf50432e8c9101c29a32aff517fe7b0a",
+    "semantic_hash": "cf50432e8c9101c29a32aff517fe7b0a"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\TitleBar.tsx": {
+    "mtime": 1781290185.0697367,
+    "ast_hash": "eb8da031b9206f6c25f0237e21cb2f5b",
+    "semantic_hash": "eb8da031b9206f6c25f0237e21cb2f5b"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\VoiceTaskReview.tsx": {
+    "mtime": 1780408168.5976636,
+    "ast_hash": "c16270a393e6f000ad321f091ddfae18",
+    "semantic_hash": "c16270a393e6f000ad321f091ddfae18"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\DailyPlannerView.tsx": {
+    "mtime": 1780149616.6191359,
+    "ast_hash": "50abc1b08347d952de2b852063cdcec2",
+    "semantic_hash": "50abc1b08347d952de2b852063cdcec2"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\HabitsView.tsx": {
+    "mtime": 1781451942.8532057,
+    "ast_hash": "4de420a2814dee6df06c361693ffacfa",
+    "semantic_hash": "4de420a2814dee6df06c361693ffacfa"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\HealthView.tsx": {
+    "mtime": 1781474802.3230145,
+    "ast_hash": "610f1c7e09e6a78f2f5c8ac4cbf1ba0b",
+    "semantic_hash": "610f1c7e09e6a78f2f5c8ac4cbf1ba0b"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\PlannerView.tsx": {
+    "mtime": 1780071656.6553967,
+    "ast_hash": "9ce4b8f086eac8de0d56a3d4f446ecbc",
+    "semantic_hash": "9ce4b8f086eac8de0d56a3d4f446ecbc"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\TopicView.tsx": {
+    "mtime": 1781532236.225359,
+    "ast_hash": "62b705982244f6f8225e2df9dfc68cd5",
+    "semantic_hash": "62b705982244f6f8225e2df9dfc68cd5"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\budget\\BankConnectModal.tsx": {
+    "mtime": 1780437880.5024447,
+    "ast_hash": "1ff49ea9f51db81a8d060974463b4e45",
+    "semantic_hash": "1ff49ea9f51db81a8d060974463b4e45"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\settings\\IntegrationsBlock.tsx": {
+    "mtime": 1781102251.68441,
+    "ast_hash": "97d3369ea612f9935fe0b564b909a39e",
+    "semantic_hash": "97d3369ea612f9935fe0b564b909a39e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\BackgroundControls.tsx": {
+    "mtime": 1780435028.7790556,
+    "ast_hash": "f73a4c6f626d908a56b8c2783f077227",
+    "semantic_hash": "f73a4c6f626d908a56b8c2783f077227"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\shared\\ColorBankPicker.tsx": {
+    "mtime": 1780307728.7121892,
+    "ast_hash": "eab3523dbce37cd56d6d1400f3b80470",
+    "semantic_hash": "eab3523dbce37cd56d6d1400f3b80470"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\ClockWidget.tsx": {
+    "mtime": 1780069806.101613,
+    "ast_hash": "95857186b3a35a5b5199ffc54b3ad9c6",
+    "semantic_hash": "95857186b3a35a5b5199ffc54b3ad9c6"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\DailyPlannerWidget.tsx": {
+    "mtime": 1781451798.4546542,
+    "ast_hash": "17df76e8cea5dc180ee7df45143dde21",
+    "semantic_hash": "17df76e8cea5dc180ee7df45143dde21"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\HabitsWidget.tsx": {
+    "mtime": 1781451939.2241085,
+    "ast_hash": "3eaa8bd5002ca6f2076089c54b607564",
+    "semantic_hash": "3eaa8bd5002ca6f2076089c54b607564"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\PhotoWidget.tsx": {
+    "mtime": 1781532058.2142265,
+    "ast_hash": "998d41cc52d98990c62854c0d265b02e",
+    "semantic_hash": "998d41cc52d98990c62854c0d265b02e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\TodayScheduleWidget.tsx": {
+    "mtime": 1780149817.0815785,
+    "ast_hash": "fa050cad2d75ebb3c9b0d64d30bccb52",
+    "semantic_hash": "fa050cad2d75ebb3c9b0d64d30bccb52"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\TodayWidget.tsx": {
+    "mtime": 1780260983.788512,
+    "ast_hash": "5877e105a086168a84bafb3dcac37e40",
+    "semantic_hash": "5877e105a086168a84bafb3dcac37e40"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\TopicLinksWidget.tsx": {
+    "mtime": 1781530718.096135,
+    "ast_hash": "e97e9b5bcf558a82b5c120628f62ad10",
+    "semantic_hash": "e97e9b5bcf558a82b5c120628f62ad10"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\TopicNoteWidget.tsx": {
+    "mtime": 1781451804.1371386,
+    "ast_hash": "f47dadc58856c97acca25b1b4d86b09c",
+    "semantic_hash": "f47dadc58856c97acca25b1b4d86b09c"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\TopicTodosWidget.tsx": {
+    "mtime": 1780412772.4558616,
+    "ast_hash": "480b1c41fe5ddcc751fedf32eacb26c0",
+    "semantic_hash": "480b1c41fe5ddcc751fedf32eacb26c0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\widgets\\WhatsAppWidget.tsx": {
+    "mtime": 1780691092.8763301,
+    "ast_hash": "88080fd7ee33ecd559cd2416976b8d15",
+    "semantic_hash": "88080fd7ee33ecd559cd2416976b8d15"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\caldav.ts": {
+    "mtime": 1780414429.0813038,
+    "ast_hash": "954dc5ee3646311ebf3eb85a5b4739a3",
+    "semantic_hash": "954dc5ee3646311ebf3eb85a5b4739a3"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\gcal.ts": {
+    "mtime": 1780414051.7999032,
+    "ast_hash": "671379f9caabd7b9b23800fd45ae8a68",
+    "semantic_hash": "671379f9caabd7b9b23800fd45ae8a68"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\http.ts": {
+    "mtime": 1780413903.0632324,
+    "ast_hash": "94b9ec2033b4993a284a7d60fe7cd29c",
+    "semantic_hash": "94b9ec2033b4993a284a7d60fe7cd29c"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\oauth\\google.ts": {
+    "mtime": 1781103326.0503922,
+    "ast_hash": "bcb82ece79203acbe17b66ecb72ec827",
+    "semantic_hash": "bcb82ece79203acbe17b66ecb72ec827"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\supabase.ts": {
+    "mtime": 1779890784.9830844,
+    "ast_hash": "9f47ae2c76ff34ef893ba542fee63821",
+    "semantic_hash": "9f47ae2c76ff34ef893ba542fee63821"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\sync.ts": {
+    "mtime": 1781206033.403926,
+    "ast_hash": "c91e31f2c604e6ce7d6ed33ae754a0c0",
+    "semantic_hash": "c91e31f2c604e6ce7d6ed33ae754a0c0"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\taskParser.ts": {
+    "mtime": 1780411414.4495175,
+    "ast_hash": "c66382bb29e88037d96a262fb6131a2e",
+    "semantic_hash": "c66382bb29e88037d96a262fb6131a2e"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\lib\\whatsapp.ts": {
+    "mtime": 1780691059.6799803,
+    "ast_hash": "761bad7b04e9171cd1b514aa6e921d41",
+    "semantic_hash": "761bad7b04e9171cd1b514aa6e921d41"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\vercel.json": {
+    "mtime": 1780513583.1128469,
+    "ast_hash": "b2280712cefeec57bd87cac808cd01c2",
+    "semantic_hash": "b2280712cefeec57bd87cac808cd01c2"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\whatsapp-bridge\\package.json": {
+    "mtime": 1780689086.8524296,
+    "ast_hash": "f999c892d8c9e0a68b2f63b2a86cd222",
+    "semantic_hash": "f999c892d8c9e0a68b2f63b2a86cd222"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\whatsapp-bridge\\server.js": {
+    "mtime": 1780691045.3734796,
+    "ast_hash": "5447f3bea5da5b8b0b51a980cc0f3502",
+    "semantic_hash": "5447f3bea5da5b8b0b51a980cc0f3502"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\STYLE_BRIEF.md": {
+    "mtime": 1781289707.7521658,
+    "ast_hash": "38a3f2d65a4389c946df56141f45532c",
+    "semantic_hash": "38a3f2d65a4389c946df56141f45532c"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\website\\index.html": {
+    "mtime": 1781289176.8116007,
+    "ast_hash": "c1600252a12022f5973873951a72a105",
+    "semantic_hash": "c1600252a12022f5973873951a72a105"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\background_image.jpeg": {
+    "mtime": 1780916501.0751257,
+    "ast_hash": "8cc1c62bd6008ce8993a00732ae5f5c9",
+    "semantic_hash": "8cc1c62bd6008ce8993a00732ae5f5c9"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\public\\auth-bg.jpeg": {
+    "mtime": 1780916649.8597317,
+    "ast_hash": "11e1d70d412c5e549398bd6cabc48521",
+    "semantic_hash": "11e1d70d412c5e549398bd6cabc48521"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\website\\assets\\bozz-home.png": {
+    "mtime": 1781208434.38332,
+    "ast_hash": "3bee637c06b9861558e604da8f5ee037",
+    "semantic_hash": "3bee637c06b9861558e604da8f5ee037"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\website\\assets\\bozz-quicks.png": {
+    "mtime": 1781208438.2772927,
+    "ast_hash": "3bee637c06b9861558e604da8f5ee037",
+    "semantic_hash": "3bee637c06b9861558e604da8f5ee037"
+  },
+  "C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\website\\assets\\bozz-topic.png": {
+    "mtime": 1781208436.4987361,
+    "ast_hash": "3bee637c06b9861558e604da8f5ee037",
+    "semantic_hash": "3bee637c06b9861558e604da8f5ee037"
   }
 }

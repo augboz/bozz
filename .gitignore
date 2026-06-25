@@ -27,3 +27,25 @@ dist-ssr
 # Tauri signing keys — never commit these
 .tauri-private.key
 .tauri-private.key.pub
+
+# Windows folder metadata
+desktop.ini
+**/desktop.ini
+
+# Experimental WhatsApp bridge — separate sub-project, belongs in its own repo
+whatsapp-bridge/
+
+# impeccable skill working directory
+.impeccable/
+
+# Internal Supabase ops runbooks — keep out of the PUBLIC repo (expose schema)
+SUPABASE_*.sql
+
+# Stray local image
+background_image.jpeg
+
+# Internal strategy / product docs — keep OUT of the public repo
+BOZZ_PLUS_PLAN.md
+BOZZ_PLUS_CEO_REPORT.md
+BOZZ_PLUS_RESEARCH.md
+PRODUCT.md

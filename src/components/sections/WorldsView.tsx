@@ -166,9 +166,11 @@ export default function WorldsView({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.9rem' }}>
         {shown.map(world => {
           const active = activeId === world.id || (!activeId && world.id === 'default');
-          // Plus worlds are always teased blurred so users see the premium tier;
-          // whether they can actually apply is decided in the modal (canApply).
-          const isPlus = !world.free;
+          const premium = !world.free;       // a paid-tier World (Plus)
+          // Only blur/lock a World the user genuinely can't apply. During beta
+          // canApply() is always true, so premium Worlds show crisp with a calm
+          // "Plus" pill — never a locked-looking blur over a working preview.
+          const locked = !canApply(world);
           return (
             <button
               key={world.id}
@@ -187,13 +189,13 @@ export default function WorldsView({
                   src={world.previewUrl} alt={world.name}
                   style={{
                     width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                    filter: isPlus ? 'blur(6px)' : undefined, transform: isPlus ? 'scale(1.1)' : undefined,
+                    filter: locked ? 'blur(6px)' : undefined, transform: locked ? 'scale(1.1)' : undefined,
                   }}
                 />
                 {active && (
                   <span style={badge(t.doneAccent)}><Check size={13} strokeWidth={2.5} /></span>
                 )}
-                {isPlus && (
+                {locked && (
                   <span style={{
                     position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#fff', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.04em',
@@ -211,6 +213,11 @@ export default function WorldsView({
                   )}
                   {world.free && world.id !== 'default' && (
                     <span style={pill(t.doneAccent, t.doneBorder)}>Free</span>
+                  )}
+                  {premium && (
+                    <span style={{ ...pill(t.doingAccent, t.doingBorder), display: 'inline-flex', alignItems: 'center', gap: '0.18rem' }}>
+                      <Sparkles size={9} strokeWidth={2} /> Plus
+                    </span>
                   )}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '0.2rem', lineHeight: 1.4 }}>

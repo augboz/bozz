@@ -1,22 +1,22 @@
 import { useState } from 'react';
-import { Palette, Heart, Coffee, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
+import { Palette, Bell, Heart, Coffee, Star, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Theme } from '../../../lib/types';
 import { getPlanLabel, BETA_UNLOCK } from '../../../lib/plus';
-import { activateLicense, openDonate, openPlansPage, isLinkLive } from '../../../lib/billing';
+import { activateLicense, openDonate, openGitHub, openPlansPage, isLinkLive } from '../../../lib/billing';
 
 interface Props {
   t: Theme;
   /** Navigate to the in-app Worlds gallery. */
   onOpenWorlds: () => void;
+  /** Navigate to the Email page, where Priority alerts are configured. */
+  onOpenEmail: () => void;
 }
 
-export default function PlanBlock({ t, onOpenWorlds }: Props) {
+export default function PlanBlock({ t, onOpenWorlds, onOpenEmail }: Props) {
   const [keyOpen, setKeyOpen] = useState(false);
   const [key, setKey] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [plansSoon, setPlansSoon] = useState(false);
-
-  const donateLive = isLinkLive('sponsors') || isLinkLive('kofi');
 
   const ghost: React.CSSProperties = {
     background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
@@ -84,6 +84,23 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} />
       </button>
 
+      {/* Priority alerts — the other Plus pillar; lives on the Email page */}
+      <button
+        onClick={onOpenEmail}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%',
+          background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '10px',
+          padding: '0.7rem 0.9rem', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        }}
+      >
+        <Bell size={15} strokeWidth={1.6} color={t.textMuted} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.86rem', color: t.text }}>Priority alerts</div>
+          <div style={{ fontSize: '0.72rem', color: t.textMuted }}>Get pinged when an email that matters lands.</div>
+        </div>
+        <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} />
+      </button>
+
       {/* License key — compact, collapsed by default (most users never need it) */}
       <div>
         <button
@@ -115,7 +132,7 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
             </button>
           </div>
         )}
-        {msg && <div style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '0.4rem' }}>{msg}</div>}
+        {msg && <div role="status" aria-live="polite" style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '0.4rem' }}>{msg}</div>}
       </div>
 
       {/* Support Bozz — external links, never gated, never nagged */}
@@ -127,22 +144,21 @@ export default function PlanBlock({ t, onOpenWorlds }: Props) {
         <div style={{ fontSize: '0.74rem', color: t.textMuted, lineHeight: 1.5, marginBottom: '0.6rem' }}>
           Built by one person. If it makes your mornings calmer, you can chip in.
         </div>
-        {donateLive ? (
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-            {isLinkLive('sponsors') && (
-              <button onClick={() => openDonate('sponsors')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                <ExternalLink size={13} strokeWidth={1.6} /> GitHub Sponsors
-              </button>
-            )}
-            {isLinkLive('kofi') && (
-              <button onClick={() => openDonate('kofi')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Coffee size={13} strokeWidth={1.6} /> Ko-fi
-              </button>
-            )}
-          </div>
-        ) : (
-          <span style={{ fontSize: '0.72rem', color: t.textDim }}>Support links coming soon.</span>
-        )}
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <button onClick={openGitHub} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Star size={13} strokeWidth={1.6} /> Star on GitHub
+          </button>
+          {isLinkLive('sponsors') && (
+            <button onClick={() => openDonate('sponsors')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <ExternalLink size={13} strokeWidth={1.6} /> GitHub Sponsors
+            </button>
+          )}
+          {isLinkLive('kofi') && (
+            <button onClick={() => openDonate('kofi')} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Coffee size={13} strokeWidth={1.6} /> Ko-fi
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

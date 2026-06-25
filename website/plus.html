@@ -134,12 +134,22 @@ footer { border-top:1px solid var(--lead); padding:2.5rem; display:flex; align-i
 .footer-links a:hover { color:var(--starlight); }
 .footer-copy { color:var(--muted); font-size:0.85rem; }
 
+/* On touch devices :hover sticks after a tap — don't leave cards/buttons
+   stuck in a lifted/shadowed state. */
+@media (hover: none) {
+  .btn-primary:hover, .btn-ghost:hover, .card:hover { transform:none; box-shadow:none; }
+}
+
 @media (max-width:680px) {
   nav { padding:0 1.25rem; }
   .nav-links { display:none; }
-  .cmp .row { grid-template-columns:1fr 1fr; }
-  .cmp .free { display:none; }
-  .cmp .head .free { display:none; }
+  /* Stack each row so the Free column stays visible — "free stays whole" must
+     not hide the free value on the breakpoint most shared-link visitors use. */
+  .cmp .row { grid-template-columns:1fr; gap:0.3rem; }
+  .cmp .head { display:none; }
+  .cmp .feat { font-weight:500; color:var(--starlight); }
+  .cmp .free::before { content:"Free — "; color:var(--muted); }
+  .cmp .plus::before { content:"Plus — "; color:var(--blue); margin-right:0.1rem; }
 }
 </style>
 </head>
@@ -241,14 +251,14 @@ footer { border-top:1px solid var(--lead); padding:2.5rem; display:flex; align-i
         <div class="amount">£15–20</div>
         <div class="per">one-time</div>
         <p class="desc">Buy once, unlock every World — themes and templates — plus every future drop, forever. Best for the sub-averse.</p>
-        <a class="btn-primary" href="mailto:ab5324@ic.ac.uk?subject=Bozz%20Plus%20waitlist%20%E2%80%94%20Lifetime">Join the waitlist</a>
+        <a class="btn-primary" href="mailto:augbozzetto@gmail.com?subject=Bozz%20Plus%20waitlist%20%E2%80%94%20Lifetime">Join the waitlist</a>
       </div>
       <div class="price">
         <div class="ptop"><h3>Bozz Plus</h3></div>
         <div class="amount">£3</div>
         <div class="per">per month · or £25/year</div>
         <p class="desc">Unlocks all Worlds while active, plus priority alerts and sync depth. Cancel anytime, one click.</p>
-        <a class="btn-ghost" href="mailto:ab5324@ic.ac.uk?subject=Bozz%20Plus%20waitlist%20%E2%80%94%20Subscription">Join the waitlist</a>
+        <a class="btn-ghost" href="mailto:augbozzetto@gmail.com?subject=Bozz%20Plus%20waitlist%20%E2%80%94%20Subscription">Join the waitlist</a>
       </div>
     </div>
     <p class="fineprint">Checkout isn't live yet — Plus is <strong>free while in beta</strong>, so everything is already unlocked in the app. Leave your email and we'll tell you when paid plans open (and early supporters get a better price).</p>
@@ -291,7 +301,7 @@ footer { border-top:1px solid var(--lead); padding:2.5rem; display:flex; align-i
     <a href="privacy.html">Privacy</a>
     <a href="terms.html">Terms</a>
     <a href="https://github.com/augboz/bozz" target="_blank" rel="noopener">GitHub</a>
-    <a href="mailto:ab5324@ic.ac.uk">Contact</a>
+    <a href="mailto:augbozzetto@gmail.com">Contact</a>
   </div>
   <span class="footer-copy">© 2026 BOZZ.</span>
 </footer>

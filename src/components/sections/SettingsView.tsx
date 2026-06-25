@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronRight, ChevronDown, Palette,
-  Plug, NotebookPen, Power, RotateCcw, LogOut, Plus, X,
+  Plug, Power, RotateCcw, LogOut, Plus, X,
   Sparkles, HelpCircle,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
@@ -33,6 +33,8 @@ interface SettingsViewProps {
   accountEmail: string | null;
   onSignOut: () => Promise<void>;
   onOpenWorlds: () => void;
+  /** Navigate to the Email page (where Priority alerts live). */
+  onOpenEmail: () => void;
 }
 
 // A settings section. Flat by default (content always shown); pass
@@ -381,7 +383,7 @@ export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, onClearTopics, sections,
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, hiddenTopicIds,
-  accountEmail, onSignOut, onOpenWorlds,
+  accountEmail, onSignOut, onOpenWorlds, onOpenEmail,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -397,6 +399,13 @@ export default function SettingsView({
       if (autostartOn) { await disable(); } else { await enable(); }
       setAutostartOn(v => !v);
     } catch (e) { console.error('Autostart error:', e); }
+  };
+
+  // Compact selects for the low-key weekly-review control tucked into Help.
+  const reviewSelectStyle: React.CSSProperties = {
+    background: t.input, border: `1px solid ${t.border}`, borderRadius: '7px',
+    padding: '0.3rem 0.5rem', color: t.text, fontSize: '0.75rem',
+    fontFamily: 'inherit', outline: 'none',
   };
 
   return (
@@ -422,7 +431,7 @@ export default function SettingsView({
       </button>
 
       <Block title="Bozz Plus" t={t} icon={Sparkles}>
-        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} />
+        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} onOpenEmail={onOpenEmail} />
       </Block>
 
       <Block title="Appearance" t={t} icon={Palette} collapsible>
@@ -502,41 +511,6 @@ export default function SettingsView({
         </div>
       </Block>
 
-      <Block title="Weekly review" t={t} icon={NotebookPen}>
-        <Field label="Day" hint="When the week-ending review becomes available" t={t}>
-          <select
-            value={reviewSettings.dayOfWeek}
-            onChange={e => onReviewSettingsChange({ ...reviewSettings, dayOfWeek: Number(e.target.value) })}
-            aria-label="Review day"
-            style={{
-              background: t.input, border: `1px solid ${t.border}`, borderRadius: '8px',
-              padding: '0.4rem 0.6rem', color: t.text, fontSize: '0.8rem',
-              fontFamily: 'inherit', outline: 'none',
-            }}
-          >
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
-              <option key={d} value={i}>{d}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Time" t={t}>
-          <select
-            value={reviewSettings.hour}
-            onChange={e => onReviewSettingsChange({ ...reviewSettings, hour: Number(e.target.value) })}
-            aria-label="Review hour"
-            style={{
-              background: t.input, border: `1px solid ${t.border}`, borderRadius: '8px',
-              padding: '0.4rem 0.6rem', color: t.text, fontSize: '0.8rem',
-              fontFamily: 'inherit', outline: 'none',
-            }}
-          >
-            {Array.from({ length: 24 }, (_, h) => (
-              <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>
-            ))}
-          </select>
-        </Field>
-      </Block>
-
       <Block title="Launcher" t={t} icon={Power}>
         <Field label="Launch Bozz when you open your laptop" t={t}>
           <Toggle on={autostartOn} onClick={toggleAutostart} t={t} disabled={checking} />
@@ -568,6 +542,37 @@ export default function SettingsView({
             a="Open the Email page and tap Priority alerts to watch senders or keywords. Bozz pings you when a matching email lands, even when it is tucked away in the tray." />
           <Faq t={t} q="Is my data private?"
             a="Your data syncs across your own devices and is never sold. You can clear topics anytime below, and reset the look without touching your data." />
+
+          {/* Weekly review — intentionally low-key: a small timing control, not a headline feature */}
+          <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1rem' }}>
+            <div style={{ fontSize: '0.84rem', color: t.text, fontWeight: 500, marginBottom: '0.2rem' }}>Weekly review</div>
+            <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5, marginBottom: '0.55rem' }}>
+              A calm week-ending summary. Pick when it becomes available — that's all there is to set.
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <select
+                value={reviewSettings.dayOfWeek}
+                onChange={e => onReviewSettingsChange({ ...reviewSettings, dayOfWeek: Number(e.target.value) })}
+                aria-label="Weekly review day"
+                style={reviewSelectStyle}
+              >
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
+                  <option key={d} value={i}>{d}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: '0.74rem', color: t.textDim }}>at</span>
+              <select
+                value={reviewSettings.hour}
+                onChange={e => onReviewSettingsChange({ ...reviewSettings, hour: Number(e.target.value) })}
+                aria-label="Weekly review time"
+                style={reviewSelectStyle}
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </Block>
 

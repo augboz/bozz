@@ -226,11 +226,6 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <span style={{ fontSize: '0.82rem', color: t.text }}>Sound</span>
-          <Toggle on={settings.sound} onClick={() => patch({ sound: !settings.sound })} t={t} />
-        </div>
-
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.82rem', color: t.text }}>Quiet hours</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -259,12 +254,14 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
         <button onClick={runTest} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
           <Bell size={13} strokeWidth={1.6} /> Test notification
         </button>
-        {testState === 'ok' && <span style={{ fontSize: '0.72rem', color: t.doneAccent }}>Sent ✓</span>}
-        {testState === 'blocked' && (
-          <span style={{ fontSize: '0.72rem', color: t.alert }}>
-            {isTauri() ? 'Notifications are blocked at the OS level.' : 'Only available in the desktop app.'}
-          </span>
-        )}
+        <span role="status" aria-live="polite">
+          {testState === 'ok' && <span style={{ fontSize: '0.72rem', color: t.doneAccent }}>Sent ✓</span>}
+          {testState === 'blocked' && (
+            <span style={{ fontSize: '0.72rem', color: t.alert }}>
+              {isTauri() ? 'Notifications are blocked at the OS level.' : 'Only available in the desktop app.'}
+            </span>
+          )}
+        </span>
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ export async function loadEntitlement(): Promise<Entitlement> {
       const e = JSON.parse(r.value) as Entitlement;
       // Expired subscription → downgrade to free.
       if (e.expiresAt && e.expiresAt < Date.now()) {
-        cached = FREE_ENTITLEMENT;
+        cached = { ...FREE_ENTITLEMENT };
       } else {
         cached = e;
       }
@@ -74,7 +74,7 @@ export async function setEntitlement(e: Entitlement): Promise<void> {
 
 /** Clear the stored entitlement (downgrade to free). */
 export async function clearEntitlement(): Promise<void> {
-  cached = FREE_ENTITLEMENT;
+  cached = { ...FREE_ENTITLEMENT };
   try { await deleteItem(ENTITLEMENT_KEY); } catch { /* ignore */ }
 }
 

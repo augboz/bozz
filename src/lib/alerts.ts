@@ -61,7 +61,8 @@ export function matchRules(msg: EmailMessage, rules: AlertRule[]): AlertRule | n
   for (const r of rules) {
     if (!r.enabled) continue;
     if (r.unreadOnly && !msg.unread) continue;
-    if (r.accountEmails.length && !r.accountEmails.includes(msg.accountEmail)) continue;
+    if (r.accountEmails.length
+        && !r.accountEmails.some(e => e.toLowerCase() === msg.accountEmail.toLowerCase())) continue;
     const v = r.value.trim().toLowerCase();
     if (!v) continue;
     if (r.type === 'sender') {
@@ -111,6 +112,11 @@ async function ensurePermission(): Promise<boolean> {
   }
 }
 
+// Note: the notification sound is controlled by the OS, not by us. The Tauri
+// plugin only lets us set a *custom* sound file (no portable "silent" flag for
+// desktop), so PriorityAlertSettings.sound is kept for forward-compat but is
+// not surfaced as a toggle — shipping a control that can't take effect would
+// break the calm/honest brand rule.
 export async function notify(m: EmailMessage, rule: AlertRule): Promise<void> {
   if (!(await ensurePermission())) return;
   try {

@@ -19,22 +19,22 @@ import { setEntitlement, BETA_UNLOCK } from './plus';
 export type Product = 'worldsLifetime' | 'plusMonthly' | 'plusAnnual';
 export type DonateMethod = 'sponsors' | 'kofi' | 'tip';
 
-// External links. ALL EMPTY until the real pages/handles exist — an empty value
-// means "not live yet", so the UI shows a calm "coming soon" instead of opening
-// a dead URL (a non-resolving domain gets hijacked by the browser's default
-// search, which is how a placeholder produced a 403). Fill these in when the
-// website + merchant-of-record + sponsor handles are real:
-//   plans:    the promo site's pricing page, e.g. https://yoursite.com/plus
-//   sponsors: https://github.com/sponsors/<handle>
-//   kofi:     https://ko-fi.com/<handle>
+// External links. An empty value means "not live yet", so the UI shows a calm
+// "coming soon" instead of opening a dead URL (a non-resolving domain gets
+// hijacked by the browser's default search, which is how a placeholder produced
+// a 403). Fill these in when the merchant-of-record + sponsor handles are real:
+//   sponsors: https://github.com/sponsors/<handle>  (needs GitHub Sponsors enabled)
+//   kofi:     https://ko-fi.com/<handle>            (needs a Ko-fi account)
+// `plans` and `github` are already live (public website + public repo).
 const LINKS: Record<string, string> = {
   plans: 'https://bozz-app.vercel.app/plus.html',
+  github: 'https://github.com/augboz/bozz',
   worldsLifetime: '',
   plusMonthly: '',
   plusAnnual: '',
   managePortal: '',
   sponsors: '',
-  kofi: '',
+  kofi: 'https://ko-fi.com/augboz',
   tip: '',
 };
 
@@ -75,6 +75,11 @@ export function openManageSubscription(): boolean {
 /** Open a donation link. Returns false if not live yet. */
 export function openDonate(method: DonateMethod): boolean {
   return open(LINKS[method]);
+}
+
+/** Open the public GitHub repo — zero-setup support (a star costs nothing). */
+export function openGitHub(): boolean {
+  return open(LINKS.github);
 }
 
 /**

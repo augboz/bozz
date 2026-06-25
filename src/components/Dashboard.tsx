@@ -1574,6 +1574,7 @@ export default function Dashboard() {
               onReplayWalkthroughs={replayWalkthroughs}
               topics={topics}
               onOpenWorlds={() => setActiveSection('worlds')}
+              onOpenEmail={() => setActiveSection('email')}
             />
           )}
           </ErrorBoundary>
