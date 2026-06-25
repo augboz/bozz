@@ -10,7 +10,8 @@ import React from 'react';
 
 export type BrandId =
   | 'gmail' | 'outlook' | 'icloud' | 'imap' | 'gcal' | 'acal'
-  | 'spotify' | 'notion' | 'gfit' | 'ahealth' | 'whatsapp';
+  | 'spotify' | 'notion' | 'gfit' | 'ahealth' | 'whatsapp'
+  | 'strava' | 'zoom';
 
 const LOGOS: Record<BrandId, (s: number) => React.ReactNode> = {
   // Gmail — multicolour envelope.
@@ -117,6 +118,23 @@ const LOGOS: Record<BrandId, (s: number) => React.ReactNode> = {
         fill="#fff"
         d="M9.2 7.3c-.18-.45-.37-.46-.55-.47h-.47c-.16 0-.43.06-.66.31-.23.25-.86.84-.86 2.05 0 1.2.88 2.37 1 2.53.13.16 1.72 2.73 4.25 3.72 2.1.83 2.53.67 2.98.62.46-.04 1.46-.59 1.66-1.16.21-.57.21-1.06.15-1.16-.06-.1-.23-.16-.47-.29-.25-.12-1.45-.71-1.67-.79-.22-.08-.39-.12-.55.13-.16.25-.63.79-.77.95-.14.16-.28.18-.53.06-.25-.12-1.04-.38-1.97-1.21-.73-.65-1.22-1.45-1.36-1.7-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.55-1.33-.76-1.82z"
       />
+    </svg>
+  ),
+
+  // Strava — orange chevron mark.
+  strava: (s) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#FC4C02" d="M10.4 3 4.8 14.1h3.32L10.4 9.6l2.28 4.5H16z" />
+      <path fill="#FC8B5E" d="M13.2 14.1 11.9 16.7l-1.3-2.6H8.3l3.6 6.9 3.6-6.9z" />
+    </svg>
+  ),
+
+  // Zoom — blue rounded tile with a white video camera.
+  zoom: (s) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1.5" y="3" width="21" height="18" rx="5" fill="#2D8CFF" />
+      <rect x="5.2" y="8.4" width="9" height="7.2" rx="1.8" fill="#fff" />
+      <path d="M15 11.1l3.8-2.1v6l-3.8-2.1z" fill="#fff" />
     </svg>
   ),
 };

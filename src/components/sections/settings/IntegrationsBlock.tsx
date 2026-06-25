@@ -73,6 +73,8 @@ const ENV = {
   notionRedirectBase:   import.meta.env.VITE_NOTION_REDIRECT_URL    as string | undefined,
   gcalClientId:         import.meta.env.VITE_GCAL_CLIENT_ID         as string | undefined,
   gfitClientId:         import.meta.env.VITE_GFIT_CLIENT_ID         as string | undefined,
+  stravaClientId:       import.meta.env.VITE_STRAVA_CLIENT_ID       as string | undefined,
+  zoomClientId:         import.meta.env.VITE_ZOOM_CLIENT_ID         as string | undefined,
   /** Base URL of the self-hosted WhatsApp bridge, e.g. https://wa.yourserver.com */
   waBackendUrl:         import.meta.env.VITE_WA_BACKEND_URL         as string | undefined,
   waBackendKey:         import.meta.env.VITE_WA_BACKEND_KEY         as string | undefined,
@@ -104,6 +106,10 @@ const inp = (t: Theme): React.CSSProperties => ({
   padding: '0.55rem 0.75rem', color: t.text, fontSize: '0.82rem',
   fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box',
 });
+
+// Layout mode — Card reads this so grid cards stretch to a uniform height (the
+// Apps page lays the same cards out in a grid; Settings stacks them in a list).
+const CardLayout = React.createContext<'list' | 'grid'>('list');
 
 // ── ServiceCard ───────────────────────────────────────────────────────────────
 
@@ -224,6 +230,7 @@ function Card({
 }) {
   const [hover, setHover] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const grid = React.useContext(CardLayout) === 'grid';
   const hasDetails = React.Children.toArray(details).length > 0;
   return (
     <div
@@ -231,10 +238,13 @@ function Card({
       onMouseLeave={() => setHover(false)}
       style={{
         border: `1px solid ${hover ? t.borderStrong : t.border}`, borderRadius: '14px',
-        padding: '0.9rem 1rem', marginBottom: '0.65rem',
+        padding: '0.9rem 1rem', marginBottom: grid ? 0 : '0.65rem',
         background: hover ? t.bgAlt : 'transparent',
         transform: hover ? 'translateY(-1px)' : 'none',
         transition: 'border-color 0.25s, background 0.25s, transform 0.25s',
+        // In the grid, fill the cell so every card in a row is the same height,
+        // with a baseline min-height so collapsed cards read as a uniform set.
+        ...(grid ? { height: '100%', minHeight: '112px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' as const } : {}),
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <ServiceIcon brand={brand} color={color} letter={letter} />
@@ -311,8 +321,11 @@ function DisconnectBtn({ t, onClick }: { t: Theme; onClick: () => void }) {
   );
 }
 
-/** Shown when the env var for a service hasn't been added yet. */
+/** Shown when the env var for a service hasn't been added yet. Hidden in the
+ *  grid (Apps page) so cards stay a uniform size — the hint still shows in the
+ *  Settings list, where a developer wires env vars. */
 function DevNote({ t, vars }: { t: Theme; vars: string[] }) {
+  if (React.useContext(CardLayout) === 'grid') return null;
   return (
     <div style={{
       marginTop: '0.7rem', fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6,
@@ -689,6 +702,7 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   const [ready, setReady] = useState(false);
 
   const oauthReady = Boolean(ENV.notionClientId && ENV.notionRedirectBase);
+  const grid = React.useContext(CardLayout) === 'grid';
 
   const persist = useCallback(async (cfg: NotionConfig) => {
     await saveAndSync('notionWidget', cfg);
@@ -816,11 +830,10 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
         </div>
       )}
 
-      {/* Manual integration-token connect. Always offered when not connected:
-          this is the path that works without a public-integration OAuth
-          redirect URI being registered, so it's the reliable fallback when the
-          one-click "Connect" flow returns an invalid_redirect_uri error. */}
-      {!isConnected && (
+      {/* Manual integration-token connect. Offered when not connected — but only
+          in the Settings list, not the Apps grid (keeps grid cards uniform; the
+          one-click OAuth Connect button is the grid path). */}
+      {!isConnected && !grid && (
         <div style={{ marginTop: '0.75rem', paddingTop: '0.7rem', borderTop: `1px solid ${t.border}` }}>
           {oauthReady && !showManualToken ? (
             <button
@@ -934,6 +947,144 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
           )}
         </div>
       )}
+    </Card>
+  );
+}
+
+// ── Strava / Zoom (generic OAuth-window connectors) ──────────────────────────
+// Both providers exchange their code with a client secret, so (like Notion) the
+// token round-trip goes through the Vercel proxy. Same UX/structure as every
+// other connector; gated on an env client ID until the founder adds one.
+
+/** Generic in-app OAuth-window flow — same approach as connectNotionOAuth:
+ *  open the provider's consent page in an isolated window, capture the code on
+ *  the local Rust server via the Vercel redirect proxy, exchange it server-side
+ *  at /api/<provider>-token. Returns the access token. */
+async function connectOAuthWindow(opts: {
+  provider: string; clientId: string; authorizeBase: string; scope: string;
+  redirectBase: string; extraAuthParams?: Record<string, string>;
+}): Promise<string> {
+  const redirectUri = `${opts.redirectBase.replace(/\/$/, '')}/api/oauth-redirect`;
+  const state = randomString(24);
+
+  let portReject: (e: Error) => void = () => {};
+  const portPromise = new Promise<void>((resolve, reject) => {
+    portReject = reject;
+    const timer = setTimeout(() => reject(new Error('OAuth timed out — click Try again')), 8000);
+    let unlisten: (() => void) | null = null;
+    tauriListen<number>('oauth:port', () => { clearTimeout(timer); if (unlisten) unlisten(); resolve(); }).then(fn => { unlisten = fn; });
+  });
+  const runPromise = tauriInvoke<Record<string, string>>('oauth_run', { port: NOTION_LOCAL_PORT });
+  runPromise.catch((e: unknown) => portReject(new Error(String(e))));
+  await portPromise;
+
+  const authUrl = opts.authorizeBase + '?' + new URLSearchParams({
+    client_id: opts.clientId, response_type: 'code', redirect_uri: redirectUri,
+    scope: opts.scope, state, ...(opts.extraAuthParams ?? {}),
+  }).toString();
+  const win = await tauriWebviewWindow(`${opts.provider}-oauth-${Date.now()}`, {
+    url: authUrl, title: `Connect ${opts.provider}`, width: 540, height: 740, center: true, resizable: true,
+  });
+  void runPromise.finally(() => { void win.close(); });
+
+  const params = await runPromise;
+  if (params.error) throw new Error(`${opts.provider}: ${params.error}`);
+  if (!params.code || params.state !== state) throw new Error('OAuth failed — please try again');
+
+  const res = await apiFetch(`${API_BASE}/api/${opts.provider}-token`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: params.code, redirect_uri: redirectUri }),
+  });
+  if (!res.ok) throw new Error(`${opts.provider} token exchange failed: ${res.status}`);
+  const json = (await res.json()) as { access_token?: string };
+  if (!json.access_token) throw new Error(`${opts.provider} returned no token`);
+  return json.access_token;
+}
+
+function StravaCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: boolean) => void }) {
+  const [connected, setConnected] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    getItem('stravaAccount').then(r => { if (r?.value) { setConnected(true); onConnectedChange?.(true); } setReady(true); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const connect = async () => {
+    if (!ENV.stravaClientId) { setError('Strava needs setup — add VITE_STRAVA_CLIENT_ID and an /api/strava-token endpoint.'); return; }
+    if (isWeb()) { setError('Connect requires the desktop app.'); return; }
+    setBusy(true); setError(null);
+    try {
+      const token = await connectOAuthWindow({
+        provider: 'strava', clientId: ENV.stravaClientId,
+        authorizeBase: 'https://www.strava.com/oauth/authorize',
+        scope: 'read,activity:read', redirectBase: API_BASE,
+        extraAuthParams: { approval_prompt: 'auto' },
+      });
+      await saveAndSync('stravaAccount', { token, connectedAt: Date.now() });
+      setConnected(true); onConnectedChange?.(true);
+    } catch (e) { setError(String(e)); }
+    setBusy(false);
+  };
+
+  const disconnect = async () => { await deleteItem('stravaAccount'); setConnected(false); onConnectedChange?.(false); };
+
+  if (!ready) return null;
+  return (
+    <Card
+      t={t} brand="strava" color="#FC4C02" letter="S" name="Strava"
+      status={connected ? '● Connected' : 'Your runs, rides & activity'}
+      action={connected
+        ? <DisconnectBtn t={t} onClick={disconnect} />
+        : <ConnectBtn t={t} busy={busy} onClick={connect} errored={Boolean(error)} />}
+    >
+      {!ENV.stravaClientId && <DevNote t={t} vars={['VITE_STRAVA_CLIENT_ID']} />}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
+    </Card>
+  );
+}
+
+function ZoomCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: boolean) => void }) {
+  const [connected, setConnected] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    getItem('zoomAccount').then(r => { if (r?.value) { setConnected(true); onConnectedChange?.(true); } setReady(true); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const connect = async () => {
+    if (!ENV.zoomClientId) { setError('Zoom needs setup — add VITE_ZOOM_CLIENT_ID and an /api/zoom-token endpoint.'); return; }
+    if (isWeb()) { setError('Connect requires the desktop app.'); return; }
+    setBusy(true); setError(null);
+    try {
+      const token = await connectOAuthWindow({
+        provider: 'zoom', clientId: ENV.zoomClientId,
+        authorizeBase: 'https://zoom.us/oauth/authorize', scope: '', redirectBase: API_BASE,
+      });
+      await saveAndSync('zoomAccount', { token, connectedAt: Date.now() });
+      setConnected(true); onConnectedChange?.(true);
+    } catch (e) { setError(String(e)); }
+    setBusy(false);
+  };
+
+  const disconnect = async () => { await deleteItem('zoomAccount'); setConnected(false); onConnectedChange?.(false); };
+
+  if (!ready) return null;
+  return (
+    <Card
+      t={t} brand="zoom" color="#2D8CFF" letter="Z" name="Zoom"
+      status={connected ? '● Connected' : 'Your meetings on the dashboard'}
+      action={connected
+        ? <DisconnectBtn t={t} onClick={disconnect} />
+        : <ConnectBtn t={t} busy={busy} onClick={connect} errored={Boolean(error)} />}
+    >
+      {!ENV.zoomClientId && <DevNote t={t} vars={['VITE_ZOOM_CLIENT_ID']} />}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
     </Card>
   );
 }
@@ -1598,7 +1749,7 @@ export default function IntegrationsBlock({
 }: IntegrationsProps) {
   const bank = colorBank ?? [];
   // Track connected state for storage-based services (loaded async)
-  const [localConn, setLocalConn] = useState({ spotify: false, notion: false, icloud: false, imap: false, whatsapp: false });
+  const [localConn, setLocalConn] = useState({ spotify: false, notion: false, icloud: false, imap: false, whatsapp: false, strava: false, zoom: false });
 
   // Determine connected state for every service
   const isConnected = {
@@ -1613,6 +1764,8 @@ export default function IntegrationsBlock({
     icloud:    localConn.icloud,
     imap:      localConn.imap,
     whatsapp:  localConn.whatsapp,
+    strava:    localConn.strava,
+    zoom:      localConn.zoom,
   };
 
   // Shared card props
@@ -1637,6 +1790,8 @@ export default function IntegrationsBlock({
   const spotifyCard = <SpotifyCard key="spotify" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, spotify: v }))} />;
   const notionCard    = <NotionCard    key="notion"    t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, notion: v }))} />;
   const whatsappCard  = <WhatsAppCard  key="whatsapp"  t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, whatsapp: v }))} />;
+  const stravaCard = <StravaCard key="strava" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, strava: v }))} />;
+  const zoomCard   = <ZoomCard   key="zoom"   t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, zoom: v }))} />;
   const gcalCard   = <GoogleCalendarCard  key="gcal"    t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} />;
   const acalCard   = <AppleCalendarCard   key="acal"    t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} />;
   const gfitCard   = <GoogleFitCard       key="gfit"    t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
@@ -1656,6 +1811,8 @@ export default function IntegrationsBlock({
     { id: 'acal',    name: 'Apple Calendar',  keywords: 'apple icloud calendar caldav', node: acalCard },
     { id: 'spotify', name: 'Spotify',         keywords: 'music',                      node: spotifyCard },
     { id: 'notion',  name: 'Notion',          keywords: 'notes docs',                 node: notionCard },
+    { id: 'strava',  name: 'Strava',          keywords: 'fitness sport running cycling exercise health', node: stravaCard },
+    { id: 'zoom',    name: 'Zoom',            keywords: 'meetings video calls conference',               node: zoomCard },
     { id: 'gfit',    name: 'Google Fit',      keywords: 'google health fitness',      node: gfitCard },
     { id: 'ahealth', name: 'Apple Health',    keywords: 'apple health fitness',       node: ahealthCard },
     { id: 'whatsapp', name: 'WhatsApp',       keywords: 'messaging chat meta',        node: whatsappCard },
@@ -1669,10 +1826,11 @@ export default function IntegrationsBlock({
   const available = allCards.filter(c => !HIDDEN_INTEGRATIONS.has(c.id) && !isConnected[c.id] && match(c));
 
   const gridStyle: React.CSSProperties | undefined = variant === 'grid'
-    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.65rem', alignItems: 'start' }
+    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.65rem', alignItems: 'stretch' }
     : undefined;
 
   return (
+    <CardLayout.Provider value={variant}>
     <div>
       {connected.length > 0 && (
         <>
@@ -1692,5 +1850,6 @@ export default function IntegrationsBlock({
         </div>
       )}
     </div>
+    </CardLayout.Provider>
   );
 }
