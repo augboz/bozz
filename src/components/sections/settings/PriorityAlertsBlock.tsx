@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Bell, Plus, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import type { AlertRule, OAuthAccount, PriorityAlertSettings, Theme } from '../../../lib/types';
-import { testNotification } from '../../../lib/alerts';
 import { isPlus, FREE_LIMITS } from '../../../lib/plus';
 import { isTauri } from '../../../lib/platform';
 
@@ -46,7 +45,6 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
   const [value, setValue] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(true);
   const [scope, setScope] = useState<string>(''); // '' = all accounts
-  const [testState, setTestState] = useState<null | 'ok' | 'blocked'>(null);
 
   const plus = isPlus();
   const ruleLimitReached = !plus && settings.rules.length >= FREE_LIMITS.alertRules;
@@ -85,12 +83,6 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
     patch({ rules: settings.rules.map(r => r.id === id ? { ...r, ...p } : r) });
   const removeRule = (id: string) =>
     patch({ rules: settings.rules.filter(r => r.id !== id) });
-
-  const runTest = async () => {
-    const ok = await testNotification();
-    setTestState(ok ? 'ok' : 'blocked');
-    setTimeout(() => setTestState(null), 4000);
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
@@ -249,20 +241,6 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
         </div>
       </div>
 
-      {/* Test */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-        <button onClick={runTest} style={{ ...ghost, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-          <Bell size={13} strokeWidth={1.6} /> Test notification
-        </button>
-        <span role="status" aria-live="polite">
-          {testState === 'ok' && <span style={{ fontSize: '0.72rem', color: t.doneAccent }}>Sent ✓</span>}
-          {testState === 'blocked' && (
-            <span style={{ fontSize: '0.72rem', color: t.alert }}>
-              {isTauri() ? 'Notifications are blocked at the OS level.' : 'Only available in the desktop app.'}
-            </span>
-          )}
-        </span>
-      </div>
     </div>
   );
 }

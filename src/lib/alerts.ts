@@ -130,18 +130,6 @@ export async function notify(m: EmailMessage, rule: AlertRule): Promise<void> {
   }
 }
 
-/** Fire a test notification so the user can confirm OS permission is granted. */
-export async function testNotification(): Promise<boolean> {
-  if (!(await ensurePermission())) return false;
-  try {
-    const { sendNotification } = await import('@tauri-apps/plugin-notification');
-    sendNotification({ title: 'Bozz', body: 'Priority alerts are working ✓' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // ── Watcher ──────────────────────────────────────────────────────────────────
 
 export interface AlertDeps {
