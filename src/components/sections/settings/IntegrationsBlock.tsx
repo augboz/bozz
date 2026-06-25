@@ -216,30 +216,61 @@ function AccountRow({
 }
 
 /** Wrapper card for each service.
- *  `details` is the connected-account info (email, sync time, …) — it's hidden
- *  behind a chevron so every card stays the same height; click to expand.
- *  `children` (connect forms, errors, dev notes) always render. */
+ *
+ *  Not-yet-connected cards show their `action` (Connect) inline in the header.
+ *
+ *  Connected cards (`connected`) read as compact as the available ones: the
+ *  header shows only the name + status + a dropdown arrow, and a light-green
+ *  border marks them as connected. Everything else — the `action`
+ *  (Add account / Disconnect), the account-detail rows (`details`) and any
+ *  forms/errors (`children`) — collapses behind the arrow. */
 function Card({
-  t, color, letter, brand, name, status, action, details,
+  t, color, letter, brand, name, status, action, details, connected,
   children,
 }: {
   t: Theme; color: string; letter: string; brand?: BrandId; name: string;
   status?: React.ReactNode; action?: React.ReactNode;
   details?: React.ReactNode;
+  connected?: boolean;
   children?: React.ReactNode;
 }) {
-  const [hover, setHover] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
   const grid = React.useContext(CardLayout) === 'grid';
+  const [hover, setHover] = React.useState(false);
+  // Connected cards collapse their body behind the arrow. In the cramped Apps
+  // grid they start collapsed (clean, uniform); in the roomy Settings list they
+  // start open so managing accounts stays one glance away.
+  const [open, setOpen] = React.useState(!grid);
   const hasDetails = React.Children.toArray(details).length > 0;
+
+  const chevron = (
+    <button
+      onClick={() => setOpen(o => !o)}
+      aria-expanded={open}
+      aria-label={open ? 'Hide account details' : 'Show account details'}
+      title={open ? 'Hide account details' : 'Show account details'}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted,
+        padding: '0.25rem', display: 'flex', flexShrink: 0,
+      }}
+    >
+      <ChevronDown
+        size={16} strokeWidth={1.7}
+        style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s' }}
+      />
+    </button>
+  );
+
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        border: `1px solid ${hover ? t.borderStrong : t.border}`, borderRadius: '14px',
+        border: `1px solid ${connected
+          ? (hover ? t.doneAccent : t.doneBorder)
+          : (hover ? t.borderStrong : t.border)}`,
+        borderRadius: '14px',
         padding: '0.9rem 1rem', marginBottom: grid ? 0 : '0.65rem',
-        background: hover ? t.bgAlt : 'transparent',
+        background: hover ? (connected ? t.doneBg : t.bgAlt) : 'transparent',
         transform: hover ? 'translateY(-1px)' : 'none',
         transition: 'border-color 0.25s, background 0.25s, transform 0.25s',
         // In the grid, fill the cell so every card in a row is the same height,
@@ -256,27 +287,34 @@ function Card({
             </div>
           )}
         </div>
-        {action}
-        {hasDetails && (
-          <button
-            onClick={() => setOpen(o => !o)}
-            aria-expanded={open}
-            aria-label={open ? 'Hide account details' : 'Show account details'}
-            title={open ? 'Hide account details' : 'Show account details'}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted,
-              padding: '0.25rem', display: 'flex', flexShrink: 0,
-            }}
-          >
-            <ChevronDown
-              size={16} strokeWidth={1.7}
-              style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s' }}
-            />
-          </button>
+        {/* Connected → a single arrow reveals the body. Not connected → the
+            inline Connect action (plus an arrow only if there are details). */}
+        {connected ? chevron : (
+          <>
+            {action}
+            {hasDetails && chevron}
+          </>
         )}
       </div>
-      {hasDetails && open && <div>{details}</div>}
-      {children}
+
+      {connected ? (
+        open && (
+          <div>
+            {details}
+            {action && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.7rem' }}>
+                {action}
+              </div>
+            )}
+            {children}
+          </div>
+        )
+      ) : (
+        <>
+          {hasDetails && open && <div>{details}</div>}
+          {children}
+        </>
+      )}
     </div>
   );
 }
@@ -366,7 +404,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
 
   return (
     <Card
-      t={t} brand="gmail" color="#EA4335" letter="G" name="Gmail"
+      t={t} brand="gmail" color="#EA4335" letter="G" name="Gmail" connected={connected.length > 0}
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
@@ -422,7 +460,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
 
   return (
     <Card
-      t={t} brand="outlook" color="#0078D4" letter="M" name="Outlook / Hotmail"
+      t={t} brand="outlook" color="#0078D4" letter="M" name="Outlook / Hotmail" connected={connected.length > 0}
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
@@ -513,7 +551,7 @@ function SpotifyCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (
 
   return (
     <Card
-      t={t} brand="spotify" color="#1DB954" letter="S" name="Spotify"
+      t={t} brand="spotify" color="#1DB954" letter="S" name="Spotify" connected={Boolean(account)}
       status={account ? `● ${account.displayName}` : 'Now playing widget'}
       action={account
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -802,7 +840,7 @@ function NotionCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
 
   return (
     <Card
-      t={t} brand="notion" color="#3d3d3d" letter="N" name="Notion"
+      t={t} brand="notion" color="#3d3d3d" letter="N" name="Notion" connected={isConnected}
       status={isConnected
         ? `● Connected · ${selectedIds.size} page${selectedIds.size !== 1 ? 's' : ''} in widget`
         : 'View your workspace pages'}
@@ -1034,7 +1072,7 @@ function StravaCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   if (!ready) return null;
   return (
     <Card
-      t={t} brand="strava" color="#FC4C02" letter="S" name="Strava"
+      t={t} brand="strava" color="#FC4C02" letter="S" name="Strava" connected={connected}
       status={connected ? '● Connected' : 'Your runs, rides & activity'}
       action={connected
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -1077,7 +1115,7 @@ function ZoomCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: 
   if (!ready) return null;
   return (
     <Card
-      t={t} brand="zoom" color="#2D8CFF" letter="Z" name="Zoom"
+      t={t} brand="zoom" color="#2D8CFF" letter="Z" name="Zoom" connected={connected}
       status={connected ? '● Connected' : 'Your meetings on the dashboard'}
       action={connected
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -1162,7 +1200,7 @@ function ICloudCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
 
   return (
     <Card
-      t={t} brand="icloud" color="#555" letter="" name="iCloud Mail"
+      t={t} brand="icloud" color="#555" letter="" name="iCloud Mail" connected={accounts.length > 0}
       status={accounts.length ? `${accounts.length} account${accounts.length > 1 ? 's' : ''} connected` : 'Sync your iCloud inbox'}
       action={step === 'idle'
         ? <ConnectBtn t={t} onClick={openApple} label={accounts.length ? 'Add account' : 'Connect'} />
@@ -1314,7 +1352,7 @@ function ImapCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: 
 
   return (
     <Card
-      t={t} brand="imap" color="#6B7280" letter="@" name="Other inbox"
+      t={t} brand="imap" color="#6B7280" letter="@" name="Other inbox" connected={accounts.length > 0}
       status={accounts.length
         ? `${accounts.length} account${accounts.length > 1 ? 's' : ''} connected`
         : 'Yahoo, Fastmail, Zoho, any IMAP'}
@@ -1410,7 +1448,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
 
   return (
     <Card
-      t={t} brand="gcal" color="#4285F4" letter="G" name="Google Calendar"
+      t={t} brand="gcal" color="#4285F4" letter="G" name="Google Calendar" connected={connected.length > 0}
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your Google calendars'}
       action={configured
         ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
@@ -1484,7 +1522,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
 
   return (
     <Card
-      t={t} brand="acal" color="#555" letter="" name="Apple Calendar"
+      t={t} brand="acal" color="#555" letter="" name="Apple Calendar" connected={connected.length > 0}
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your iCloud calendars'}
       action={!showForm
         ? <ConnectBtn t={t} onClick={() => { tauriOpenUrl('https://appleid.apple.com/account/manage'); setShowForm(true); }} label={connected.length ? 'Add account' : 'Connect'} />
@@ -1553,7 +1591,7 @@ function GoogleFitCard({ t, connections, onChange }: {
 
   return (
     <Card
-      t={t} brand="gfit" color="#4285F4" letter="G" name="Google Fit"
+      t={t} brand="gfit" color="#4285F4" letter="G" name="Google Fit" connected={connected.length > 0}
       status={connected.length ? '● Connected — steps & sleep synced' : 'Sync steps, sleep & activity'}
       action={connected.length
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -1579,7 +1617,7 @@ function AppleHealthCard({ t, connections, onChange }: {
 
   return (
     <Card
-      t={t} brand="ahealth" color="#fc3c44" letter="" name="Apple Health"
+      t={t} brand="ahealth" color="#fc3c44" letter="" name="Apple Health" connected={connected.length > 0}
       status={connected.length ? '● Connected' : 'Steps, sleep & heart rate from iPhone'}
       action={connected.length
         ? <DisconnectBtn t={t} onClick={disconnect} />
@@ -1684,7 +1722,7 @@ function WhatsAppCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: 
 
   return (
     <Card
-      t={t} brand="whatsapp" color="#25D366" letter="W" name="WhatsApp"
+      t={t} brand="whatsapp" color="#25D366" letter="W" name="WhatsApp" connected={connected}
       status={connected
         ? `● ${phone ? `+${phone}` : 'Connected'}`
         : scanning ? 'Scan the QR code with your phone' : 'Recent messages widget'}
