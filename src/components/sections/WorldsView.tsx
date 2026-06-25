@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ArrowLeft, Check, RotateCcw, Volume2, VolumeX, X, Sparkles } from 'lucide-react';
-import type { AppearancePrefs, BozzWorld, Theme, Topic, TopicFolder, WorldScope } from '../../lib/types';
+import type { AppearancePrefs, BozzWorld, Theme, Topic, TopicFolder, WidgetType, WorldScope } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import {
   BUNDLED_WORLDS, applyWorld, revertToDefault, canApply,
   worldToTopic, worldTopicPatch, worldToFolder,
 } from '../../lib/worlds';
+import { WIDGET_REGISTRY } from '../widgets/registry';
 import { FONT_STACK } from '../../lib/appearance';
 import { openPlansPage } from '../../lib/billing';
 import {
@@ -167,10 +168,10 @@ export default function WorldsView({
         {shown.map(world => {
           const active = activeId === world.id || (!activeId && world.id === 'default');
           const premium = !world.free;       // a paid-tier World (Plus)
-          // Only blur/lock a World the user genuinely can't apply. During beta
-          // canApply() is always true, so premium Worlds show crisp with a calm
-          // "Plus" pill — never a locked-looking blur over a working preview.
-          const locked = !canApply(world);
+          // Cards stay crisp — even premium ones — so the gallery reads clearly.
+          // The paid surface (the actual layout) is teased in the preview modal,
+          // not hidden behind a blur here. Premium is signalled by the Plus pill.
+          const wtypes = uniqueWidgetTypes(world);
           return (
             <button
               key={world.id}
@@ -187,22 +188,10 @@ export default function WorldsView({
               <div style={{ position: 'relative', height: '110px' }}>
                 <img
                   src={world.previewUrl} alt={world.name}
-                  style={{
-                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                    filter: locked ? 'blur(6px)' : undefined, transform: locked ? 'scale(1.1)' : undefined,
-                  }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
                 {active && (
                   <span style={badge(t.doneAccent)}><Check size={13} strokeWidth={2.5} /></span>
-                )}
-                {locked && (
-                  <span style={{
-                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.04em',
-                    textShadow: '0 1px 6px rgba(0,0,0,0.6)',
-                  }}>
-                    <Sparkles size={14} strokeWidth={2} style={{ marginRight: '0.35rem' }} /> Plus
-                  </span>
                 )}
               </div>
               <div style={{ padding: '0.7rem 0.85rem' }}>
@@ -223,6 +212,18 @@ export default function WorldsView({
                 <div style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '0.2rem', lineHeight: 1.4 }}>
                   {world.description}
                 </div>
+                {world.kind === 'template' && wtypes.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.22rem', marginTop: '0.5rem' }}>
+                    {wtypes.slice(0, 4).map(type => (
+                      <span key={type} style={{ fontSize: '0.6rem', color: t.textDim, border: `1px solid ${t.border}`, borderRadius: '999px', padding: '0.08rem 0.42rem' }}>
+                        {WIDGET_REGISTRY[type]?.label ?? type}
+                      </span>
+                    ))}
+                    {wtypes.length > 4 && (
+                      <span style={{ fontSize: '0.6rem', color: t.textDim, padding: '0.08rem 0.2rem' }}>+{wtypes.length - 4}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </button>
           );
@@ -253,11 +254,13 @@ function PreviewModal({
   topics: Topic[]; targetTopic: string; setTargetTopic: (s: string) => void;
   onAccept: () => void; onClose: () => void;
 }) {
-  const radius = SHAPE_RADIUS[world.widgetShape ?? 'rounded'];
   const font = FONT_STACK[world.font] ?? FONT_STACK.inter;
   const accent = world.accent;
   const swatches = world.colorBank.slice(0, 6);
   const hasWidgets = !!(world.topicWidgets && world.topicWidgets.length);
+  // "Whole of Bozz" applies the look only (no widgets), so preview a home mock;
+  // a topic/folder drops the actual template page. Themes have no page either way.
+  const showHome = scope === 'global' || !hasWidgets;
 
   const scopeOpts: Array<{ id: WorldScope; label: string }> = [
     { id: 'global', label: 'Whole of Bozz' },
@@ -301,23 +304,21 @@ function PreviewModal({
           </button>
         </div>
 
-        {/* Home preview mock */}
-        <div style={{ position: 'relative', height: '190px', borderRadius: '14px', overflow: 'hidden', margin: '0.9rem 0', border: `1px solid ${t.border}` }}>
-          <img src={world.background.url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          <div style={{ position: 'absolute', inset: 0, background: world.mood === 'light' ? '#f4f4f6' : '#0e0e10', opacity: world.background.dim }} />
-          {/* mock widget cards in the World's style */}
-          <div style={{ position: 'relative', display: 'flex', gap: '0.6rem', padding: '0.9rem', height: '100%', fontFamily: font }}>
-            <div style={{ flex: 2, background: 'var(--glass-bg, rgba(255,255,255,0.1))', backdropFilter: 'blur(8px)', borderRadius: radius, border: `1px solid ${accent}55`, padding: '0.7rem' }}>
-              <div style={{ width: '40%', height: '8px', borderRadius: '4px', background: accent, marginBottom: '0.5rem' }} />
-              <div style={{ width: '75%', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.4)', marginBottom: '0.35rem' }} />
-              <div style={{ width: '60%', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.3)' }} />
-            </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              <div style={{ flex: 1, background: 'var(--glass-bg, rgba(255,255,255,0.1))', backdropFilter: 'blur(8px)', borderRadius: radius, border: `1px solid ${accent}55` }} />
-              <div style={{ flex: 1, background: accent, opacity: 0.85, borderRadius: radius }} />
-            </div>
+        {/* Real layout preview — adapts to the chosen scope: a home mock for
+            "Whole of Bozz" (look only), the template's page for a topic/folder.
+            Crisp for free, teased for premium (names listed below regardless). */}
+        <div style={{ margin: '0.9rem 0' }}>
+          <MiniLayout t={t} world={world} blurred={!world.free} home={showHome} />
+          <div style={{ fontSize: '0.7rem', color: t.textDim, marginTop: '0.45rem', textAlign: 'center' }}>
+            {showHome
+              ? 'How your home looks with this World applied — the look only.'
+              : (world.free ? 'The page this drops in — tap Apply to add it.' : 'The page this drops in. Plus is free while in beta.')}
           </div>
         </div>
+
+        {/* What's inside — every widget + connected app the page installs
+            ("Whole of Bozz" applies the look only, so no page is listed). */}
+        {!showHome && <IncludesChips t={t} world={world} accent={accent} />}
 
         {/* palette + font line */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -441,4 +442,113 @@ function badge(bg: string): React.CSSProperties {
 }
 function pill(color: string, border: string): React.CSSProperties {
   return { fontSize: '0.6rem', color, border: `1px solid ${border}`, borderRadius: '999px', padding: '0.05rem 0.4rem' };
+}
+
+// ── Layout preview ────────────────────────────────────────────────────────────
+
+/** Connected-app widgets → the app they surface (shown on the "what's inside" chips). */
+const CONNECTED_APP: Partial<Record<WidgetType, string>> = {
+  recentEmails: 'Email', miniCalendar: 'Calendar', todaySchedule: 'Calendar',
+  nowPlaying: 'Spotify', notion: 'Notion', weather: 'Weather', whatsapp: 'WhatsApp',
+};
+
+/** A representative home layout for theme Worlds (which install no widgets). */
+const THEME_HOME_MOCK: Array<{ type: WidgetType; x: number; y: number; w: number; h: number }> = [
+  { type: 'today', x: 0, y: 0, w: 7, h: 12 },
+  { type: 'clock', x: 7, y: 0, w: 5, h: 5 },
+  { type: 'upcomingDeadlines', x: 7, y: 5, w: 5, h: 7 },
+  { type: 'quickAdd', x: 0, y: 12, w: 12, h: 4 },
+];
+
+/** Unique widget types in a World's layout, in placement order. */
+function uniqueWidgetTypes(world: BozzWorld): WidgetType[] {
+  const seen = new Set<WidgetType>(); const out: WidgetType[] = [];
+  for (const w of world.topicWidgets ?? []) if (!seen.has(w.type)) { seen.add(w.type); out.push(w.type); }
+  return out;
+}
+
+/**
+ * A scaled, labelled mock of the World's page — the real widget arrangement, in
+ * the World's own colours / shape / font, over its wallpaper. `blurred` is the
+ * Plus teaser: legible enough to entice, not a crisp giveaway (names still come
+ * through clearly on the "what's inside" chips below).
+ */
+function MiniLayout({ t, world, blurred, home, height = 210 }: { t: Theme; world: BozzWorld; blurred?: boolean; home?: boolean; height?: number }) {
+  const radius = SHAPE_RADIUS[world.widgetShape ?? 'rounded'];
+  const font = FONT_STACK[world.font] ?? FONT_STACK.inter;
+  const accent = world.accent;
+  const light = world.mood === 'light';
+  const tiles = (!home && world.topicWidgets && world.topicWidgets.length)
+    ? world.topicWidgets.map(w => ({ type: w.type, x: w.x, y: w.y, w: w.w, h: w.h }))
+    : THEME_HOME_MOCK;
+  const rows = Math.max(...tiles.map(tl => tl.y + tl.h), 1);
+  return (
+    <div style={{ position: 'relative', height: `${height}px`, borderRadius: '14px', overflow: 'hidden', border: `1px solid ${t.border}` }}>
+      <img src={world.background.url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <div style={{ position: 'absolute', inset: 0, background: light ? '#f4f4f6' : '#0e0e10', opacity: world.background.dim }} />
+      <div style={{ position: 'absolute', inset: 0, padding: '6px', filter: blurred ? 'blur(3.5px)' : undefined }}>
+        {tiles.map((tl, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            left: `${(tl.x / 12) * 100}%`, top: `${(tl.y / rows) * 100}%`,
+            width: `${(tl.w / 12) * 100}%`, height: `${(tl.h / rows) * 100}%`, padding: '3px',
+          }}>
+            <div style={{
+              width: '100%', height: '100%', boxSizing: 'border-box',
+              background: light ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.09)',
+              backdropFilter: 'blur(6px)', border: `1px solid ${accent}66`, borderRadius: radius,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', overflow: 'hidden',
+            }}>
+              <span style={{
+                fontFamily: font, fontSize: '0.58rem', fontWeight: 500, textAlign: 'center', lineHeight: 1.1,
+                color: light ? '#33373c' : 'rgba(255,255,255,0.92)',
+              }}>
+                {WIDGET_REGISTRY[tl.type]?.label ?? tl.type}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {blurred && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+            background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '999px',
+            padding: '0.28rem 0.75rem', fontSize: '0.7rem', fontWeight: 600,
+          }}>
+            <Sparkles size={12} strokeWidth={2} /> Plus preview
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "What's inside" — names every widget in a template; connected-app widgets are
+ *  tinted and tagged with the app they use, so users know what to expect. */
+function IncludesChips({ t, world, accent }: { t: Theme; world: BozzWorld; accent: string }) {
+  const types = uniqueWidgetTypes(world);
+  if (!types.length) return null;
+  return (
+    <div style={{ marginBottom: '1rem' }}>
+      <div style={{ fontSize: '0.7rem', color: t.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.45rem' }}>
+        What's inside
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+        {types.map(type => {
+          const label = WIDGET_REGISTRY[type]?.label ?? type;
+          const app = CONNECTED_APP[type];
+          return (
+            <span key={type} style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.28rem',
+              fontSize: '0.7rem', color: app ? accent : t.textMuted,
+              border: `1px solid ${app ? accent + '88' : t.border}`, borderRadius: '999px', padding: '0.2rem 0.6rem',
+            }}>
+              {label}{app && <span style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {app}</span>}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

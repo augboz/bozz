@@ -7,7 +7,7 @@
 // budget, calendar). The wallpaper reuses the existing page-background render
 // path (homeBackground → BgLayer) so there is no new global render layer.
 
-import type { AppearancePrefs, BozzWorld, HomeWidgetItem, Topic, TopicFolder } from './types';
+import type { AppearancePrefs, BozzWorld, HomeWidgetItem, Topic, TopicFolder, WidgetType } from './types';
 import { hasWorldsAccess } from './plus';
 
 // ── Wallpaper generation (offline, no binary assets) ─────────────────────────
@@ -56,16 +56,9 @@ function world(w: Omit<BozzWorld, 'background' | 'previewUrl' | 'author' | 'vers
 
 let wcount = 0;
 const wid = () => { wcount += 1; return `ww-${wcount}`; };
-/** A compact ready-made topic-page layout for topic/folder-scoped Worlds. */
-function topicLayout(extra: HomeWidgetItem['type'][]): HomeWidgetItem[] {
-  const base: HomeWidgetItem[] = [
-    { i: wid(), type: 'topicTodos', x: 0, y: 0, w: 7, h: 12 },
-    { i: wid(), type: 'topicNote', x: 7, y: 0, w: 5, h: 6 },
-    { i: wid(), type: 'topicLinks', x: 7, y: 6, w: 5, h: 6 },
-  ];
-  let y = 12;
-  for (const type of extra) { base.push({ i: wid(), type, x: 0, y, w: 6, h: 6 }); y += 6; }
-  return base;
+/** A positioned widget for a template's bespoke topic-page layout (12-col grid). */
+function tw(type: WidgetType, x: number, y: number, w: number, h: number): HomeWidgetItem {
+  return { i: wid(), type, x, y, w, h };
 }
 
 // ── The bundled free Worlds ──────────────────────────────────────────────────
@@ -121,53 +114,118 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     gradient: ['#eef3f6', '#dce7ee', '#cad9e4'], dim: 0.32,
   }),
 
-  // ── Templates — pre-made pages (widgets + look) for a specific use ───────────
-  // Applied as a New topic, these drop a fully set-up section in one tap. Two are
-  // free (activation); the rest are Plus (teased blurred until unlocked).
-  world({
-    id: 'job-hunt', name: 'Job Hunt', free: true, kind: 'template',
-    description: 'Track every application from applied to offer.',
-    mood: 'dark', font: 'inter', accent: '#d47a7a', icon: 'Briefcase',
-    colorBank: ['#d47a7a', '#e0a16b', '#7da7d9', '#bb9af7', '#7fc8a9', '#c8c8c8'],
-    widgetShape: 'rounded', widgetBorder: 'normal',
-    topicWidgets: topicLayout(['upcomingDeadlines', 'quickAdd']),
-    gradient: ['#1a1216', '#2a1a22', '#3a2230'], dim: 0.55,
-  }),
+  // ── Templates — bespoke pre-made pages (widgets + look) for one real use ─────
+  // Applied as a topic/folder, each drops a fully arranged page in one tap — its
+  // own widget mix (incl. connected-app widgets), palette, font and wallpaper.
+  // Two are free (activation); the rest are Plus (preview teased, names shown).
   world({
     id: 'study', name: 'Study', free: true, kind: 'template',
-    description: 'Assignments, revision and deadlines — sorted.',
-    mood: 'light', font: 'manrope', accent: '#7da7d9', icon: 'GraduationCap',
-    colorBank: ['#7da7d9', '#bb9af7', '#7fc8a9', '#e0a16b', '#9a8f7a', '#a7c7d9'],
+    description: 'Assignments, revision and deadlines — with a timetable and a focus timer.',
+    mood: 'light', font: 'manrope', accent: '#5b8fb0', icon: 'study',
+    colorBank: ['#5b8fb0', '#7da7d9', '#9b8cc4', '#7fc8a9', '#e0b06a', '#c98a8a'],
     widgetShape: 'rounded', widgetBorder: 'normal',
-    topicWidgets: topicLayout(['today', 'upcomingDeadlines']),
-    gradient: ['#eef2f7', '#dde6f0', '#cdd9e8'], dim: 0.32,
+    topicWidgets: [
+      tw('topicTodos', 0, 0, 7, 14),        // assignments by subject
+      tw('upcomingDeadlines', 7, 0, 5, 7),  // what's due
+      tw('pomodoro', 7, 7, 5, 7),           // revision sprints
+      tw('miniCalendar', 0, 14, 5, 10),     // timetable (Calendar)
+      tw('topicNote', 5, 14, 4, 10),        // revision notes
+      tw('topicLinks', 9, 14, 3, 10),       // course portal + resources
+    ],
+    gradient: ['#eef3f8', '#dce8f2', '#c8dcee'], dim: 0.3,
+  }),
+  world({
+    id: 'job-hunt', name: 'Job Hunt', free: true, kind: 'template',
+    description: 'Track every application, catch recruiter replies and prep for interviews.',
+    mood: 'dark', font: 'inter', accent: '#d4886a', icon: 'work',
+    colorBank: ['#d4886a', '#e0a16b', '#cf9b6c', '#7da7d9', '#7fc8a9', '#b0b0b0'],
+    widgetShape: 'rounded', widgetBorder: 'subtle',
+    topicWidgets: [
+      tw('topicTodos', 0, 0, 7, 14),        // application pipeline (stages)
+      tw('recentEmails', 7, 0, 5, 7),       // recruiter replies (Email)
+      tw('upcomingDeadlines', 7, 7, 5, 7),  // interviews + closing dates
+      tw('topicLinks', 0, 14, 4, 8),        // LinkedIn + job boards
+      tw('topicNote', 4, 14, 5, 8),         // prep + talking points
+      tw('miniCalendar', 9, 14, 3, 8),      // interview schedule (Calendar)
+    ],
+    gradient: ['#16100e', '#2a1a14', '#3d2418'], dim: 0.55,
   }),
   world({
     id: 'shopping', name: 'Shopping', free: false, kind: 'template',
-    description: 'A ready-made shopping space — lists, links and budget, themed.',
-    mood: 'warm', font: 'quicksand', accent: '#d4756a', icon: 'ShoppingBag',
-    colorBank: ['#d4756a', '#e0a16b', '#d4b078', '#c98a7a', '#b86a5c', '#e8c4a0'],
+    description: 'Lists, wishlists and a budget — one calm place to shop.',
+    mood: 'warm', font: 'quicksand', accent: '#d4756a', icon: 'shopping',
+    colorBank: ['#d4756a', '#e0936b', '#d9b06a', '#c98a7a', '#b8625a', '#e8c4a0'],
     widgetShape: 'pill', widgetBorder: 'normal',
-    topicWidgets: topicLayout(['budget', 'quickAdd']),
-    gradient: ['#3a201c', '#74332c', '#b8625a'], dim: 0.55,
+    topicWidgets: [
+      tw('topicTodos', 0, 0, 7, 13),        // shopping list / to-buy
+      tw('budget', 7, 0, 5, 6),             // spend this month
+      tw('topicLinks', 7, 6, 5, 7),         // product links + wishlists
+      tw('topicNote', 0, 13, 6, 7),         // gift ideas, sizes
+      tw('photo', 6, 13, 6, 7),             // inspiration board
+    ],
+    gradient: ['#3a201c', '#6e3328', '#a85544'], dim: 0.5,
+  }),
+  world({
+    id: 'family', name: 'Family', free: false, kind: 'template',
+    description: "Your child's week — schedule, to-dos, routines and the things you can't forget.",
+    mood: 'warm', font: 'quicksand', accent: '#7bb274', icon: 'social',
+    colorBank: ['#7bb274', '#e0b358', '#7da7d9', '#e08a8a', '#bb9af7', '#9cc7a0'],
+    widgetShape: 'rounded', widgetBorder: 'normal',
+    topicWidgets: [
+      tw('miniCalendar', 0, 0, 5, 11),      // school + clubs + appts (Calendar)
+      tw('topicTodos', 5, 0, 7, 11),        // to-dos for the kids
+      tw('habits', 0, 11, 4, 10),           // chores + bedtime + reading
+      tw('upcomingDeadlines', 4, 11, 4, 6), // forms + payments due
+      tw('topicNote', 8, 11, 4, 6),         // allergies, sizes, contacts
+      tw('topicLinks', 4, 17, 8, 4),        // school portal + class app
+    ],
+    gradient: ['#f6f0e0', '#ece2c4', '#e0d2a8'], dim: 0.3,
+  }),
+  world({
+    id: 'holiday', name: 'Holiday', free: false, kind: 'template',
+    description: 'Plan a trip — packing, budget, itinerary and the destination forecast.',
+    mood: 'light', font: 'manrope', accent: '#4fb0a6', icon: 'travel',
+    colorBank: ['#4fb0a6', '#6fc8c0', '#e0b878', '#e89a6a', '#7fb0d0', '#a7d9d2'],
+    widgetShape: 'pill', widgetBorder: 'normal',
+    topicWidgets: [
+      tw('topicTodos', 0, 0, 7, 13),        // packing + to-book checklist
+      tw('budget', 7, 0, 5, 6),             // trip budget
+      tw('weather', 7, 6, 5, 7),            // destination forecast (Weather)
+      tw('miniCalendar', 0, 13, 5, 9),      // trip dates / itinerary (Calendar)
+      tw('topicLinks', 5, 13, 4, 9),        // flights + hotel bookings
+      tw('topicNote', 9, 13, 3, 9),         // addresses + itinerary notes
+    ],
+    gradient: ['#e6f3f1', '#cfe8e2', '#b4dcd4'], dim: 0.3,
+  }),
+  world({
+    id: 'calm', name: 'Calm', free: false, kind: 'template',
+    description: 'A quiet corner — journal, gentle habits and a slow to-do.',
+    mood: 'dark', font: 'fraunces', accent: '#8aa892', icon: 'nature',
+    colorBank: ['#8aa892', '#a3bca8', '#b6a890', '#9a8f7a', '#7d9488', '#c4b8a0'],
+    widgetShape: 'rounded', widgetBorder: 'subtle',
+    topicWidgets: [
+      tw('topicNote', 0, 0, 7, 12),         // journal / gratitude (leads)
+      tw('habits', 7, 0, 5, 12),            // water, breathe, sleep, walk
+      tw('topicTodos', 0, 12, 7, 10),       // a gentle, short to-do
+      tw('photo', 7, 12, 5, 6),             // a calming image
+      tw('clock', 7, 18, 5, 4),             // a quiet clock
+    ],
+    gradient: ['#121815', '#1c2620', '#27332c'], dim: 0.5,
   }),
   world({
     id: 'deep-work', name: 'Deep Work', free: false, kind: 'template',
-    description: 'A focused workspace — timer, today and a clean dark canvas.',
-    mood: 'dark', font: 'mono', accent: '#8ab4f8', icon: 'Target',
-    colorBank: ['#8ab4f8', '#a0a0a0', '#c8c8c8', '#6a8fd0', '#7d7d7d', '#b0c4de'],
+    description: 'Heads-down focus — a timer, your tasks and nothing else.',
+    mood: 'dark', font: 'mono', accent: '#8ab4f8', icon: 'energy',
+    colorBank: ['#8ab4f8', '#9aa5b5', '#c0c8d4', '#6a8fd0', '#7d8694', '#b0c4de'],
     widgetShape: 'sharp', widgetBorder: 'subtle',
-    topicWidgets: topicLayout(['pomodoro', 'clock']),
-    gradient: ['#0b0d10', '#15191f', '#1d242e'], dim: 0.55,
-  }),
-  world({
-    id: 'travel', name: 'Travel', free: false, kind: 'template',
-    description: 'Plan a trip — checklist, budget and links in one place.',
-    mood: 'light', font: 'quicksand', accent: '#5bb0a8', icon: 'Plane',
-    colorBank: ['#5bb0a8', '#7fc8c0', '#e0b878', '#d99058', '#88bdd0', '#a7d9d2'],
-    widgetShape: 'pill', widgetBorder: 'normal',
-    topicWidgets: topicLayout(['budget', 'today']),
-    gradient: ['#e8f2f0', '#d2e8e4', '#bcdcd6'], dim: 0.32,
+    topicWidgets: [
+      tw('topicTodos', 0, 0, 8, 14),        // the focus list
+      tw('pomodoro', 8, 0, 4, 8),           // focus timer
+      tw('clock', 8, 8, 4, 6),              // time
+      tw('topicNote', 0, 14, 6, 6),         // scratchpad
+      tw('nowPlaying', 6, 14, 6, 6),        // focus music (Spotify)
+    ],
+    gradient: ['#0a0c0f', '#13171d', '#1b212b'], dim: 0.55,
   }),
 ];
 
