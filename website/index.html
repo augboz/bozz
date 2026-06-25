@@ -7,7 +7,9 @@
 <meta name="description" content="BOZZ brings your tasks, calendar, budget, health, email and habits into one calm, customisable desktop window.">
 <meta name="theme-color" content="#171721">
 <link rel="canonical" href="https://bozz-app.vercel.app/">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235266eb'/%3E%3Ctext x='16' y='23' font-size='21' font-weight='700' text-anchor='middle' fill='white' font-family='system-ui,sans-serif'%3EB%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/bozz-mark.png">
 <!-- Open Graph / social link previews -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://bozz-app.vercel.app/">
@@ -111,9 +113,8 @@ nav.scrolled {
   display: inline-flex; align-items: center; gap: 0.6rem;
 }
 .nav-logo .mark {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: var(--starlight); color: var(--abyss);
-  display: grid; place-items: center; font-weight: 700; font-size: 0.8rem;
+  width: 26px; height: 26px; border-radius: 7px;
+  object-fit: cover; display: block;
   /* Emil: spring for playful transforms, under 200ms */
   transition: transform 180ms var(--spring);
   will-change: transform;
@@ -573,7 +574,7 @@ footer {
 
 <!-- ── NAV ── -->
 <nav id="nav" aria-label="Main navigation">
-  <a class="nav-logo" href="#"><span class="mark">B</span>BOZZ</a>
+  <a class="nav-logo" href="#"><img class="mark" src="/assets/bozz-mark.png" alt="" width="26" height="26">BOZZ</a>
   <ul class="nav-links">
     <li><a href="#features">Features</a></li>
     <li><a href="#shortcut">Quick add</a></li>

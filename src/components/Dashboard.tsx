@@ -17,7 +17,7 @@ import { supabase } from '../lib/supabase';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
 import { getItem, setItem, initBackup } from '../lib/storage';
-import { themes, sectionAccents } from '../lib/themes';
+import { themes } from '../lib/themes';
 import { DEFAULT_APPEARANCE, applyAppearanceVars } from '../lib/appearance';
 import { fetchFeed } from '../lib/ical';
 import { DEFAULT_BUDGET } from '../lib/budget';
@@ -898,23 +898,24 @@ export default function Dashboard() {
             style={{
               background: 'transparent', border: 'none',
               color: sT.text, cursor: 'pointer', fontFamily: 'inherit',
-              display: sidebarCollapsed ? 'none' : 'flex', alignItems: 'center', gap: '0.5rem',
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
               fontSize: '1.02rem', fontWeight: 700, letterSpacing: '-0.01em',
               padding: '0.1rem 0.05rem', textAlign: 'left',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              flex: 1, minWidth: 0,
-              opacity: sidebarCollapsed ? 0 : 1,
-              pointerEvents: sidebarCollapsed ? 'none' : 'auto',
-              transition: 'opacity 0.18s ease',
+              flex: sidebarCollapsed ? '0 0 auto' : 1, minWidth: 0,
+              justifyContent: 'center',
             }}
           >
-            <span style={{
-              width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0,
-              background: sectionAccents.home, color: '#16161a',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.78rem', fontWeight: 800,
-            }}>B</span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>BOZZ</span>
+            <img
+              src="/brand/bozz-mark-dark.png"
+              alt="BOZZ"
+              width={22} height={22}
+              style={{
+                width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0,
+                objectFit: 'cover', display: 'block',
+              }}
+            />
+            {!sidebarCollapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>BOZZ</span>}
           </button>
 
           {/* Chevron — collapses when expanded, expands when collapsed. */}
