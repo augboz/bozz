@@ -1825,13 +1825,13 @@ export default function IntegrationsBlock({
   );
   const icloudCard = <ICloudCard key="icloud" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, icloud: v }))} />;
   const imapCard   = <div key="imap" data-onb="imap-card"><ImapCard t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, imap: v }))} /></div>;
-  const spotifyCard = <SpotifyCard key="spotify" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, spotify: v }))} />;
-  const notionCard    = <NotionCard    key="notion"    t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, notion: v }))} />;
+  const spotifyCard = <div key="spotify" data-onb="connector-spotify"><SpotifyCard t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, spotify: v }))} /></div>;
+  const notionCard    = <div key="notion" data-onb="connector-notion"><NotionCard    t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, notion: v }))} /></div>;
   const whatsappCard  = <WhatsAppCard  key="whatsapp"  t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, whatsapp: v }))} />;
   const stravaCard = <StravaCard key="strava" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, strava: v }))} />;
   const zoomCard   = <ZoomCard   key="zoom"   t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, zoom: v }))} />;
-  const gcalCard   = <GoogleCalendarCard  key="gcal"    t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} />;
-  const acalCard   = <AppleCalendarCard   key="acal"    t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} />;
+  const gcalCard   = <div key="gcal" data-onb="connector-gcal"><GoogleCalendarCard  t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} /></div>;
+  const acalCard   = <div key="acal" data-onb="connector-acal"><AppleCalendarCard   t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} /></div>;
   const gfitCard   = <GoogleFitCard       key="gfit"    t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
   const ahealthCard = <AppleHealthCard    key="ahealth" t={t} connections={healthConnections}   onChange={onHealthConnectionsChange} />;
 

@@ -17,7 +17,9 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
   mood: 'dark',
   font: 'inter',
   fontSize: 'medium',
-  hiddenSections: ['budget', 'email', 'review', 'planner', 'dailyPlanner', 'habits', 'health'],
+  // New accounts open to "just Home" — every non-Home section starts hidden, so
+  // the sidebar is empty until the walkthroughs guide the user to add topics.
+  hiddenSections: ['calendar', 'budget', 'email', 'review', 'planner', 'dailyPlanner', 'habits', 'health'],
   hiddenTopicIds: [],
   defaultSection: 'home',
   widgetShape: 'rounded',

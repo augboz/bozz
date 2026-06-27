@@ -36,9 +36,10 @@ interface CtrlBtnProps {
   defaultColor: string;
   children: React.ReactNode;
   width?: number;
+  height?: number;
 }
 
-function CtrlBtn({ label, onClick, hoverBg, hoverColor, defaultColor, children, width = 44 }: CtrlBtnProps) {
+function CtrlBtn({ label, onClick, hoverBg, hoverColor, defaultColor, children, width = 44, height = TITLE_BAR_HEIGHT }: CtrlBtnProps) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -52,7 +53,7 @@ function CtrlBtn({ label, onClick, hoverBg, hoverColor, defaultColor, children, 
       onMouseLeave={() => setHovered(false)}
       style={{
         width,
-        height: TITLE_BAR_HEIGHT,
+        height,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -124,39 +125,59 @@ export default function TitleBar({ theme: t }: Props) {
         BOZZ
       </span>
 
-      {/* Window controls — hidden on macOS (traffic lights handle this) */}
+      {/* Window controls — hidden on macOS (traffic lights handle this).
+          Wrapped in a bordered, slightly-elevated segmented group so the
+          minimise / maximise / close buttons are clearly visible regardless
+          of the title-bar colour. */}
       {!onMac && (
-        <div style={{ display: 'flex', height: TITLE_BAR_HEIGHT }}>
-          <CtrlBtn
-            label="Minimise"
-            onClick={() => void win.minimize()}
-            hoverBg={t.border}
-            hoverColor={t.text}
-            defaultColor={t.textMuted}
-          >
-            <Minus size={11} strokeWidth={2} />
-          </CtrlBtn>
+        <div style={{ display: 'flex', alignItems: 'center', height: TITLE_BAR_HEIGHT, paddingRight: 8 }}>
+          <div style={{
+            display: 'flex', alignItems: 'stretch', height: 26,
+            borderRadius: 7, overflow: 'hidden',
+            border: `1px solid ${t.borderStrong}`,
+            background: t.input,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.28)',
+          }}>
+            <CtrlBtn
+              label="Minimise"
+              onClick={() => void win.minimize()}
+              hoverBg={t.border}
+              hoverColor={t.text}
+              defaultColor={t.text}
+              height={26}
+              width={40}
+            >
+              <Minus size={15} strokeWidth={2.25} />
+            </CtrlBtn>
 
-          <CtrlBtn
-            label="Maximise / Restore"
-            onClick={() => void win.toggleMaximize()}
-            hoverBg={t.border}
-            hoverColor={t.text}
-            defaultColor={t.textMuted}
-          >
-            <Square size={10} strokeWidth={1.75} />
-          </CtrlBtn>
+            <div style={{ width: 1, background: t.borderStrong, flexShrink: 0 }} />
 
-          <CtrlBtn
-            label="Close"
-            onClick={() => void win.close()}
-            hoverBg={t.alert}
-            hoverColor="#fff"
-            defaultColor={t.textMuted}
-            width={48}
-          >
-            <X size={12} strokeWidth={2} />
-          </CtrlBtn>
+            <CtrlBtn
+              label="Maximise / Restore"
+              onClick={() => void win.toggleMaximize()}
+              hoverBg={t.border}
+              hoverColor={t.text}
+              defaultColor={t.text}
+              height={26}
+              width={40}
+            >
+              <Square size={12} strokeWidth={1.9} />
+            </CtrlBtn>
+
+            <div style={{ width: 1, background: t.borderStrong, flexShrink: 0 }} />
+
+            <CtrlBtn
+              label="Close"
+              onClick={() => void win.close()}
+              hoverBg={t.alert}
+              hoverColor="#fff"
+              defaultColor={t.text}
+              height={26}
+              width={44}
+            >
+              <X size={14} strokeWidth={2.25} />
+            </CtrlBtn>
+          </div>
         </div>
       )}
     </div>

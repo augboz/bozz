@@ -20,6 +20,14 @@ The app updates itself automatically on launch.
 
 The Windows installer is code-signed through the free **[SignPath Foundation](https://signpath.org)** open-source code-signing program, so it is verified by Microsoft SmartScreen / Defender.
 
+On **macOS**, if Gatekeeper reports *"Bozz is damaged and can't be opened"*, the build you downloaded predates notarization. This is the download-quarantine flag, not a corrupt file. Drag Bozz into **Applications**, then clear the flag in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Bozz.app
+```
+
+Open it normally afterwards. Notarized builds (signed with an Apple Developer ID) open with no warning at all — see [docs/macos-signing.md](docs/macos-signing.md) for the release-side setup.
+
 ## Built with
 
 [Tauri 2](https://tauri.app) · [React](https://react.dev) · [TypeScript](https://www.typescriptlang.org) · [Vite](https://vite.dev) · [Supabase](https://supabase.com) (sync) · Vercel serverless functions (OAuth token exchange).

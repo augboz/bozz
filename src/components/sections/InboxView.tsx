@@ -51,7 +51,7 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
   const commitEdit = () => { const v = editText.trim(); if (v) onRename(v); setEditing(false); };
 
   return (
-    <div style={{
+    <div data-onb="inbox-row" style={{
       background: t.todoBg, border: `1px solid ${hasSuggestion ? (suggestedColor ?? t.todoBorder) + '55' : t.todoBorder}`,
       borderRadius: '8px', padding: '0.7rem 1rem',
     }}>
@@ -107,6 +107,7 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
         <button
           onClick={() => onAssign(dest, deadline)}
           disabled={!dest}
+          data-onb="inbox-send"
           title="Send to topic"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.3rem',

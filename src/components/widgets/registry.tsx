@@ -100,11 +100,8 @@ export const TOPIC_WIDGET_LIST: WidgetMeta[] = Object.values(WIDGET_REGISTRY).fi
 );
 
 
-/** Default home — a "morning review" starter grid so first run is never empty:
- *  Today (events + tasks) leads, a clock sits top-right, Quick add sits below.
- *  New users land on something real in seconds, then edit from there. */
-export const DEFAULT_HOME: HomeWidgetItem[] = [
-  { i: 'today',    type: 'today',    x: 0, y: 0,  w: 6,  h: 12 },
-  { i: 'clock',    type: 'clock',    x: 6, y: 0,  w: 3,  h: 6  },
-  { i: 'quickAdd', type: 'quickAdd', x: 0, y: 12, w: 12, h: 8  },
-];
+/** Default home — empty. New accounts open to a clean home showing only the
+ *  "Getting started" card (rendered by Onboarding), so a first-time user runs a
+ *  walkthrough instead of staring at demo widgets. Existing users keep their
+ *  saved layout (a stored homeLayout overrides this default). */
+export const DEFAULT_HOME: HomeWidgetItem[] = [];

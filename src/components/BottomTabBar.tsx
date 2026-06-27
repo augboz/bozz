@@ -51,17 +51,26 @@ export default function BottomTabBar({ tabs, active, onSelect, quicksCount = 0, 
       <div style={{
         position: 'absolute', right: onQuicks ? 52 : 0, top: 0, bottom: 0,
         width: '40px', pointerEvents: 'none',
-        background: `linear-gradient(to right, transparent, ${t.bgAlt})`,
+        background: `linear-gradient(to right, transparent, ${t.bg})`,
         zIndex: 1,
       }} />
 
       <nav
         aria-label="Main navigation"
         style={{
-          background: t.bgAlt,
+          // Opaque in every theme. In light mode bgAlt is barely-there
+          // (rgba(0,0,0,0.04)), so over a World wallpaper the bar went
+          // see-through and page content bled through it. Layer the bgAlt
+          // tint over a solid base so it stays solid regardless of theme.
+          backgroundColor: t.bg,
+          backgroundImage: `linear-gradient(${t.bgAlt}, ${t.bgAlt})`,
           borderTop: `1px solid ${t.border}`,
           display: 'flex',
           paddingBottom: 'env(safe-area-inset-bottom)',
+          // Inset the end items so the first/last icons clear the window's
+          // rounded corners instead of being clipped by them.
+          paddingLeft: 'max(10px, env(safe-area-inset-left))',
+          paddingRight: 'max(10px, env(safe-area-inset-right))',
         } as React.CSSProperties}
       >
         {/* Left fixed section: mic + settings */}

@@ -183,8 +183,10 @@ button:focus-visible {
   opacity: 1;
 }
 .react-grid-item > .react-resizable-handle::after {
-  border-right-color: rgba(140, 140, 140, 0.55);
-  border-bottom-color: rgba(140, 140, 140, 0.55);
+  width: 8px; height: 8px;
+  border-right: 3px solid rgba(255, 255, 255, 0.95);
+  border-bottom: 3px solid rgba(255, 255, 255, 0.95);
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.9));
 }
 /* Grid widgets only animate their position while you are EDITING the layout —
    never on mount or page navigation. The old setTimeout-based "ready" flag

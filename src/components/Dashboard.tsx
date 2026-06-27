@@ -47,6 +47,8 @@ import TopicView from './sections/TopicView';
 import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
 import Onboarding from './onboarding/Onboarding';
+import WelcomeThemePicker from './onboarding/WelcomeThemePicker';
+import FirstHoverHints from './shared/FirstHoverHint';
 import CalendarView from './sections/calendar/CalendarView';
 import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
 import DailyPlannerView from './sections/DailyPlannerView';
@@ -108,6 +110,12 @@ export default function Dashboard() {
   // is complete, so "Replay walkthroughs" in Settings can always bring it back.
   const [onbForced, setOnbForced] = useState(false);
   const onbInit = useRef(false);
+  // First-run theme picker — shown once to brand-new accounts before anything else.
+  const [showWelcome, setShowWelcome] = useState(false);
+  // Topic/folder rename modal (opened from sidebar edit mode); declared early so
+  // the onboarding ctx signals below can read the topic being edited.
+  const [editTopicId, setEditTopicId] = useState<string | null>(null);
+  const [editFolderId, setEditFolderId] = useState<string | null>(null);
 
   // Exit edit mode automatically when the user navigates away or collapses the sidebar
   useEffect(() => { setSidebarEditing(false); }, [activeSection, sidebarCollapsed]);
@@ -273,32 +281,9 @@ export default function Dashboard() {
       }
       if (loadedHomeItems) setHomeItems(loadedHomeItems);
 
-      // Seed a default General topic for brand-new users so they have something
-      // to explore. Only injected when the account has no topics at all.
-      const DEFAULT_GENERAL_TOPIC: Topic = {
-        id: 'topic-general-default',
-        name: 'General',
-        color: '#7da7d9',
-        keywords: [],
-        order: 0,
-        stages: [
-          { id: 'stg-todo',  label: 'To do',  color: '#7da7d9', done: false },
-          { id: 'stg-doing', label: 'Doing',  color: '#e0a16b', done: false },
-          { id: 'stg-done',  label: 'Done',   color: '#7fc8a9', done: true  },
-        ],
-        items: [
-          { id: 1, text: 'Add your first task here', stageId: 'stg-todo', completedAt: null, deadline: null },
-          { id: 2, text: 'Move tasks between stages with the pill button', stageId: 'stg-doing', completedAt: null, deadline: null },
-        ],
-        sortMode: 'manual',
-      };
-      if (loadedTopics && loadedTopics.length > 0) {
-        setTopics(loadedTopics);
-      } else {
-        // No topics stored (new account or empty array) → seed default so the
-        // user has something to explore. They can delete it if they want.
-        setTopics([DEFAULT_GENERAL_TOPIC]);
-      }
+      // Brand-new accounts start with NO topics — the Home walkthroughs guide
+      // the user through creating their first one. Existing users load theirs.
+      setTopics(loadedTopics && loadedTopics.length > 0 ? loadedTopics : []);
 
       setAppearance(appr);
       if (appr.defaultSection !== 'settings' && (appr.hiddenSections as string[]).includes(appr.defaultSection)) {
@@ -306,6 +291,14 @@ export default function Dashboard() {
       } else {
         setActiveSection(appr.defaultSection);
       }
+
+      // First-run welcome (theme picker): only for a genuinely brand-new
+      // account — nothing of theirs in storage and no prior choice yet. Decided
+      // here from the loaded data so it can never race with async state.
+      const welcomeChosen = await getItem('welcomeComplete');
+      const brandNewAccount = !appearanceLoaded && !loadedHomeItems
+        && (!loadedTopics || loadedTopics.length === 0);
+      if (welcomeChosen?.value == null && brandNewAccount) setShowWelcome(true);
 
       setLoading(false);
       initBackup();
@@ -331,11 +324,17 @@ export default function Dashboard() {
       if (r?.value != null) {
         try { setOnbDismissed(JSON.parse(r.value) === true); } catch { /* ignore */ }
       } else {
-        const established = oauthAccounts.length > 0 || topics.some(tp => tp.id !== 'topic-general-default');
+        const established = oauthAccounts.length > 0 || topics.length > 0;
         setOnbDismissed(established);
       }
     }).catch(() => {});
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const chooseWelcomeMood = (mood: 'dark' | 'light') => {
+    setAppearance(a => ({ ...a, mood }));
+    setShowWelcome(false);
+    void save('welcomeComplete', true);
+  };
 
   const dismissOnboarding = () => {
     setOnbKeepMounted(false);
@@ -351,12 +350,23 @@ export default function Dashboard() {
     void save('onboardingDismissed', false);
     setActiveSection('home');
   };
+
   // Onboarding step signals (auto-check the walkthrough steps as they're done).
-  const gmailConnected = oauthAccounts.some(a => a.provider === 'gmail');
-  const emailsWidgetAdded = homeItems.some(it => it.type === 'recentEmails');
-  const topicAdded = topics.length > 1;
-  const topicInFolder = topics.some(tp => !!tp.folderId);
-  const showOnboarding = onbForced || (!onbDismissed && !(gmailConnected && emailsWidgetAdded && topicAdded && topicInFolder));
+  // Onboarding ctx signals — drive the walkthrough auto-advance.
+  const onbCurrentTopicId = topics.some(tp => tp.id === activeSection) ? activeSection : null;
+  const onbTopicWidgetTypes = onbCurrentTopicId
+    ? (topics.find(tp => tp.id === onbCurrentTopicId)?.widgetLayout ?? []).map(w => w.type).filter(ty => ty !== 'topicTodos')
+    : [];
+  // The topic open in the rename modal — drives the "customise icon/stages" steps.
+  const onbEditTopic = editTopicId ? topics.find(tp => tp.id === editTopicId) : null;
+  const onbIconCustomised = !!onbEditTopic && onbEditTopic.icon !== 'list';
+  const onbStagesCustomised = !!onbEditTopic && (
+    onbEditTopic.stages.length !== 3 ||
+    onbEditTopic.stages.some((s, i) => s.label !== ['To do', 'Doing', 'Done'][i])
+  );
+  // Walkthroughs are always re-runnable — the guide shows until the user
+  // dismisses it (or replays from Settings); there's no "completed" state.
+  const showOnboarding = onbForced || !onbDismissed;
 
   useEffect(() => { applyAppearanceVars(appearance); }, [appearance]);
 
@@ -607,8 +617,6 @@ export default function Dashboard() {
   const resetHomeLayout = () => setHomeItems(DEFAULT_HOME);
 
   // ── Topic / folder editing from the sidebar edit mode ──────────────────────
-  const [editTopicId, setEditTopicId] = useState<string | null>(null);
-  const [editFolderId, setEditFolderId] = useState<string | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   const addTopicFromNav = () => {
@@ -882,15 +890,19 @@ export default function Dashboard() {
         overflowY: 'auto', overflowX: 'hidden',
         transition: 'width 0.35s var(--ease, cubic-bezier(0.16,1,0.3,1))',
       }}>
-        {/* Brand row — BOZZ wordmark navigates home; chevron collapses/expands. */}
+        {/* Brand row — name navigates home. Expanded: "BOZZ" wordmark on the
+            left + collapse chevron on the right (row). Collapsed: the chevron on
+            top with the B-logo mark beneath it (column). */}
         <div style={{
-          display: 'flex', alignItems: 'center',
-          gap: '0.4rem',
+          display: 'flex',
+          flexDirection: sidebarCollapsed ? 'column-reverse' : 'row',
+          alignItems: 'center',
+          gap: sidebarCollapsed ? '0.6rem' : '0.4rem',
           padding: '0.3rem 0.05rem 1.2rem',
           minWidth: 0,
           justifyContent: sidebarCollapsed ? 'center' : 'space-between',
         }}>
-          {/* BOZZ wordmark — go to home. Hidden when collapsed. */}
+          {/* Home — "BOZZ" wordmark when expanded, the B-logo mark when collapsed. */}
           <button
             onClick={() => setActiveSection('home')}
             aria-label="Go to home"
@@ -903,19 +915,22 @@ export default function Dashboard() {
               padding: '0.1rem 0.05rem', textAlign: 'left',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               flex: sidebarCollapsed ? '0 0 auto' : 1, minWidth: 0,
-              justifyContent: 'center',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
             }}
           >
-            <img
-              src="/brand/bozz-mark-dark.png"
-              alt="BOZZ"
-              width={22} height={22}
-              style={{
-                width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0,
-                objectFit: 'cover', display: 'block',
-              }}
-            />
-            {!sidebarCollapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>BOZZ</span>}
+            {sidebarCollapsed ? (
+              <img
+                src="/brand/bozz-mark-dark.png"
+                alt="BOZZ"
+                width={22} height={22}
+                style={{
+                  width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0,
+                  objectFit: 'cover', display: 'block',
+                }}
+              />
+            ) : (
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>BOZZ</span>
+            )}
           </button>
 
           {/* Chevron — collapses when expanded, expands when collapsed. */}
@@ -989,7 +1004,7 @@ export default function Dashboard() {
               return (
                 <button
                   key={id}
-                  data-onb={id === 'home' ? 'nav-home' : undefined}
+                  data-onb={id === 'home' ? 'nav-home' : topics.some(tp => tp.id === id) ? 'topic-nav-item' : undefined}
                   onClick={() => setActiveSection(id)}
                   title={sidebarCollapsed ? label : undefined}
                   style={{
@@ -1154,6 +1169,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.1rem 0' }}>
             <button
               onClick={() => setQuickAddOpen(true)}
+              data-onb="quick-add"
               title="Quick add"
               aria-label="Quick add"
               style={{
@@ -1198,6 +1214,7 @@ export default function Dashboard() {
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <button
                   onClick={() => setAddMenuOpen(o => !o)}
+                  data-onb="nav-add-menu"
                   title="Add topic or folder"
                   aria-label="Add topic or folder"
                   style={{
@@ -1218,12 +1235,12 @@ export default function Dashboard() {
                     padding: '0.25rem', minWidth: '130px', boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
                     display: 'flex', flexDirection: 'column', gap: '0.1rem',
                   }}>
-                    <button onClick={() => { setAddMenuOpen(false); addTopicFromNav(); }} style={addMenuItem}
+                    <button data-onb="nav-new-topic" onClick={() => { setAddMenuOpen(false); addTopicFromNav(); }} style={addMenuItem}
                       onMouseEnter={e => { e.currentTarget.style.background = t.bgAlt; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
                       <ListTree size={13} strokeWidth={1.6} /> New topic
                     </button>
-                    <button onClick={() => { setAddMenuOpen(false); addFolderFromNav(); }} style={addMenuItem}
+                    <button data-onb="nav-new-folder" onClick={() => { setAddMenuOpen(false); addFolderFromNav(); }} style={addMenuItem}
                       onMouseEnter={e => { e.currentTarget.style.background = t.bgAlt; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
                       <FolderPlus size={13} strokeWidth={1.6} /> New folder
@@ -1288,6 +1305,7 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveSection('inbox')}
+            data-onb="nav-quicks"
             title={isTauri() ? 'Quicks (Ctrl+B)' : 'Quicks'}
             aria-label="Quicks"
             style={{
@@ -1345,18 +1363,21 @@ export default function Dashboard() {
 
 
         <main>
+          {showWelcome && <WelcomeThemePicker onChoose={chooseWelcomeMood} />}
+          <FirstHoverHints />
           {(activeSection === 'home' || onbKeepMounted) && showOnboarding && (
             <ErrorBoundary label="the getting-started guide">
               <Onboarding
                 t={t}
-                replay={onbForced}
                 activeSection={activeSection}
-                gmailConnected={gmailConnected}
-                emailsWidgetAdded={emailsWidgetAdded}
-                topicAdded={topicAdded}
-                folderCreated={topicFolders.length > 0}
-                topicInFolder={topicInFolder}
-                onGo={setActiveSection}
+                currentTopicId={onbCurrentTopicId}
+                sidebarEditing={sidebarEditing}
+                topicCount={topics.length}
+                topicWidgetTypes={onbTopicWidgetTypes}
+                inboxCount={inbox.length}
+                emailConnected={oauthAccounts.length > 0}
+                iconCustomised={onbIconCustomised}
+                stagesCustomised={onbStagesCustomised}
                 onDismiss={dismissOnboarding}
                 onWalkStart={() => setOnbKeepMounted(true)}
                 onWalkEnd={() => setOnbKeepMounted(false)}

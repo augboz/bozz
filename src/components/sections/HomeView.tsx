@@ -268,13 +268,10 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
       {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
       <div style={{ position: 'relative', zIndex: 1 }}>
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
         gap: '0.5rem', marginBottom: editMode ? '0.5rem' : '0.75rem',
         flexWrap: 'wrap',
       }}>
-        <span style={{ fontSize: '0.82rem', color: t.textMuted, fontWeight: 500, letterSpacing: '-0.01em' }}>
-          {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           {editMode && (
             <AppearanceControls t={t} widgetShape={widgetShape} widgetBorder={widgetBorder} onShape={onWidgetShape} onBorder={onWidgetBorder} />
@@ -286,6 +283,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             </button>
           )}
           <button
+            data-onb="home-edit"
             onClick={() => { setEditMode(e => !e); setShowAdd(false); setConfiguringId(null); }}
             title={editMode ? 'Done editing' : 'Edit layout'}
             aria-label={editMode ? 'Done editing' : 'Edit layout'}
@@ -336,18 +334,18 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
           return (
             <div key={it.i} data-widget-id={it.i} style={{
               position: 'relative', height: '100%',
-              outline: editMode ? `1px dashed ${t.borderStrong}` : 'none',
+              outline: editMode ? `2px dashed ${t.doneAccent}` : 'none',
               outlineOffset: '2px', borderRadius: '14px',
               ...cellVars,
             }}>
               {editMode && (
                 <>
                   <button className="widget-remove" onClick={() => removeWidget(it.i)} aria-label={`Remove ${meta.label}`}
-                    style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                     <X size={12} strokeWidth={2} />
                   </button>
                   <button className="widget-remove" onClick={(e) => openConfig(e, it.i)} aria-label="Widget settings"
-                    style={{ position: 'absolute', top: '-10px', right: '18px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: configuringId === it.i ? t.text : t.panel, border: `1px solid ${t.borderStrong}`, color: configuringId === it.i ? t.bg : t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    style={{ position: 'absolute', top: '-10px', right: '18px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: configuringId === it.i ? t.text : t.panel, border: `1px solid ${t.borderStrong}`, color: configuringId === it.i ? t.bg : t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                     <Settings2 size={12} strokeWidth={2} />
                   </button>
                 </>
@@ -460,7 +458,7 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
         <span style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: t.textMuted }}>
           Add widget
         </span>
-        <button onClick={onClose} aria-label="Close" style={{
+        <button data-onb="add-widget-close" onClick={onClose} aria-label="Close" style={{
           background: 'transparent', border: 'none', color: t.textMuted, cursor: 'pointer', padding: '0.2rem',
         }}>
           <X size={16} strokeWidth={1.5} />
@@ -520,10 +518,14 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
 
 const ghostBtn = (t: Theme): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-  background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '999px',
-  padding: '0.35rem 0.75rem', color: t.textMuted, cursor: 'pointer',
+  // Frosted so the control stays readable over any page background photo.
+  background: `var(--glass-bg, ${t.panel})`,
+  backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+  border: `1px solid ${t.borderStrong}`, borderRadius: '999px',
+  padding: '0.35rem 0.75rem', color: t.text, cursor: 'pointer',
   fontSize: '0.72rem', fontFamily: 'inherit', fontWeight: 400,
   transition: 'border-color 0.2s, color 0.2s',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 });
 
 // ── Colour dropdown — a labelled pill that opens an inline bank picker ────────

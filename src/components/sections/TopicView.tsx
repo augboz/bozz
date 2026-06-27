@@ -380,9 +380,13 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
 
   const ghostBtn = (t: Theme): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-    background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
-    padding: '0.4rem 0.7rem', color: t.textMuted, cursor: 'pointer',
-    fontSize: '0.75rem', fontFamily: 'inherit', fontWeight: 300,
+    // Frosted so the control stays readable over any page background photo.
+    background: `var(--glass-bg, ${t.panel})`,
+    backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+    border: `1px solid ${t.borderStrong}`, borderRadius: '8px',
+    padding: '0.4rem 0.7rem', color: t.text, cursor: 'pointer',
+    fontSize: '0.75rem', fontFamily: 'inherit', fontWeight: 400,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
   });
 
   if (isMobile) {
@@ -391,16 +395,17 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
       <div style={{ position: 'relative' }}>
         {pageBg && <BgLayer bg={pageBg} t={t} />}
         <div style={{ position: 'relative', zIndex: 1 }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 600, letterSpacing: '-0.03em', color: t.text, margin: '0 0 1.25rem' }}>{topic.name}</h1>
+        <h1 style={{ fontSize: '2rem', fontWeight: 600, letterSpacing: '-0.03em', color: t.text, margin: '0 0 1.25rem', textShadow: '0 1px 12px rgba(0,0,0,0.45)' }}>{topic.name}</h1>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
           {editMode && (
-            <button onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
+            <button data-onb="topic-add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
               <Plus size={14} strokeWidth={1.5} /> Add widget
             </button>
           )}
           <button
+            data-onb="topic-edit"
             onClick={() => { setEditMode(e => !e); setShowAdd(false); }}
             style={ghostBtn(t)}
           >
@@ -453,7 +458,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
     <div style={{ position: 'relative' }}>
       {pageBg && <BgLayer bg={pageBg} t={t} />}
       <div style={{ position: 'relative', zIndex: 1 }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 600, letterSpacing: '-0.03em', color: t.text, margin: '0 0 1.25rem' }}>{topic.name}</h1>
+      <h1 style={{ fontSize: '2rem', fontWeight: 600, letterSpacing: '-0.03em', color: t.text, margin: '0 0 1.25rem', textShadow: '0 1px 12px rgba(0,0,0,0.45)' }}>{topic.name}</h1>
 
       <div style={{
         display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
@@ -461,11 +466,12 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
       }}>
         {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
         {editMode && (
-          <button onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
+          <button data-onb="topic-add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
             <Plus size={14} strokeWidth={1.5} /> Add widget
           </button>
         )}
         <button
+          data-onb="topic-edit"
           onClick={() => { setEditMode(e => !e); setShowAdd(false); setConfiguringId(null); }}
           style={ghostBtn(t)}
         >
@@ -509,18 +515,18 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
                 '--w-text': it.config?.textColor,
               } as React.CSSProperties),
               position: 'relative', height: '100%',
-              outline: editMode ? `1px dashed ${t.borderStrong}` : 'none',
+              outline: editMode ? `2px dashed ${t.doneAccent}` : 'none',
               outlineOffset: '2px', borderRadius: '14px',
             }}>
               {editMode && !isTopicTodos && (
                 <button className="widget-remove" onClick={() => removeWidget(it.i)} aria-label={`Remove ${meta.label}`}
-                  style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                  style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                   <X size={12} strokeWidth={2} />
                 </button>
               )}
               {editMode && (
                 <button className="widget-remove" onClick={(e) => openConfig(e, it.i)} aria-label="Widget settings"
-                  style={{ position: 'absolute', top: '-10px', right: isTopicTodos ? '-10px' : '18px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: configuringId === it.i ? t.text : t.panel, border: `1px solid ${t.borderStrong}`, color: configuringId === it.i ? t.bg : t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                  style={{ position: 'absolute', top: '-10px', right: isTopicTodos ? '-10px' : '18px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: configuringId === it.i ? t.text : t.panel, border: `1px solid ${t.borderStrong}`, color: configuringId === it.i ? t.bg : t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                   <Settings2 size={12} strokeWidth={2} />
                 </button>
               )}
@@ -630,14 +636,14 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
         <span style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: t.textMuted }}>
           Add widget
         </span>
-        <button onClick={onClose} aria-label="Close" style={{
+        <button data-onb="topic-add-widget-close" onClick={onClose} aria-label="Close" style={{
           background: 'transparent', border: 'none', color: t.textMuted, cursor: 'pointer', padding: '0.2rem',
         }}>
           <X size={16} strokeWidth={1.5} />
         </button>
       </div>
       <div style={{ flex: 1, overflowY: 'scroll', padding: '1rem 1.5rem 2rem' }}>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
+        <div data-onb="topic-widget-options" style={{ display: 'grid', gap: '0.5rem' }}>
           {TOPIC_WIDGET_LIST.map(m => {
             const added = !m.allowMultiple && existingTypes.has(m.type);
             return (

@@ -89,6 +89,7 @@ export default function QuickAddModal({
       }}
     >
       <div
+        data-onb="quick-add-modal"
         onClick={e => e.stopPropagation()}
         onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
         style={{

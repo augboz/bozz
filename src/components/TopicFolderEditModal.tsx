@@ -86,6 +86,7 @@ export default function TopicFolderEditModal({
       }}
     >
       <div
+        data-onb="topic-modal"
         onClick={e => e.stopPropagation()}
         style={{
           width: 'min(440px, 100%)', maxHeight: '90vh', overflowY: 'auto',
@@ -106,9 +107,9 @@ export default function TopicFolderEditModal({
         <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
           <div style={{ flex: 1 }}>
             <label style={lbl}>Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder={isTopic ? 'e.g. Job hunt' : 'e.g. Work'} autoFocus style={inp} />
+            <input data-onb="topic-name-input" value={name} onChange={e => setName(e.target.value)} placeholder={isTopic ? 'e.g. Job hunt' : 'e.g. Work'} autoFocus style={inp} />
           </div>
-          <div ref={popoverRef} style={{ position: 'relative', display: 'flex', gap: '0.4rem' }}>
+          <div ref={popoverRef} data-onb="topic-icon-colour" style={{ position: 'relative', display: 'flex', gap: '0.4rem' }}>
             <div>
               <label style={lbl}>Icon</label>
               <button
@@ -164,7 +165,7 @@ export default function TopicFolderEditModal({
               />
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
+            <div data-onb="topic-stages" style={{ marginBottom: '1rem' }}>
               <label style={lbl}>Stages <span style={{ color: t.textDim }}>— mark the last as "done"</span></label>
               <div style={{ display: 'grid', gap: '0.35rem' }}>
                 {topic.stages.map((s, idx) => (
@@ -201,7 +202,7 @@ export default function TopicFolderEditModal({
           <button onClick={onDelete} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'transparent', border: `1px solid ${t.alertBorder}`, color: t.alert, borderRadius: '8px', padding: '0.45rem 0.8rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer' }}>
             <Trash2 size={13} strokeWidth={1.6} /> Delete
           </button>
-          <button onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: t.doneAccent, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontSize: '0.82rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 500 }}>
+          <button data-onb="topic-modal-done" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: t.doneAccent, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontSize: '0.82rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 500 }}>
             <Check size={14} strokeWidth={2.5} /> Done
           </button>
         </div>

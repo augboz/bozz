@@ -48,9 +48,13 @@ interface Props {
 
 const ghostBtn = (t: Theme): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-  background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
-  padding: '0.4rem 0.7rem', color: t.textMuted, cursor: 'pointer',
-  fontSize: '0.75rem', fontFamily: 'inherit', fontWeight: 300,
+  // Frosted so the control stays readable over any page background photo.
+  background: `var(--glass-bg, ${t.panel})`,
+  backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+  border: `1px solid ${t.borderStrong}`, borderRadius: '8px',
+  padding: '0.4rem 0.7rem', color: t.text, cursor: 'pointer',
+  fontSize: '0.75rem', fontFamily: 'inherit', fontWeight: 400,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 });
 
 export default function BackgroundControls({ t, bg, onChange }: Props) {
@@ -68,7 +72,16 @@ export default function BackgroundControls({ t, bg, onChange }: Props) {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0.45rem',
+      // When a photo is set, frost the dim/thumbnail cluster so it reads on top of it.
+      ...(bg ? {
+        background: `var(--glass-bg, ${t.panel})`,
+        backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+        border: `1px solid ${t.borderStrong}`, borderRadius: '999px',
+        padding: '0.2rem 0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+      } : {}),
+    }}>
       {bg ? (
         <>
           <img
@@ -101,9 +114,9 @@ export default function BackgroundControls({ t, bg, onChange }: Props) {
           </button>
         </>
       ) : (
-        <button onClick={pick} style={ghostBtn(t)}>
+        <button data-onb="topic-bg-photo" onClick={pick} style={ghostBtn(t)}>
           <ImageIcon size={13} strokeWidth={1.5} />
-          Photo
+          Background photo
         </button>
       )}
       <input

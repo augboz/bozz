@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronRight, ChevronDown, Palette,
-  Plug, Power, RotateCcw, LogOut, Plus, X,
+  Plug, RotateCcw, LogOut, Plus, X,
   Sparkles, HelpCircle,
 } from 'lucide-react';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
@@ -430,10 +430,6 @@ export default function SettingsView({
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} style={{ marginRight: '0.25rem' }} />
       </button>
 
-      <Block title="Bozz Plus" t={t} icon={Sparkles}>
-        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} onOpenEmail={onOpenEmail} />
-      </Block>
-
       <Block title="Appearance" t={t} icon={Palette} collapsible>
         <Field label="Theme" t={t}>
           <Segmented<MoodId>
@@ -511,10 +507,8 @@ export default function SettingsView({
         </div>
       </Block>
 
-      <Block title="Launcher" t={t} icon={Power}>
-        <Field label="Launch Bozz when you open your laptop" t={t}>
-          <Toggle on={autostartOn} onClick={toggleAutostart} t={t} disabled={checking} />
-        </Field>
+      <Block title="Bozz Plus" t={t} icon={Sparkles}>
+        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} onOpenEmail={onOpenEmail} />
       </Block>
 
       <Block title="Help" t={t} icon={HelpCircle} collapsible>
@@ -530,6 +524,11 @@ export default function SettingsView({
           >
             <RotateCcw size={14} strokeWidth={1.6} color={t.textMuted} /> Replay walkthroughs
           </button>
+
+          {/* Launch on startup — folded into Help to keep the page tidy */}
+          <Field label="Launch Bozz when you open your laptop" hint="Desktop app only" t={t}>
+            <Toggle on={autostartOn} onClick={toggleAutostart} t={t} disabled={checking} />
+          </Field>
           <Faq t={t} q="How do I connect Gmail or Outlook?"
             a="Open Connected apps and follow the short setup guide for your provider, then paste the keys it gives you."
             action={{ label: 'Connected apps', onClick: onOpenApps }} />
@@ -573,25 +572,26 @@ export default function SettingsView({
               </select>
             </div>
           </div>
+
+          {/* Reset — plain orange buttons, folded into Help */}
+          <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1rem' }}>
+            <div style={{ fontSize: '0.84rem', color: t.text, fontWeight: 500, marginBottom: '0.5rem' }}>Reset</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button onClick={resetAppearance} style={resetBtn}>Reset appearance</button>
+              <button onClick={resetHomeLayout} style={resetBtn}>Reset home layout</button>
+              <button
+                onClick={() => {
+                  if (!window.confirm(`Delete all ${topics.length} topic${topics.length !== 1 ? 's' : ''} and their folders? This cannot be undone.`)) return;
+                  onClearTopics();
+                }}
+                style={resetBtn}
+              >
+                Clear all topics and folders
+              </button>
+            </div>
+          </div>
         </div>
       </Block>
-
-      {/* Reset — plain orange buttons, just above sign out */}
-      <div style={{ borderTop: `1px solid ${t.border}`, padding: '1.2rem 0.25rem 0.4rem' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <button onClick={resetAppearance} style={resetBtn}>Reset appearance</button>
-          <button onClick={resetHomeLayout} style={resetBtn}>Reset home layout</button>
-          <button
-            onClick={() => {
-              if (!window.confirm(`Delete all ${topics.length} topic${topics.length !== 1 ? 's' : ''} and their folders? This cannot be undone.`)) return;
-              onClearTopics();
-            }}
-            style={resetBtn}
-          >
-            Clear all topics and folders
-          </button>
-        </div>
-      </div>
 
       {/* Sign out — bottom of the page */}
       <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1.2rem', marginTop: '0.5rem' }}>

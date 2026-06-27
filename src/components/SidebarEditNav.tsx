@@ -338,7 +338,7 @@ export default function SidebarEditNav({
                 const topicHidden = hiddenTopicIds.includes(item.topic.id);
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', opacity: isDragging ? 0.45 : 1 }}>
-                    <span {...dragProps} style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 3px', flexShrink: 0, touchAction: 'none' }}>
+                    <span {...dragProps} data-onb="topic-row-drag" style={{ cursor: 'grab', color: t.textDim, display: 'flex', padding: '0 3px', flexShrink: 0, touchAction: 'none' }}>
                       <GripVertical size={12} strokeWidth={1.5} />
                     </span>
                     <button onClick={() => onEditTopic(item.topic.id)} title="Edit topic" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: topicHidden ? 0.45 : 1 }}>
@@ -349,8 +349,8 @@ export default function SidebarEditNav({
                     </button>
                     {!sidebarCollapsed && (
                       <>
-                        <EyeBtn hidden={topicHidden} onClick={() => onToggleHiddenTopic(item.topic.id)} />
-                        <EditBtn onClick={() => onEditTopic(item.topic.id)} />
+                        <span data-onb="topic-row-hide" style={{ display: 'inline-flex' }}><EyeBtn hidden={topicHidden} onClick={() => onToggleHiddenTopic(item.topic.id)} /></span>
+                        <span data-onb="topic-row-edit" style={{ display: 'inline-flex' }}><EditBtn onClick={() => onEditTopic(item.topic.id)} /></span>
                       </>
                     )}
                   </div>
