@@ -1611,6 +1611,7 @@ export default function Dashboard() {
           onClose={() => setQuickAddOpen(false)}
           onAddInbox={(items) => setInbox(prev => [...prev, ...items])}
           onAddBudget={(transaction) => setBudget(b => ({ ...b, transactions: [...b.transactions, transaction] }))}
+          onAddToTopic={(topicId, text, deadline) => addTopicItem(topicId, text, deadline)}
         />
       )}
 

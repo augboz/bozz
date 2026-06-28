@@ -26,6 +26,28 @@ export interface ParsedTask {
 // ── 1. Transcript splitting ────────────────────────────────────────────────────
 
 /**
+ * Action verbs that, when they follow a bare "and" / "then" / "also" / comma,
+ * signal a NEW task rather than a continuation of the current one. This is the
+ * cheap, offline stand-in for an LLM "understanding intent": we split
+ *   "call Adrien and buy strings"   → ["call Adrien", "buy strings"]   (verb)
+ * but leave a trailing noun object alone:
+ *   "book a hotel and flight"       → ["book a hotel and flight"]      (noun)
+ *   "buy milk and eggs"             → ["buy milk and eggs"]            (noun)
+ * The gate is the verb itself — a determiner ("and a coffee", "and the dog")
+ * or noun ("and eggs") never matches, which is what keeps over-splitting in check.
+ */
+const ACTION_VERB = '(?:call|phone|ring|text|email|message|contact|ping|reply|' +
+  'buy|order|purchase|get|grab|pick|collect|fetch|renew|cancel|return|' +
+  'book|reserve|schedule|arrange|plan|organise|organize|set|sort|file|' +
+  'pay|send|transfer|refund|charge|split|' +
+  'finish|start|complete|do|make|build|create|write|draft|read|review|' +
+  'check|submit|prepare|prep|print|sign|update|edit|fix|test|deploy|commit|push|install|download|upload|' +
+  'clean|tidy|wash|cook|water|walk|feed|empty|fill|drop|take|bring|put|move|pack|unpack|hang|' +
+  'meet|see|visit|ask|tell|remind|invite|thank|follow|' +
+  'apply|register|confirm|research|study|learn|revise|practice|practise|watch|listen|' +
+  'find|search|look|add|remove|delete|change|go)';
+
+/**
  * Splits a raw voice transcript into individual task clauses.
  *
  * Handles patterns like:
@@ -60,7 +82,13 @@ export function splitIntoTasks(transcript: string): string[] {
         `|,?\\s+I\\s+(?:then\\s+)?also(?:\\s+${VERB})?` +        // "I [then] also [need to]"
         `|,\\s+I\\s+${VERB}` +                                    // ", I need to" — comma + subject + verb
         `|,?\\s+also\\s+I` +
-        `|,?\\s+additionally`,
+        `|,?\\s+additionally` +
+        // Bare conjunction / comma immediately followed by an action verb — split
+        // only when a verb starts the next clause (lookahead keeps the verb).
+        `|,?\\s+and\\s+(?=${ACTION_VERB}\\b)` +                  // "… and buy strings"
+        `|,?\\s+then\\s+(?=${ACTION_VERB}\\b)` +                 // "… then call mum"
+        `|,?\\s+also\\s+(?=${ACTION_VERB}\\b)` +                 // "… also email landlord"
+        `|,\\s+(?=${ACTION_VERB}\\b)`,                            // "call Adrien, buy strings"
         'i'
       ),
     );
@@ -127,6 +155,10 @@ const FILLER_PREFIXES = [
   // Discourse starters: "OK so", "so I", "right so", "and then", "so basically"
   /^(?:(?:ok(?:ay)?|right|so|well|alright)\s+)+(?:so\s+|then\s+|basically\s+|actually\s+)?/i,
   /^(?:and\s+then\s+|and\s+also\s+)/i,
+  // Bare leading conjunction before a subject/verb: "And I need to call" → "I need
+  // to call" (the subject+verb stripper below then finishes the job). Sentence
+  // splitting can leave these at the head of a clause when a ramble runs on.
+  /^(?:and|but|plus)\s+(?=i\b|i'|we\b|to\b|the\b|a\b|my\b)/i,
   // Subject + verb helpers: "I need to", "I want to", etc.
   /^(?:i\s+)?(?:also\s+)?(?:need\s+to|want\s+to|have\s+to|gotta|got\s+to|should|must|will|am\s+going\s+to|gonna)\s+/i,
   /^(?:remind\s+me\s+to|don'?t\s+forget\s+to|remember\s+to|make\s+sure\s+to)\s+/i,

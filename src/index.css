@@ -170,6 +170,18 @@ nav[aria-label="Main navigation"]::-webkit-scrollbar {
   50%      { box-shadow: 0 0 0 6px rgba(220, 80, 80, 0); }
 }
 
+/* A ramble task card sliding into the live capture list. */
+@keyframes taskPop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Live "listening" equaliser bars while the mic is open. */
+@keyframes voiceBar {
+  0%, 100% { transform: scaleY(0.35); }
+  50%      { transform: scaleY(1); }
+}
+
 /* Remove default focus outline — components handle focus styling inline */
 button:focus-visible {
   outline: none;
