@@ -277,7 +277,7 @@ export default function QuickAddModal({
               value={partial || text}
               onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') submitTyped(); }}
-              placeholder={phase === 'recording' ? 'listening…' : 'a thought, todo, expense…'}
+              placeholder={phase === 'recording' ? 'listening…' : "what's on your mind? a thought, todo, expense…"}
               disabled={phase === 'recording'}
               style={{
                 flex: 1,

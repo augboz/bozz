@@ -109,3 +109,51 @@ export const TOPIC_WIDGET_LIST: WidgetMeta[] = Object.values(WIDGET_REGISTRY).fi
  *  walkthrough instead of staring at demo widgets. Existing users keep their
  *  saved layout (a stored homeLayout overrides this default). */
 export const DEFAULT_HOME: HomeWidgetItem[] = [];
+
+/** A one-click starter layout offered on the empty home, so a brand-new user can
+ *  go from a blank canvas to a structured "morning view" in a single tap instead
+ *  of hunting for the add-widget flow. Only account-free, ready widgets are used
+ *  so the layout renders something sensible before anything is connected. The
+ *  `i` keys are generated when the template is applied (see HomeView). */
+export interface StarterTemplate {
+  id: string;
+  label: string;
+  description: string;
+  items: Array<Omit<HomeWidgetItem, 'i'>>;
+}
+
+export const STARTER_TEMPLATES: StarterTemplate[] = [
+  {
+    id: 'student',
+    label: 'Student',
+    description: 'Today, deadlines, a focus timer and quick capture.',
+    items: [
+      { type: 'today', x: 0, y: 0, w: 6, h: 12 },
+      { type: 'upcomingDeadlines', x: 6, y: 0, w: 6, h: 6 },
+      { type: 'pomodoro', x: 6, y: 6, w: 6, h: 6 },
+      { type: 'quickAdd', x: 0, y: 12, w: 12, h: 8 },
+    ],
+  },
+  {
+    id: 'freelancer',
+    label: 'Freelancer',
+    description: 'Today, your budget, a clock and quick capture.',
+    items: [
+      { type: 'today', x: 0, y: 0, w: 6, h: 12 },
+      { type: 'budget', x: 6, y: 0, w: 6, h: 6 },
+      { type: 'clock', x: 6, y: 6, w: 6, h: 6 },
+      { type: 'quickAdd', x: 0, y: 12, w: 12, h: 8 },
+    ],
+  },
+  {
+    id: 'essentials',
+    label: 'Just the essentials',
+    description: 'Today, weather and quick capture. Nothing extra.',
+    items: [
+      { type: 'today', x: 0, y: 0, w: 8, h: 12 },
+      { type: 'weather', x: 8, y: 0, w: 4, h: 6 },
+      { type: 'clock', x: 8, y: 6, w: 4, h: 6 },
+      { type: 'quickAdd', x: 0, y: 12, w: 12, h: 8 },
+    ],
+  },
+];

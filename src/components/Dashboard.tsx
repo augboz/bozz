@@ -1399,6 +1399,7 @@ export default function Dashboard() {
               visible={activeSection === 'home'}
               items={homeItems}
               setItems={setHomeItems}
+              onReplayWalkthroughs={replayWalkthroughs}
               widgetShape={appearance.widgetShape ?? 'rounded'}
               widgetBorder={appearance.widgetBorder ?? 'normal'}
               onWidgetShape={(s) => patchAppearance({ widgetShape: s })}

@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
-import { Pencil, Plus, X, Check, Settings2 } from 'lucide-react';
+import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen } from 'lucide-react';
 import type { HomeWidgetItem, Theme, ImapAccount, WidgetShape, WidgetBorder } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
-import { WIDGET_REGISTRY, WIDGET_LIST } from '../widgets/registry';
+import { WIDGET_REGISTRY, WIDGET_LIST, STARTER_TEMPLATES, type StarterTemplate } from '../widgets/registry';
 import { TITLE_BAR_HEIGHT } from '../TitleBar';
 import { isMobileViewport, isTauri } from '../../lib/platform';
 import { getItem, setItem, deleteItem } from '../../lib/storage';
@@ -28,6 +28,18 @@ interface HomeViewProps {
   /** Whether the Home section is currently shown (Home stays mounted). Used to
    *  re-arm the grid's mount-animation suppression each time it becomes visible. */
   visible?: boolean;
+  /** Re-open the "Getting started" walkthroughs. Wired to the same handler
+   *  Settings uses, so a new user can find their way back from the empty home. */
+  onReplayWalkthroughs?: () => void;
+}
+
+/** Time-of-day greeting shown above the grid, reinforcing the "your morning"
+ *  framing every day, not just on first run. */
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'good morning. here is your day.';
+  if (h < 18) return 'good afternoon. here is where things stand.';
+  return 'good evening. here is what is left.';
 }
 
 function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
@@ -39,7 +51,7 @@ function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
 }
 
 
-export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true }: HomeViewProps) {
+export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true, onReplayWalkthroughs }: HomeViewProps) {
   const { t } = ctx;
   const [editMode, setEditMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -171,6 +183,27 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
 
   const removeWidget = (i: string) => setItems(prev => prev.filter(it => it.i !== i));
 
+  // Apply a one-click starter layout from the empty state. Generates fresh `i`
+  // keys (unique per type+timestamp) so React keys never collide, and clamps each
+  // widget to its registered minimum size.
+  const applyTemplate = (tpl: StarterTemplate) => {
+    const stamp = Date.now();
+    setItems(tpl.items.map((it, idx) => {
+      const meta = WIDGET_REGISTRY[it.type];
+      return {
+        ...it,
+        i: `${it.type}-${stamp}-${idx}`,
+        w: Math.max(it.w, meta.minSize.w),
+        h: Math.max(it.h, meta.minSize.h),
+      };
+    }));
+  };
+
+  // Jump straight into the add flow from the empty state: enter edit mode and
+  // open the Add panel in one click, so the core action isn't hidden behind the
+  // pencil-then-add discovery problem.
+  const startAdding = () => { setEditMode(true); setShowAdd(true); };
+
   // ── Mobile stack ───────────────────────────────────────────────────────
   // On phone widths the 12-col grid produces unreadably small widgets, so
   // we fall back to a single-column vertical stack. Edit mode (drag/resize)
@@ -185,6 +218,11 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             views that don't sit above zIndex 0 (Calendar/Settings/Apps). */}
         {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
         <div style={{ position: 'relative', zIndex: 1 }}>
+        {items.length > 0 && !editMode && (
+          <div style={{ fontSize: '0.82rem', color: t.textMuted, marginBottom: '0.6rem' }}>
+            {greeting()}
+          </div>
+        )}
         <div style={{
           display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
           gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap',
@@ -205,6 +243,10 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
               : <><Pencil size={14} strokeWidth={1.5} /> Edit</>}
           </button>
         </div>
+
+        {items.length === 0 && !editMode && (
+          <HomeEmptyState t={t} onAddFirst={startAdding} onApplyTemplate={applyTemplate} onReplay={onReplayWalkthroughs} />
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {sortedItems.map(it => {
@@ -267,6 +309,11 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
           otherwise cover other sections while Home stays mounted. */}
       {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
       <div style={{ position: 'relative', zIndex: 1 }}>
+      {items.length > 0 && !editMode && (
+        <div style={{ fontSize: '0.82rem', color: t.textMuted, marginBottom: '0.6rem' }}>
+          {greeting()}
+        </div>
+      )}
       <div style={{
         display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
         gap: '0.5rem', marginBottom: editMode ? '0.5rem' : '0.75rem',
@@ -287,15 +334,19 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             onClick={() => { setEditMode(e => !e); setShowAdd(false); setConfiguringId(null); }}
             title={editMode ? 'Done editing' : 'Edit layout'}
             aria-label={editMode ? 'Done editing' : 'Edit layout'}
-            style={{ ...ghostBtn(t), padding: '0.4rem', borderRadius: '8px' }}
+            style={ghostBtn(t)}
           >
             {editMode
-              ? <Check size={14} strokeWidth={1.5} />
-              : <Pencil size={14} strokeWidth={1.5} />}
+              ? <><Check size={14} strokeWidth={1.5} /> Done</>
+              : <><Pencil size={14} strokeWidth={1.5} /> Edit</>}
           </button>
         </div>
       </div>
       {editMode && <div style={{ marginBottom: '0.75rem' }} />}
+
+      {items.length === 0 && !editMode && (
+        <HomeEmptyState t={t} onAddFirst={startAdding} onApplyTemplate={applyTemplate} onReplay={onReplayWalkthroughs} />
+      )}
 
       <Grid
         className={`home-grid${editMode ? ' home-grid-editing' : ''}`}
@@ -389,6 +440,84 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         );
       })()}
       </div>{/* /zIndex wrapper */}
+    </div>
+  );
+}
+
+// ── Empty home state (first run) ──────────────────────────────────────────
+// Shown when the home grid has zero widgets and we're not editing. Turns the
+// blank canvas into the product promise: names what Home is, offers one-click
+// starter layouts, and makes the (otherwise hidden) add action obvious. Mirrors
+// the Quicks empty-state pattern (icon tile, heading, body, action).
+function HomeEmptyState({ t, onAddFirst, onApplyTemplate, onReplay }: {
+  t: Theme;
+  onAddFirst: () => void;
+  onApplyTemplate: (tpl: StarterTemplate) => void;
+  onReplay?: () => void;
+}) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      gap: '1.25rem', padding: '3rem 1.5rem 2rem', textAlign: 'center',
+    }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: '14px',
+        background: t.panel, border: `1px solid ${t.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <LayoutGrid size={22} strokeWidth={1.4} color={t.textDim} />
+      </div>
+      <div>
+        <div style={{ fontSize: '1.05rem', fontWeight: 500, color: t.text, marginBottom: '0.4rem' }}>
+          your morning, in 90 seconds
+        </div>
+        <div style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.65, maxWidth: 360 }}>
+          this is your home. add a few widgets, today's plan, your calendar,
+          your inbox, and one glance tells you what your day looks like.
+        </div>
+      </div>
+
+      {/* Primary action — the add flow, no hunting for the pencil. */}
+      <button onClick={onAddFirst} style={{
+        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+        background: t.text, color: t.bg, border: 'none', borderRadius: '999px',
+        padding: '0.55rem 1.1rem', cursor: 'pointer', fontFamily: 'inherit',
+        fontSize: '0.8rem', fontWeight: 500,
+      }}>
+        <Plus size={15} strokeWidth={2} /> add your first widget
+      </button>
+
+      {/* One-click starter layouts. */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem', marginTop: '0.4rem' }}>
+        <div style={{
+          fontSize: '0.62rem', letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: t.textDim, display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+        }}>
+          <Sparkles size={11} strokeWidth={1.6} /> or start from a layout
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem', maxWidth: 420 }}>
+          {STARTER_TEMPLATES.map(tpl => (
+            <button key={tpl.id} onClick={() => onApplyTemplate(tpl)} title={tpl.description}
+              style={{
+                background: 'transparent', border: `1px solid ${t.borderStrong}`, borderRadius: '10px',
+                padding: '0.5rem 0.85rem', cursor: 'pointer', fontFamily: 'inherit',
+                color: t.text, fontSize: '0.78rem',
+              }}>
+              {tpl.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {onReplay && (
+        <button onClick={onReplay} style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+          background: 'transparent', border: 'none', color: t.textDim, cursor: 'pointer',
+          fontFamily: 'inherit', fontSize: '0.74rem', marginTop: '0.2rem',
+        }}>
+          <BookOpen size={13} strokeWidth={1.5} /> show the getting-started guide
+        </button>
+      )}
     </div>
   );
 }

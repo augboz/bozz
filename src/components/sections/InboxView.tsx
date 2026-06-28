@@ -190,8 +190,8 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign }: Inbo
                 Nothing here yet
               </div>
               <div style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.65, maxWidth: 340 }}>
-                Quicks is your scratchpad — dump anything on your mind without breaking flow.
-                Items land here and you can triage them into your topics whenever you're ready.
+                Quicks is your scratchpad. dump anything on your mind without breaking flow,
+                then sort it into your topics whenever you're ready.
               </div>
             </div>
             {isTauri() ? (
