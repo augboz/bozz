@@ -16,13 +16,23 @@ async function openLink(url: string) {
   }
 }
 
+type LinkSize = 'compact' | 'cozy' | 'full';
+const SIZE_ORDER: LinkSize[] = ['compact', 'cozy', 'full'];
+const SIZE_LABEL: Record<LinkSize, string> = { compact: 'Compact', cozy: 'Cozy', full: 'Full width' };
+
 export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, topics, currentTopicId, onTopicChange, editing } = ctx;
+  const { t, topics, currentTopicId, onTopicChange, editing, widgetConfig, onWidgetConfig } = ctx;
   const topic = topics.find(tp => tp.id === currentTopicId);
 
   const [addingLink, setAddingLink] = useState(false);
   const [linkLabel, setLinkLabel] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+
+  const size: LinkSize = (widgetConfig?.linkSize as LinkSize) ?? 'cozy';
+  const cycleSize = () => {
+    const next = SIZE_ORDER[(SIZE_ORDER.indexOf(size) + 1) % SIZE_ORDER.length];
+    onWidgetConfig?.({ ...widgetConfig, linkSize: next });
+  };
 
   if (!topic || !onTopicChange) {
     return (
@@ -59,7 +69,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   return (
     <Widget t={t} accent={accent}>
       {editing && (
-        <div className="widget-interactive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+        <div className="widget-interactive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.65rem' }}>
           <button
             onClick={() => setAddingLink(v => !v)}
             style={{
@@ -69,6 +79,17 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
             }}
           >
             + add
+          </button>
+          <button
+            onClick={cycleSize}
+            title="Change how much space links take"
+            style={{
+              background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px',
+              padding: '0.2rem 0.55rem', cursor: 'pointer', color: t.textMuted,
+              fontSize: '0.68rem', fontFamily: 'inherit',
+            }}
+          >
+            {SIZE_LABEL[size]}
           </button>
         </div>
       )}
@@ -111,35 +132,53 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
           {editing ? 'No links yet — click + add to pin one.' : 'No links pinned.'}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-          {links.map(l => (
-            <div key={l.id} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-              background: accent + '18', border: `1px solid ${accent}44`,
-              borderRadius: '999px', padding: '0.25rem 0.55rem 0.25rem 0.45rem',
-            }}>
-              <button
-                onClick={() => openLink(l.url)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.28rem',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: accent, fontFamily: 'inherit', fontSize: '0.78rem', padding: 0,
-                }}
-              >
-                <ExternalLink size={10} strokeWidth={1.5} />
-                {l.label}
-              </button>
-              {editing && (
+        <div style={{
+          display: 'flex',
+          flexDirection: size === 'full' ? 'column' : 'row',
+          flexWrap: size === 'full' ? 'nowrap' : 'wrap',
+          gap: size === 'compact' ? '0.3rem' : size === 'full' ? '0.4rem' : '0.45rem',
+        }}>
+          {links.map(l => {
+            const fontSize = size === 'compact' ? '0.72rem' : size === 'full' ? '0.86rem' : '0.8rem';
+            const pad = size === 'compact'
+              ? '0.18rem 0.45rem 0.18rem 0.4rem'
+              : size === 'full'
+                ? '0.5rem 0.7rem'
+                : '0.3rem 0.6rem 0.3rem 0.5rem';
+            const icon = size === 'compact' ? 10 : size === 'full' ? 14 : 12;
+            return (
+              <div key={l.id} style={{
+                display: size === 'full' ? 'flex' : 'inline-flex',
+                alignItems: 'center', gap: '0.3rem',
+                width: size === 'full' ? '100%' : undefined,
+                background: accent + '18', border: `1px solid ${accent}44`,
+                borderRadius: size === 'full' ? '10px' : '999px', padding: pad,
+              }}>
                 <button
-                  className="widget-interactive"
-                  onClick={() => removeLink(l.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textDim, padding: '0 0 0 1px', display: 'flex', alignItems: 'center' }}
+                  onClick={() => openLink(l.url)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.32rem',
+                    flex: size === 'full' ? 1 : undefined, minWidth: 0,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: accent, fontFamily: 'inherit', fontSize, padding: 0,
+                    textAlign: 'left',
+                  }}
                 >
-                  <X size={9} strokeWidth={2} />
+                  <ExternalLink size={icon} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span>
                 </button>
-              )}
-            </div>
-          ))}
+                {editing && (
+                  <button
+                    className="widget-interactive"
+                    onClick={() => removeLink(l.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textDim, padding: '0 0 0 1px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                  >
+                    <X size={size === 'full' ? 12 : 9} strokeWidth={2} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </Widget>

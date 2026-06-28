@@ -19,8 +19,8 @@
         "minHeight": 500,
         "center": true,
         "resizable": true,
-        "decorations": false,
-        "titleBarStyle": "Overlay",
+        "maximizable": true,
+        "decorations": true,
         "visible": true,
         "theme": "Dark",
         "backgroundColor": "#101015"

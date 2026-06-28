@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { ImageIcon, RotateCcw } from 'lucide-react';
+import { ImageIcon, RotateCcw, ClipboardPaste } from 'lucide-react';
 import type { WidgetCtx } from './context';
 import { Widget } from '../shared/Widget';
 import { getItem, setItem } from '../../lib/storage';
@@ -60,6 +60,28 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+/** Pull the first image off the system clipboard, if any (button/gesture only). */
+async function readImageFromClipboard(): Promise<string | null> {
+  try {
+    if (!navigator.clipboard?.read) return null;
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const type = item.types.find(t => t.startsWith('image/'));
+      if (type) {
+        const blob = await item.getType(type);
+        return await readFileAsDataUrl(new File([blob], 'pasted', { type }));
+      }
+    }
+  } catch { /* permission denied, empty, or non-image clipboard */ }
+  return null;
+}
+
+/** First image file from a paste or drag-drop event, or null. */
+function imageFileFromEvent(list: FileList | null | undefined): File | null {
+  if (!list) return null;
+  return Array.from(list).find(f => f.type.startsWith('image/')) ?? null;
+}
+
 export default function PhotoWidget({ ctx }: { ctx: WidgetCtx }) {
   const { t, widgetConfig, onWidgetConfig, widgetId } = ctx;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,27 +115,48 @@ export default function PhotoWidget({ ctx }: { ctx: WidgetCtx }) {
     return () => window.removeEventListener('photo-update', handler);
   }, [widgetId]);
 
-  const handleFile = (file: File) => {
-    readFileAsDataUrl(file).then(url => {
-      const next: PhotoData = { url, ...DEFAULT_FRAME };
-      setPhoto(next);
-      if (widgetId) void savePhoto(widgetId, next);
-    });
+  const setFromUrl = (url: string) => {
+    const next: PhotoData = { url, ...DEFAULT_FRAME };
+    setPhoto(next);
+    if (widgetId) void savePhoto(widgetId, next);
+  };
+  const handleFile = (file: File) => { readFileAsDataUrl(file).then(setFromUrl); };
+  const pasteFromClipboard = async () => {
+    const url = await readImageFromClipboard();
+    if (url) setFromUrl(url);
   };
 
   if (!photo) {
     return (
       <Widget t={t} accent="" noPadding>
         <div
+          className="widget-interactive"
+          tabIndex={0}
           onClick={() => fileRef.current?.click()}
+          onPaste={e => { const f = imageFileFromEvent(e.clipboardData?.files); if (f) { e.preventDefault(); handleFile(f); } }}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { const f = imageFileFromEvent(e.dataTransfer?.files); if (f) { e.preventDefault(); handleFile(f); } }}
           style={{
             width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: '0.75rem', cursor: 'pointer',
+            gap: '0.6rem', cursor: 'pointer', outline: 'none',
           }}
         >
           <ImageIcon size={28} strokeWidth={1} color={t.textDim} />
-          <span style={{ fontSize: '0.78rem', color: t.textDim }}>Click to add a photo</span>
+          <span style={{ fontSize: '0.78rem', color: t.textDim, textAlign: 'center', padding: '0 0.75rem' }}>
+            Click, paste, or drop a photo
+          </span>
+          <button
+            onClick={e => { e.stopPropagation(); void pasteFromClipboard(); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px',
+              padding: '0.25rem 0.6rem', color: t.textMuted, cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '0.7rem',
+            }}
+          >
+            <ClipboardPaste size={12} strokeWidth={1.6} /> Paste image
+          </button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={e => { if (e.target.files?.[0]) { handleFile(e.target.files[0]); e.target.value = ''; } }} />
         </div>
@@ -193,6 +236,14 @@ export function PhotoWidgetConfig({ config: _config, onConfig: _onConfig, t, wid
     });
   };
 
+  const pasteFromClipboard = async () => {
+    const url = await readImageFromClipboard();
+    if (!url) return;
+    const next: PhotoData = { url, ...DEFAULT_FRAME };
+    setPhoto(next);
+    if (widgetId) void savePhoto(widgetId, next);
+  };
+
   const removePhoto = () => {
     setPhoto(null);
     if (widgetId) void savePhoto(widgetId, null);
@@ -223,12 +274,26 @@ export function PhotoWidgetConfig({ config: _config, onConfig: _onConfig, t, wid
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
       {!photo ? (
-        <button
-          onClick={() => fileRef.current?.click()}
-          style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.8rem', color: t.textMuted, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem', textAlign: 'left' }}
+        <div
+          onPaste={e => { const f = imageFileFromEvent(e.clipboardData?.files); if (f) { e.preventDefault(); handleFile(f); } }}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { const f = imageFileFromEvent(e.dataTransfer?.files); if (f) { e.preventDefault(); handleFile(f); } }}
+          style={{ display: 'flex', gap: '0.4rem' }}
         >
-          Add a photo…
-        </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            style={{ flex: 1, background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.8rem', color: t.textMuted, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem', textAlign: 'left' }}
+          >
+            Add a photo…
+          </button>
+          <button
+            onClick={() => void pasteFromClipboard()}
+            title="Paste image from clipboard"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.7rem', color: t.textMuted, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem' }}
+          >
+            <ClipboardPaste size={13} strokeWidth={1.6} /> Paste
+          </button>
+        </div>
       ) : (
         <>
           <div

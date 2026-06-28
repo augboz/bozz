@@ -369,6 +369,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         return createPortal(
           <div
             ref={panelRef}
+            className="thin-scroll"
             style={{
               position: 'fixed',
               top: configPanelPos.top,
@@ -376,6 +377,10 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
               right: configPanelPos.right,
               zIndex: 9999,
               width: '248px',
+              // Never run off the bottom of the screen — cap to the space below
+              // the panel's top and scroll inside if the controls are tall.
+              maxHeight: `calc(100vh - ${configPanelPos.top ?? 8}px - 12px)`,
+              overflowY: 'auto',
             }}
           >
             <WidgetConfigPanel t={t} item={item} ctx={renderCtx} onConfig={(cfg) => updateWidgetConfig(configuringId, cfg)} />
@@ -400,16 +405,26 @@ function AppearanceControls({ t, widgetShape, widgetBorder, onShape, onBorder }:
   const borders: Array<{ id: WidgetBorder; label: string }> = [
     { id: 'subtle', label: 'None' }, { id: 'normal', label: 'Thin' }, { id: 'bold', label: 'Bold' },
   ];
+  // Active option is filled with the "doing" accent so it clearly stands out
+  // over any page-background photo; inactive stays legible (not dim-grey).
   const segStyle = (on: boolean, t: Theme): React.CSSProperties => ({
-    background: on ? t.bgAlt : 'transparent', color: on ? t.text : t.textMuted,
-    border: 'none', padding: '0.3rem 0.6rem', fontSize: '0.72rem', fontFamily: 'inherit',
-    cursor: 'pointer', fontWeight: 300,
+    background: on ? t.doingAccent : 'transparent', color: on ? '#fff' : t.text,
+    border: 'none', padding: '0.35rem 0.7rem', fontSize: '0.74rem', fontFamily: 'inherit',
+    cursor: 'pointer', fontWeight: on ? 600 : 400,
   });
+  // Frost the whole cluster so the controls read on top of a background photo.
+  const group: React.CSSProperties = {
+    display: 'inline-flex', border: `1px solid ${t.borderStrong}`, borderRadius: '9px', overflow: 'hidden',
+    background: `var(--glass-bg, ${t.panel})`,
+    backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+  };
+  const lbl: React.CSSProperties = { fontSize: '0.7rem', color: t.text, fontWeight: 500, letterSpacing: '0.04em' };
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <span style={{ fontSize: '0.65rem', color: t.textDim, letterSpacing: '0.06em' }}>corners</span>
-        <div style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '7px', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flex: 1, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <span style={lbl}>Corners</span>
+        <div style={group}>
           {shapes.map((o, i) => (
             <button key={o.id} onClick={() => onShape(o.id)} aria-pressed={widgetShape === o.id}
               style={{ ...segStyle(widgetShape === o.id, t), borderLeft: i === 0 ? 'none' : `1px solid ${t.border}` }}>
@@ -418,9 +433,9 @@ function AppearanceControls({ t, widgetShape, widgetBorder, onShape, onBorder }:
           ))}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <span style={{ fontSize: '0.65rem', color: t.textDim, letterSpacing: '0.06em' }}>border</span>
-        <div style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '7px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <span style={lbl}>Border</span>
+        <div style={group}>
           {borders.map((o, i) => (
             <button key={o.id} onClick={() => onBorder(o.id)} aria-pressed={widgetBorder === o.id}
               style={{ ...segStyle(widgetBorder === o.id, t), borderLeft: i === 0 ? 'none' : `1px solid ${t.border}` }}>
@@ -438,6 +453,10 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
   tbOffset: number; existingTypes: Set<string>;
 }) {
   return (
+    <>
+    {/* Click-anywhere-off backdrop so the panel closes without hunting for the X
+        (which the walkthrough bar can cover at the top of the screen). */}
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 49, background: 'transparent' }} />
     <div style={{
       position: 'fixed', top: tbOffset, right: 0, bottom: 0,
       width: 'min(320px, 90vw)', zIndex: 50,
@@ -513,6 +532,7 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

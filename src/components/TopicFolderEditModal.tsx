@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Plus, Check, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { X, Plus, Check, ChevronUp, ChevronDown, Trash2, Info } from 'lucide-react';
 import type { Theme, Topic, TopicFolder, TopicStage } from '../lib/types';
 import ColorBankPicker from './shared/ColorBankPicker';
 import { DEFAULT_COLOR_BANK } from '../lib/appearance';
-import { TOPIC_ICONS, iconForTopic } from './sections/settings/TopicsBlock';
+import { TOPIC_ICONS, iconForTopic, normalizeStages } from './sections/settings/TopicsBlock';
 
 const STAGE_COLORS = ['#7a93ad', '#d99a52', '#6fb088', '#dc5050', '#bfa8c9'];
 function genId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -33,23 +33,49 @@ export default function TopicFolderEditModal({
   const [showIcons, setShowIcons] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [newStage, setNewStage] = useState('');
+  const [info, setInfo] = useState<null | 'description' | 'stages'>(null);
+
+  // Small "ⓘ" that toggles a one-line explanation. Kept deliberately short.
+  const InfoDot = ({ id, text }: { id: 'description' | 'stages'; text: string }) => (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        type="button"
+        onClick={() => setInfo(v => (v === id ? null : id))}
+        aria-label="What's this?"
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: t.textDim, padding: 0, display: 'inline-flex' }}
+      >
+        <Info size={12} strokeWidth={1.7} />
+      </button>
+      {info === id && (
+        <span style={{
+          position: 'absolute', top: '150%', left: 0, zIndex: 80, width: 210,
+          background: t.panel, border: `1px solid ${t.borderStrong}`, borderRadius: 8,
+          padding: '0.5rem 0.6rem', fontSize: '0.72rem', color: t.textMuted, lineHeight: 1.45,
+          letterSpacing: 0, fontWeight: 400, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+        }}>
+          {text}
+        </span>
+      )}
+    </span>
+  );
 
   const setName = (v: string) => isTopic ? onChangeTopic?.({ name: v }) : onChangeFolder?.({ name: v });
   const setColor = (v: string) => isTopic ? onChangeTopic?.({ color: v }) : onChangeFolder?.({ color: v });
   const setIcon = (v: string) => isTopic ? onChangeTopic?.({ icon: v }) : onChangeFolder?.({ icon: v });
 
-  // ── Stage helpers (topics only) ──
+  // ── Stage helpers (topics only). The last stage is always the "done" stage,
+  //    enforced by normalizeStages — the user no longer toggles it per-stage. ──
   const setStage = (id: string, patch: Partial<TopicStage>) =>
-    onChangeTopic?.({ stages: (topic?.stages ?? []).map(s => s.id === id ? { ...s, ...patch } : s) });
+    onChangeTopic?.({ stages: normalizeStages((topic?.stages ?? []).map(s => s.id === id ? { ...s, ...patch } : s)) });
   const removeStage = (id: string) => {
     if ((topic?.stages.length ?? 0) <= 1) return;
-    onChangeTopic?.({ stages: (topic?.stages ?? []).filter(s => s.id !== id) });
+    onChangeTopic?.({ stages: normalizeStages((topic?.stages ?? []).filter(s => s.id !== id)) });
   };
   const addStage = () => {
     const label = newStage.trim();
     if (!label || !topic) return;
     const c = usableBank[topic.stages.length % usableBank.length] ?? STAGE_COLORS[topic.stages.length % STAGE_COLORS.length];
-    onChangeTopic?.({ stages: [...topic.stages, { id: genId(), label, color: c }] });
+    onChangeTopic?.({ stages: normalizeStages([...topic.stages, { id: genId(), label, color: c }]) });
     setNewStage('');
   };
   const moveStage = (idx: number, dir: -1 | 1) => {
@@ -58,7 +84,7 @@ export default function TopicFolderEditModal({
     const j = idx + dir;
     if (j < 0 || j >= arr.length) return;
     [arr[idx], arr[j]] = [arr[j], arr[idx]];
-    onChangeTopic?.({ stages: arr });
+    onChangeTopic?.({ stages: normalizeStages(arr) });
   };
 
   const inp: React.CSSProperties = {
@@ -155,7 +181,10 @@ export default function TopicFolderEditModal({
         {isTopic && topic && (
           <>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={lbl}>Description <span style={{ color: t.textDim }}>— helps Quick Add route to the right topic</span></label>
+              <div style={{ ...lbl, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                Description
+                <InfoDot id="description" text="What this topic is about. Bozz uses it to send your quick notes to the right topic." />
+              </div>
               <textarea
                 value={topic.description ?? ''}
                 onChange={e => onChangeTopic?.({ description: e.target.value })}
@@ -166,7 +195,10 @@ export default function TopicFolderEditModal({
             </div>
 
             <div data-onb="topic-stages" style={{ marginBottom: '1rem' }}>
-              <label style={lbl}>Stages <span style={{ color: t.textDim }}>— mark the last as "done"</span></label>
+              <div style={{ ...lbl, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                Stages
+                <InfoDot id="stages" text="The steps a task moves through. The last stage always means done." />
+              </div>
               <div style={{ display: 'grid', gap: '0.35rem' }}>
                 {topic.stages.map((s, idx) => (
                   <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: t.input, border: `1px solid ${s.done ? t.doneBorder : t.border}`, borderRadius: '8px', padding: '0.35rem 0.45rem' }}>
@@ -176,10 +208,11 @@ export default function TopicFolderEditModal({
                     </div>
                     <StageSwatch color={s.color ?? STAGE_COLORS[idx % STAGE_COLORS.length]} bank={usableBank} t={t} onChange={c => setStage(s.id, { color: c })} />
                     <input value={s.label} onChange={e => setStage(s.id, { label: e.target.value })} placeholder="stage name" style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', color: t.text, fontSize: '0.8rem', fontFamily: 'inherit' }} />
-                    <button onClick={() => setStage(s.id, { done: !s.done })} aria-pressed={!!s.done} title="Mark as completion stage"
-                      style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', border: 'none', fontSize: '0.62rem', fontFamily: 'inherit', cursor: 'pointer', background: s.done ? t.doneAccent : t.borderStrong, color: s.done ? '#fff' : t.textDim, flexShrink: 0 }}>
-                      ✓ done
-                    </button>
+                    {s.done && (
+                      <span title="The last stage always means done" style={{ padding: '0.15rem 0.5rem', borderRadius: '999px', fontSize: '0.62rem', fontFamily: 'inherit', background: t.doneAccent, color: '#fff', flexShrink: 0 }}>
+                        done
+                      </span>
+                    )}
                     <button onClick={() => removeStage(s.id)} disabled={topic.stages.length <= 1} aria-label="Remove stage"
                       style={{ background: 'transparent', border: 'none', color: topic.stages.length <= 1 ? t.textDim : t.textMuted, cursor: topic.stages.length <= 1 ? 'not-allowed' : 'pointer', padding: '0.2rem', display: 'flex', flexShrink: 0 }}>
                       <X size={12} strokeWidth={1.6} />

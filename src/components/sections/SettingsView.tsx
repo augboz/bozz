@@ -33,8 +33,6 @@ interface SettingsViewProps {
   accountEmail: string | null;
   onSignOut: () => Promise<void>;
   onOpenWorlds: () => void;
-  /** Navigate to the Email page (where Priority alerts live). */
-  onOpenEmail: () => void;
 }
 
 // A settings section. Flat by default (content always shown); pass
@@ -383,7 +381,7 @@ export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, onClearTopics, sections,
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, hiddenTopicIds,
-  accountEmail, onSignOut, onOpenWorlds, onOpenEmail,
+  accountEmail, onSignOut, onOpenWorlds,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -460,7 +458,7 @@ export default function SettingsView({
           <Segmented<FontSize>
             value={appearance.fontSize} t={t}
             onChange={(v) => patchAppearance({ fontSize: v })}
-            options={[{ id: 'small', label: 'Small' }, { id: 'medium', label: 'Medium' }, { id: 'large', label: 'Large' }]}
+            options={[{ id: 'small', label: 'Small' }, { id: 'medium', label: 'Medium' }, { id: 'large', label: 'Large' }, { id: 'xlarge', label: 'XL' }]}
           />
         </Field>
         <Field label="Default section" hint="Where the app opens on launch" t={t}>
@@ -508,7 +506,7 @@ export default function SettingsView({
       </Block>
 
       <Block title="Bozz Plus" t={t} icon={Sparkles}>
-        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} onOpenEmail={onOpenEmail} />
+        <PlanBlock t={t} onOpenWorlds={onOpenWorlds} />
       </Block>
 
       <Block title="Help" t={t} icon={HelpCircle} collapsible>

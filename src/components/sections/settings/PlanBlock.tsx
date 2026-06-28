@@ -1,32 +1,22 @@
 import { useState } from 'react';
-import { Palette, Bell, Heart, Coffee, Star, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
+import { Palette, Heart, Coffee, Star, ExternalLink, ChevronRight } from 'lucide-react';
 import type { Theme } from '../../../lib/types';
 import { getPlanLabel, BETA_UNLOCK } from '../../../lib/plus';
-import { activateLicense, openDonate, openGitHub, openPlansPage, isLinkLive } from '../../../lib/billing';
+import { openDonate, openGitHub, openPlansPage, isLinkLive } from '../../../lib/billing';
 
 interface Props {
   t: Theme;
   /** Navigate to the in-app Worlds gallery. */
   onOpenWorlds: () => void;
-  /** Navigate to the Email page, where Priority alerts are configured. */
-  onOpenEmail: () => void;
 }
 
-export default function PlanBlock({ t, onOpenWorlds, onOpenEmail }: Props) {
-  const [keyOpen, setKeyOpen] = useState(false);
-  const [key, setKey] = useState('');
-  const [msg, setMsg] = useState<string | null>(null);
+export default function PlanBlock({ t, onOpenWorlds }: Props) {
   const [plansSoon, setPlansSoon] = useState(false);
 
   const ghost: React.CSSProperties = {
     background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
     padding: '0.45rem 0.85rem', color: t.textMuted, cursor: 'pointer',
     fontFamily: 'inherit', fontSize: '0.78rem',
-  };
-
-  const activate = async () => {
-    try { await activateLicense(key); setMsg('Activated ✓'); }
-    catch (e) { setMsg(e instanceof Error ? e.message : String(e)); }
   };
 
   return (
@@ -83,57 +73,6 @@ export default function PlanBlock({ t, onOpenWorlds, onOpenEmail }: Props) {
         </div>
         <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} />
       </button>
-
-      {/* Priority alerts — the other Plus pillar; lives on the Email page */}
-      <button
-        onClick={onOpenEmail}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%',
-          background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '10px',
-          padding: '0.7rem 0.9rem', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-        }}
-      >
-        <Bell size={15} strokeWidth={1.6} color={t.textMuted} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.86rem', color: t.text }}>Priority alerts</div>
-          <div style={{ fontSize: '0.72rem', color: t.textMuted }}>Get pinged when an email that matters lands.</div>
-        </div>
-        <ChevronRight size={15} strokeWidth={1.5} color={t.textDim} />
-      </button>
-
-      {/* License key — compact, collapsed by default (most users never need it) */}
-      <div>
-        <button
-          onClick={() => setKeyOpen(o => !o)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-            background: 'transparent', border: 'none', color: t.textMuted, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: '0.76rem', padding: 0,
-          }}
-        >
-          {keyOpen ? <ChevronDown size={13} strokeWidth={1.6} /> : <ChevronRight size={13} strokeWidth={1.6} />}
-          Have a license key?
-        </button>
-        {keyOpen && (
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-            <input
-              value={key}
-              onChange={e => { setKey(e.target.value); setMsg(null); }}
-              placeholder="Paste your key"
-              style={{
-                flex: 1, minWidth: '180px',
-                background: t.input, border: `1px solid ${t.border}`, borderRadius: '8px',
-                padding: '0.45rem 0.7rem', color: t.text, fontSize: '0.8rem',
-                fontFamily: 'inherit', outline: 'none',
-              }}
-            />
-            <button onClick={activate} disabled={!key.trim()} style={{ ...ghost, opacity: key.trim() ? 1 : 0.5 }}>
-              Activate
-            </button>
-          </div>
-        )}
-        {msg && <div role="status" aria-live="polite" style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '0.4rem' }}>{msg}</div>}
-      </div>
 
       {/* Support Bozz — external links, never gated, never nagged */}
       <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '0.9rem' }}>

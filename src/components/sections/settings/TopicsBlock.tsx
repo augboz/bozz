@@ -104,6 +104,22 @@ export function makeBlankTopic(order: number, bank: string[] = DEFAULT_COLOR_BAN
   };
 }
 
+/**
+ * The final stage is always the completion ("done") stage. Users used to toggle
+ * `done` per-stage, which was confusing — now it's derived purely from position.
+ * Returns stages with `done` set on the last one only (cleared everywhere else).
+ * A lone single stage is never auto-done, otherwise every new item would land
+ * complete the moment it's added.
+ */
+export function normalizeStages(stages: TopicStage[]): TopicStage[] {
+  const last = stages.length - 1;
+  return stages.map((s, i) => {
+    const shouldBeDone = stages.length > 1 && i === last;
+    if (shouldBeDone) return s.done ? s : { ...s, done: true };
+    return s.done ? { ...s, done: false } : s;
+  });
+}
+
 // ── Folder row in the settings list ────────────────────────────────────────
 
 function FolderRow({ folder, t, bank, onRename, onColorChange, onIconChange, onDelete }: {
@@ -396,21 +412,15 @@ function SortableStage({ s, t, total, onSetStage, onRemove, bank }: {
         placeholder="stage name"
         style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', color: t.text, fontSize: '0.8rem', fontFamily: 'inherit', padding: '0.15rem' }}
       />
-      <button
-        onClick={() => onSetStage({ done: !s.done })}
-        title={s.done ? 'Remove done flag' : 'Mark as completion stage'}
-        aria-pressed={!!s.done}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-          padding: '0.15rem 0.5rem', borderRadius: '999px', border: 'none',
-          fontSize: '0.65rem', fontFamily: 'inherit', cursor: 'pointer',
-          background: s.done ? t.doneAccent : t.borderStrong,
-          color: s.done ? '#fff' : t.textDim,
-          transition: 'background 0.15s', flexShrink: 0,
-        }}
-      >
-        ✓ done
-      </button>
+      {s.done && (
+        <span title="The last stage always means done" style={{
+          display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.5rem',
+          borderRadius: '999px', fontSize: '0.62rem', fontFamily: 'inherit',
+          background: t.doneAccent, color: '#fff', flexShrink: 0,
+        }}>
+          done
+        </span>
+      )}
       <button onClick={onRemove} disabled={total <= 1} aria-label="Remove stage" style={miniBtn(t, total <= 1)}>
         <X size={11} strokeWidth={1.6} />
       </button>
@@ -489,17 +499,17 @@ function TopicCard({ t, topic, expanded, isNew, onToggle, onChange, onDelete, on
   const CurrentIcon = iconForTopic(topic.icon);
 
   const setStage = (id: string, patch: Partial<TopicStage>) => {
-    onChange({ stages: topic.stages.map(s => s.id === id ? { ...s, ...patch } : s) });
+    onChange({ stages: normalizeStages(topic.stages.map(s => s.id === id ? { ...s, ...patch } : s)) });
   };
   const removeStage = (id: string) => {
     if (topic.stages.length <= 1) return;
-    onChange({ stages: topic.stages.filter(s => s.id !== id) });
+    onChange({ stages: normalizeStages(topic.stages.filter(s => s.id !== id)) });
   };
   const addStage = () => {
     const label = newStageInput.trim();
     if (!label) return;
     const nextColor = bank[topic.stages.length % bank.length] ?? STAGE_COLORS[topic.stages.length % STAGE_COLORS.length];
-    onChange({ stages: [...topic.stages, { id: genId(), label, color: nextColor }] });
+    onChange({ stages: normalizeStages([...topic.stages, { id: genId(), label, color: nextColor }]) });
     setNewStageInput('');
   };
   const handleStageDragEnd = (e: DragEndEvent) => {
@@ -508,7 +518,7 @@ function TopicCard({ t, topic, expanded, isNew, onToggle, onChange, onDelete, on
     const oldIdx = topic.stages.findIndex(s => s.id === active.id);
     const newIdx = topic.stages.findIndex(s => s.id === over.id);
     if (oldIdx === -1 || newIdx === -1) return;
-    onChange({ stages: arrayMove(topic.stages, oldIdx, newIdx) });
+    onChange({ stages: normalizeStages(arrayMove(topic.stages, oldIdx, newIdx)) });
   };
 
   const inp: React.CSSProperties = {
@@ -637,7 +647,7 @@ function TopicCard({ t, topic, expanded, isNew, onToggle, onChange, onDelete, on
             <label style={lbl(t)}>
               Stages
               <span style={{ color: t.textDim, fontWeight: 400, marginLeft: '0.4rem' }}>
-                — drag to reorder · mark last stage as "done"
+                — drag to reorder · the last stage means done
               </span>
             </label>
             <DndContext sensors={stageSensors} collisionDetection={closestCenter} onDragEnd={handleStageDragEnd}

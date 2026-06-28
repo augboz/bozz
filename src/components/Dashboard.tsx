@@ -40,7 +40,7 @@ import { loadEntitlement } from '../lib/plus';
 import { BgLayer } from './shared/BackgroundControls';
 import WorldsView from './sections/WorldsView';
 import TopicFolderEditModal from './TopicFolderEditModal';
-import { makeBlankTopic } from './sections/settings/TopicsBlock';
+import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
 import TopicView from './sections/TopicView';
@@ -283,7 +283,13 @@ export default function Dashboard() {
 
       // Brand-new accounts start with NO topics — the Home walkthroughs guide
       // the user through creating their first one. Existing users load theirs.
-      setTopics(loadedTopics && loadedTopics.length > 0 ? loadedTopics : []);
+      // Normalize stages so the last stage is the done one (migrates topics that
+      // predate the "last stage = done, always" rule).
+      setTopics(
+        loadedTopics && loadedTopics.length > 0
+          ? loadedTopics.map(tp => ({ ...tp, stages: normalizeStages(tp.stages ?? []) }))
+          : [],
+      );
 
       setAppearance(appr);
       if (appr.defaultSection !== 'settings' && (appr.hiddenSections as string[]).includes(appr.defaultSection)) {
@@ -870,7 +876,7 @@ export default function Dashboard() {
           Navigation is handled by BottomTabBar on small viewports. */}
 
       {/* ── Sidebar — desktop only. Mobile navigation is handled by BottomTabBar. */}
-      <aside style={{
+      <aside data-onb="sidebar-nav" style={{
         display: isMobile ? 'none' : 'flex',
         width: sidebarCollapsed ? '64px' : '220px',
         flexShrink: 0,
@@ -1381,6 +1387,7 @@ export default function Dashboard() {
                 onDismiss={dismissOnboarding}
                 onWalkStart={() => setOnbKeepMounted(true)}
                 onWalkEnd={() => setOnbKeepMounted(false)}
+                onExitSidebarEdit={() => setSidebarEditing(false)}
               />
             </ErrorBoundary>
           )}
@@ -1596,7 +1603,6 @@ export default function Dashboard() {
               onReplayWalkthroughs={replayWalkthroughs}
               topics={topics}
               onOpenWorlds={() => setActiveSection('worlds')}
-              onOpenEmail={() => setActiveSection('email')}
             />
           )}
           </ErrorBoundary>

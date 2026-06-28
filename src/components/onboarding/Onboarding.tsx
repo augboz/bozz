@@ -29,7 +29,7 @@ interface SpotlightProps {
 }
 
 function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: SpotlightProps) {
-  const BAR_H = 56;
+  const BAR_H = 72;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -64,22 +64,27 @@ function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: Spotlight
 
       <div style={{
         position:'fixed', zIndex:9992, left:0, right:0, top:0, minHeight:BAR_H,
-        background:'rgba(10,10,16,0.94)', backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+        background:'rgba(10,10,16,0.94)', backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)',
         borderBottom:'1px solid rgba(255,255,255,0.08)',
-        display:'flex', alignItems:'center', padding:'0.5rem 1.25rem', gap:'1rem',
+        display:'flex', alignItems:'center', padding:'0.85rem 1.5rem', gap:'1.1rem',
       }}>
-        <span style={{ fontSize:'0.68rem', color:accent, flexShrink:0, fontVariantNumeric:'tabular-nums', fontWeight:600 }}>
+        <span style={{
+          flexShrink:0, fontSize:'0.78rem', fontWeight:700, color:accent,
+          fontVariantNumeric:'tabular-nums',
+          background:accent + '1f', border:`1px solid ${accent}55`, borderRadius:'999px',
+          padding:'0.25rem 0.7rem',
+        }}>
           {step + 1} / {total}
         </span>
-        <span style={{ flex:1, fontSize:'0.84rem', color:'rgba(255,255,255,0.92)', lineHeight:1.35 }}>
+        <span style={{ flex:1, fontSize:'1.02rem', fontWeight:450, color:'rgba(255,255,255,0.95)', lineHeight:1.5 }}>
           {tip}
         </span>
         <button onClick={onExit} style={{
-          flexShrink:0, background:'transparent', border:'1px solid rgba(255,255,255,0.18)', borderRadius:'8px',
-          padding:'0.3rem 0.75rem', color:'rgba(255,255,255,0.65)', fontSize:'0.73rem', fontFamily:'inherit',
-          cursor:'pointer', display:'flex', alignItems:'center', gap:'0.35rem',
+          flexShrink:0, background:'transparent', border:'1px solid rgba(255,255,255,0.22)', borderRadius:'10px',
+          padding:'0.45rem 0.95rem', color:'rgba(255,255,255,0.78)', fontSize:'0.86rem', fontFamily:'inherit',
+          cursor:'pointer', display:'flex', alignItems:'center', gap:'0.4rem',
         }}>
-          <X size={12} strokeWidth={1.7} /> Exit
+          <X size={15} strokeWidth={1.8} /> Exit
         </button>
       </div>
 
@@ -117,21 +122,19 @@ interface WalkStep {
 }
 
 const SIDEBAR_STEPS: WalkStep[] = [
-  { targets:['edit-nav'],         tip:'Step 1. A "topic" is an area of your life, like Uni, Work, or your CV. Click the highlighted "Edit" in your sidebar to start adding one.', advance:c => c.sidebarEditing || c.domHas('nav-add-menu') },
-  { targets:['nav-add-menu'],     tip:'Step 2. Click the "+" to add something to your sidebar.', advance:c => c.domHas('nav-new-topic') },
-  { targets:['nav-new-topic'],    tip:'Step 3. Choose "New topic".', advance:c => c.domHas('topic-name-input') },
-  { targets:['topic-modal'],      tip:'Step 4. Name your topic (for example "Uni"), then tap the icon and the colour to make it yours.', advance:c => c.iconCustomised || !c.domHas('topic-modal'), autoMs:30000 },
-  { targets:['topic-modal'],      tip:'Step 5. Set up the stages your to-dos move through, like To do, Doing, Done. Rename, reorder, or add your own.', advance:c => c.stagesCustomised || !c.domHas('topic-modal'), autoMs:20000 },
-  { targets:['topic-modal-done'], tip:'Step 6. Happy with it? Click "Done". That is your first topic made.', advance:c => !c.domHas('topic-modal') },
-  { targets:['topic-row-edit'],   tip:'Step 7. To edit a topic later, click its pencil in the sidebar. Try it on the topic you just made.', advance:c => c.domHas('topic-modal') },
-  { targets:['topic-modal'],      tip:'Step 8. This is the edit card. Change anything you like in here, then click "Done" to come back.', advance:c => !c.domHas('topic-modal') },
-  { targets:['topic-row-hide','topic-row-drag','edit-nav'], tip:'Step 9. The eye hides or shows a topic, and the handle lets you drag to reorder them. When you are finished, click "Done" to leave edit mode.', advance:c => !c.sidebarEditing },
+  { targets:['edit-nav'],      tip:'A topic is an area of your life, like Uni, Work or the gym. Click Edit to start.', advance:c => c.sidebarEditing || c.domHas('nav-add-menu') },
+  { targets:['nav-add-menu'],  tip:'Click + to add to your sidebar.', advance:c => c.domHas('nav-new-topic') },
+  { targets:['nav-new-topic'], tip:'Choose New topic.', advance:c => c.domHas('topic-name-input') },
+  { targets:['topic-modal'],   tip:'Name it, pick an icon and colour, set your stages, then click Done.', advance:c => !c.domHas('topic-modal') },
+  { targets:['topic-row-edit'],tip:'To change a topic later, click its pencil.', advance:c => c.domHas('topic-modal') },
+  { targets:['topic-modal'],   tip:'Change anything here, then click Done.', advance:c => !c.domHas('topic-modal') },
+  { targets:['sidebar-nav'],   tip:'Use 👁 to hide a topic and ⠿ to drag it. Click Done when you are finished.', advance:c => !c.sidebarEditing },
 ];
 
 const TOPICPAGE_STEPS: WalkStep[] = [
-  { targets:['topic-nav-item'],                          tip:'Step 1. Open your topic from the sidebar to set up its page.', advance:c => c.currentTopicId != null },
-  { targets:['topic-edit'],                              tip:'Step 2. Click the highlighted "Edit" to customise this page.', advance:c => c.domHas('topic-add-widget') },
-  { targets:['topic-add-widget','topic-widget-options','topic-add-widget-close'], tip:'Step 3. Click "Add widget" and pick anything you want: tasks, a calendar, notes, music and more. Add as many as you like, then close the picker (the X) when you are done.', advance:c => c.topicWidgetTypes.length > 0 && !c.domHas('topic-add-widget-close') },
+  { targets:['topic-nav-item'],   tip:'Open your topic from the sidebar.', advance:c => c.currentTopicId != null },
+  { targets:['topic-edit'],       tip:'Click Edit to customise this page.', advance:c => c.domHas('topic-add-widget') },
+  { targets:['topic-add-widget'], tip:'Click Add widget and pick what you want. Add as many as you like.', advance:c => c.topicWidgetTypes.length > 0 },
 ];
 
 const CONNECT_STEPS: WalkStep[] = [
@@ -140,10 +143,10 @@ const CONNECT_STEPS: WalkStep[] = [
 ];
 
 const QUICKS_STEPS: WalkStep[] = [
-  { targets:['quick-add'],       tip:'Step 1. "Quicks" capture any thought instantly. Click "Quick add", or press Ctrl+B.', advance:c => c.domHas('quick-add-modal') },
-  { targets:['quick-add-modal'], tip:'Step 2. Type anything here and add it. It lands in your Quicks to sort later. Take your time.', advance:c => !c.domHas('quick-add-modal') },
-  { targets:['nav-quicks'],      tip:'Step 3. Open "Quicks" to see everything you have captured.', advance:c => c.section === 'inbox' },
-  { targets:['inbox-row'],       tip:'Step 4. For each quick you can edit the text, pick which topic it belongs to, and set a date if needed, then send it. That is the whole loop: capture now, sort later.', advance:c => !c.domHas('inbox-row') },
+  { targets:['quick-add'],       tip:'Quicks capture any thought fast. Click Quick add, or press Ctrl+B from anywhere.', advance:c => c.domHas('quick-add-modal') },
+  { targets:['quick-add-modal'], tip:'Type anything and add it. Take your time.', advance:c => !c.domHas('quick-add-modal') },
+  { targets:['nav-quicks'],      tip:'Open Quicks to see what you captured.', advance:c => c.section === 'inbox' },
+  { targets:['inbox-row'],       tip:'Edit it, pick a topic, add a date, then send it. Capture now, sort later.', advance:c => !c.domHas('inbox-row') },
 ];
 
 const FLOW_STEPS: Record<Flow, WalkStep[]> = {
@@ -234,26 +237,27 @@ function useWalkEngine(
 function WalkCard({ t, icon: Icon, num, title, subtitle, onStart }: {
   t: Theme; icon: React.ElementType; num: number; title: string; subtitle: string; onStart: () => void;
 }) {
+  const accent = t.doneAccent;
   return (
     <div style={{
-      flex:'1 1 230px', minWidth:0,
-      border:`1px solid ${t.border}`, borderRadius:'14px', padding:'0.9rem 1rem',
+      flex:'1 1 240px', minWidth:0,
+      border:`1px solid ${t.border}`, borderRadius:'18px', padding:'1.25rem 1.35rem',
       background:t.bgAlt, display:'flex', flexDirection:'column',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:'0.55rem', marginBottom:'0.5rem' }}>
-        <div style={{ width:30, height:30, borderRadius:'9px', flexShrink:0, background:t.input, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon size={15} strokeWidth={1.7} color={t.textMuted} />
+      <div style={{ display:'flex', alignItems:'center', gap:'0.7rem', marginBottom:'0.85rem' }}>
+        <div style={{ width:42, height:42, borderRadius:'12px', flexShrink:0, background:accent + '1f', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <Icon size={21} strokeWidth={1.8} color={accent} />
         </div>
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:'0.7rem', color:t.textDim, fontWeight:600, letterSpacing:'0.04em' }}>WALKTHROUGH {num}</div>
-          <div style={{ fontSize:'0.88rem', fontWeight:600, color:t.text }}>{title}</div>
+          <div style={{ fontSize:'0.72rem', color:t.textDim, fontWeight:700, letterSpacing:'0.07em' }}>WALKTHROUGH {num}</div>
+          <div style={{ fontSize:'1.12rem', fontWeight:650, color:t.text, letterSpacing:'-0.01em' }}>{title}</div>
         </div>
       </div>
-      <div style={{ fontSize:'0.74rem', color:t.textMuted, lineHeight:1.45, flex:1, marginBottom:'0.7rem' }}>{subtitle}</div>
+      <div style={{ fontSize:'0.92rem', color:t.textMuted, lineHeight:1.55, flex:1, marginBottom:'1.1rem' }}>{subtitle}</div>
       <button onClick={onStart} style={{
-        alignSelf:'flex-start', display:'inline-flex', alignItems:'center', gap:'0.3rem',
-        background:'transparent', border:`1px solid ${t.borderStrong}`, borderRadius:'8px',
-        padding:'0.3rem 0.75rem', color:t.text, fontSize:'0.75rem', fontFamily:'inherit', cursor:'pointer',
+        alignSelf:'flex-start', display:'inline-flex', alignItems:'center', gap:'0.4rem',
+        background:accent, border:'none', borderRadius:'10px',
+        padding:'0.55rem 1.15rem', color:'#fff', fontSize:'0.92rem', fontWeight:600, fontFamily:'inherit', cursor:'pointer',
       }}>
         Start
       </button>
@@ -277,16 +281,24 @@ export interface OnboardingProps {
   onDismiss: () => void;
   onWalkStart: () => void;
   onWalkEnd: () => void;
+  /** Leave sidebar edit mode (used when a non-sidebar walkthrough starts). */
+  onExitSidebarEdit: () => void;
 }
 
 export default function Onboarding({
   t, activeSection, currentTopicId, sidebarEditing,
   topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised,
-  onDismiss, onWalkStart, onWalkEnd,
+  onDismiss, onWalkStart, onWalkEnd, onExitSidebarEdit,
 }: OnboardingProps) {
   const [walkState, setWalkState] = useState<WalkState | null>(null);
 
-  const startWalk = (flow: Flow) => { setWalkState({ flow, step: 0 }); onWalkStart(); };
+  const startWalk = (flow: Flow) => {
+    // The topic-page walkthrough drives the topic page, not the sidebar — if the
+    // user left the sidebar in edit mode, drop out of it so the steps line up.
+    if (flow !== 'sidebar') onExitSidebarEdit();
+    setWalkState({ flow, step: 0 });
+    onWalkStart();
+  };
   const exitWalk = () => { setWalkState(null); onWalkEnd(); };
 
   const ctx = { section: activeSection, currentTopicId, sidebarEditing, topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised };
@@ -302,23 +314,23 @@ export default function Onboarding({
     <>
       {activeSection === 'home' && !walkState && (
         <div style={{
-          border:`1px solid ${t.border}`, borderRadius:'16px',
-          padding:'1.1rem 1.2rem', marginBottom:'1.5rem', background:t.panel ?? t.bg,
+          border:`1px solid ${t.border}`, borderRadius:'20px',
+          padding:'1.5rem 1.6rem', marginBottom:'1.5rem', background:t.panel ?? t.bg,
         }}>
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'0.9rem' }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', marginBottom:'1.25rem' }}>
             <div>
-              <div style={{ fontSize:'1rem', fontWeight:700, color:t.text }}>Getting started</div>
-              <div style={{ fontSize:'0.76rem', color:t.textMuted, marginTop:'0.15rem' }}>
+              <div style={{ fontSize:'1.4rem', fontWeight:750, color:t.text, letterSpacing:'-0.02em' }}>Getting started</div>
+              <div style={{ fontSize:'0.95rem', color:t.textMuted, marginTop:'0.35rem', lineHeight:1.5, maxWidth:'52ch' }}>
                 Four short walkthroughs set Bozz up around your life. Do them in order. Each one guides you click by click, and you can re-run any of them any time.
               </div>
             </div>
             <button onClick={() => { onWalkEnd(); onDismiss(); }} aria-label="Dismiss getting started"
               style={{ background:'none', border:'none', cursor:'pointer', color:t.textMuted, padding:'0.25rem', display:'flex', flexShrink:0 }}>
-              <X size={17} strokeWidth={1.7} />
+              <X size={20} strokeWidth={1.7} />
             </button>
           </div>
 
-          <div style={{ display:'flex', flexWrap:'wrap', gap:'0.7rem' }}>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'0.9rem' }}>
             <WalkCard t={t} icon={ListTree}   num={1} title="Sidebar & topics"  subtitle="Make your sidebar yours: add a topic (Uni, Work, CV), give it an icon, colour and stages, then learn how to edit, hide and reorder topics and folders." onStart={() => startWalk('sidebar')} />
             <WalkCard t={t} icon={LayoutGrid} num={2} title="Build a topic page" subtitle="Open a topic and pick the widgets you want on its page: tasks, calendar, notes, music and more." onStart={() => startWalk('topicPage')} />
             <WalkCard t={t} icon={Plug}       num={3} title="Connect your apps"  subtitle="Hook up an email account so your inbox and calendar widgets can show your data." onStart={() => startWalk('connect')} />

@@ -547,7 +547,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
         if (!item) return null;
         const cfg = item.config ?? {};
         return createPortal(
-          <div ref={panelRef} style={{ position: 'fixed', top: configPanelPos.top, left: configPanelPos.left, right: configPanelPos.right, zIndex: 9999, width: '248px' }}>
+          <div ref={panelRef} className="thin-scroll" style={{ position: 'fixed', top: configPanelPos.top, left: configPanelPos.left, right: configPanelPos.right, zIndex: 9999, width: '248px', maxHeight: `calc(100vh - ${configPanelPos.top ?? 8}px - 12px)`, overflowY: 'auto' }}>
             <SimpleConfigPanel t={t} cfg={cfg} onConfig={(c) => updateWidgetConfig(configuringId, c)} colorBank={topicCtx.colorBank} />
           </div>,
           document.body,
@@ -620,6 +620,9 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
   tbOffset: number; existingTypes: Set<string>;
 }) {
   return (
+    <>
+    {/* Click-anywhere-off backdrop so the panel closes without hunting for the X. */}
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 49, background: 'transparent' }} />
     <div style={{
       position: 'fixed', top: tbOffset, right: 0, bottom: 0,
       width: 'min(320px, 90vw)', zIndex: 50,
@@ -678,5 +681,6 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -11,6 +11,8 @@ export const DEFAULT_COLOR_BANK: string[] = [
   '#d4a86a', // warm amber
   '#d47a7a', // soft coral
   '#6abfbf', // teal
+  '#f2f2f2', // white
+  '#111111', // black
 ];
 
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
@@ -52,6 +54,7 @@ export const FONT_PX: Record<FontSize, string> = {
   small: '14px',
   medium: '16px',
   large: '18px',
+  xlarge: '21px',
 };
 
 /** Push appearance prefs into root CSS so the whole UI reacts instantly. */

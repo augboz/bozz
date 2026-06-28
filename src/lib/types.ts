@@ -81,8 +81,9 @@ export interface Topic {
   pinnedNote?: string;
   /** Per-topic widget layout for the topic page grid. */
   widgetLayout?: HomeWidgetItem[];
-  /** Page background photo. */
-  pageBg?: { url: string; dim: number };
+  /** Page background photo. posX/posY (0-100) and scale (1-3) let the user
+   *  reposition and zoom the photo so it frames correctly on the page. */
+  pageBg?: { url: string; dim: number; posX?: number; posY?: number; scale?: number };
 }
 
 export interface WeeklyReview {
@@ -320,7 +321,7 @@ export type WidgetType =
   | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd'
   | 'clock' | 'photo' | 'dailyPlanner' | 'todaySchedule' | 'today'
   | 'topicTodos' | 'topicLinks' | 'topicNote'
-  | 'whatsapp';
+  | 'whatsapp' | 'map' | 'linkedin';
 
 /** A placed widget on the home grid (combines instance + grid position). */
 export interface HomeWidgetItem {
@@ -351,7 +352,7 @@ export interface SpotifyTrack {
 
 export type MoodId = 'dark' | 'light' | 'warm';
 export type FontChoice = 'geist' | 'inter' | 'manrope' | 'quicksand' | 'mono' | 'fraunces';
-export type FontSize = 'small' | 'medium' | 'large';
+export type FontSize = 'small' | 'medium' | 'large' | 'xlarge';
 export type WidgetShape = 'rounded' | 'sharp' | 'pill';
 export type WidgetBorder = 'subtle' | 'normal' | 'bold';
 
@@ -457,6 +458,12 @@ export interface BozzWorld {
    * = a pure aesthetic World (look only).
    */
   topicWidgets?: HomeWidgetItem[];
+  /**
+   * Optional bespoke pipeline stages for the topic a template creates (e.g. the
+   * Job Hunt template uses Applied / Interviewing / Offer / Rejected instead of
+   * the default To do / Doing / Done). Ignored for pure themes.
+   */
+  stages?: TopicStage[];
 }
 
 /** Where an applied World should land. */

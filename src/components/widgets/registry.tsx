@@ -21,6 +21,8 @@ import TopicTodosWidget from './TopicTodosWidget';
 import TopicLinksWidget from './TopicLinksWidget';
 import TopicNoteWidget from './TopicNoteWidget';
 import WhatsAppWidget from './WhatsAppWidget';
+import MapWidget from './MapWidget';
+import LinkedInWidget from './LinkedInWidget';
 
 export interface WidgetMeta {
   type: WidgetType;
@@ -79,6 +81,8 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
   topicLinks: ready('topicLinks', 'Links', 'Pinned links for this topic', { w: 4, h: 6 }, { w: 3, h: 2 }, TopicLinksWidget),
   topicNote:  ready('topicNote',  'Pinned note', 'Freeform note for this topic', { w: 4, h: 8 }, { w: 3, h: 2 }, TopicNoteWidget),
   whatsapp:   ready('whatsapp',   'WhatsApp',    'Recent WhatsApp message threads',  { w: 4, h: 12 }, { w: 3, h: 3 }, WhatsAppWidget),
+  map:        readyMulti('map',   'Map',         'A map you can drop pins and areas on', { w: 6, h: 12 }, { w: 3, h: 4 }, MapWidget),
+  linkedin:   ready('linkedin',   'LinkedIn',    'Quick links to your feed, jobs & messaging', { w: 4, h: 9 }, { w: 3, h: 5 }, LinkedInWidget),
 };
 
 /** Widgets shown in the home Add Widget panel. */

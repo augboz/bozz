@@ -46,7 +46,7 @@ function world(w: Omit<BozzWorld, 'background' | 'previewUrl' | 'author' | 'vers
     mood: w.mood, colorBank: w.colorBank, accent: w.accent, font: w.font,
     widgetShape: w.widgetShape, widgetBorder: w.widgetBorder,
     ambientSound: w.ambientSound,
-    icon: w.icon, topicWidgets: w.topicWidgets,
+    icon: w.icon, topicWidgets: w.topicWidgets, stages: w.stages,
     author: 'Bozz',
     background: { url, dim: w.dim },
     previewUrl: url,
@@ -140,6 +140,15 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
     mood: 'dark', font: 'inter', accent: '#d4886a', icon: 'work',
     colorBank: ['#d4886a', '#e0a16b', '#cf9b6c', '#7da7d9', '#7fc8a9', '#b0b0b0'],
     widgetShape: 'rounded', widgetBorder: 'subtle',
+    // A real application pipeline (ids are regenerated on apply). "Rejected" is a
+    // done stage so closed-out apps archive away; "Offer" stays on the board.
+    stages: [
+      { id: 'jh-toapply',   label: 'To apply',     color: '#b0b0b0', done: false },
+      { id: 'jh-applied',   label: 'Applied',      color: '#7da7d9', done: false },
+      { id: 'jh-interview', label: 'Interviewing', color: '#e0a16b', done: false },
+      { id: 'jh-offer',     label: 'Offer',        color: '#7fc8a9', done: false },
+      { id: 'jh-rejected',  label: 'Rejected',     color: '#c98a8a', done: true  },
+    ],
     topicWidgets: [
       tw('topicTodos', 0, 0, 7, 14),        // application pipeline (stages)
       tw('recentEmails', 7, 0, 5, 7),       // recruiter replies (Email)
@@ -285,7 +294,8 @@ const DEFAULT_STAGES: Topic['stages'] = [
 
 /** Build a fresh Topic from a World (used by the "New topic" scope). */
 export function worldToTopic(world: BozzWorld, name: string, order: number, folderId?: string): Topic {
-  const stages = DEFAULT_STAGES.map(s => ({ ...s, id: freshId('stg') }));
+  const base = world.stages && world.stages.length ? world.stages : DEFAULT_STAGES;
+  const stages = base.map(s => ({ ...s, id: freshId('stg') }));
   return {
     id: freshId('topic'),
     name: name.trim() || world.name,

@@ -33,13 +33,23 @@ interface TodoRowProps {
   onAdvance: () => void;
   onDelete: () => void;
   onDeadlineChange: (dl: number | null) => void;
+  onTextChange: (text: string) => void;
 }
 
 function SortableTodoRow({
   item, t, stageLabel, stageColor, isLastStage, sortMode,
-  onAdvance, onDelete, onDeadlineChange,
+  onAdvance, onDelete, onDeadlineChange, onTextChange,
 }: TodoRowProps) {
   const disabled = sortMode !== 'manual';
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.text);
+
+  const commit = () => {
+    const next = draft.trim();
+    setEditing(false);
+    if (next && next !== item.text) onTextChange(next);
+    else setDraft(item.text); // reverted/empty — restore original
+  };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled,
@@ -91,13 +101,35 @@ function SortableTodoRow({
       >
         {stageLabel}
       </button>
-      {/* Text */}
-      <span style={{
-        flex: 1, fontSize: '0.8rem', color: t.text,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
-        {item.text}
-      </span>
+      {/* Text — click to edit inline */}
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            else if (e.key === 'Escape') { setDraft(item.text); setEditing(false); }
+          }}
+          style={{
+            flex: 1, minWidth: 0, fontSize: '0.8rem', color: t.text,
+            background: t.input, border: `1px solid ${stageColor}`, borderRadius: '5px',
+            padding: '0.1rem 0.35rem', fontFamily: 'inherit', outline: 'none',
+          }}
+        />
+      ) : (
+        <span
+          onClick={() => { setDraft(item.text); setEditing(true); }}
+          title="Click to edit"
+          style={{
+            flex: 1, fontSize: '0.8rem', color: t.text, cursor: 'text',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}
+        >
+          {item.text}
+        </span>
+      )}
       {/* Deadline */}
       <DeadlineControl deadline={item.deadline} onChange={onDeadlineChange} t={t} />
       {/* Delete */}
@@ -265,6 +297,7 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
                     onAdvance={() => advanceStage(item)}
                     onDelete={() => deleteItem(item.id)}
                     onDeadlineChange={(dl) => updateItem({ ...item, deadline: dl })}
+                    onTextChange={(text) => updateItem({ ...item, text })}
                   />
                 );
               })}

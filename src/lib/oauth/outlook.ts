@@ -25,7 +25,9 @@ export const outlookConfig: ProviderConfig = {
   provider: 'outlook',
   authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
   tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-  scopes: ['Mail.ReadWrite', 'offline_access', 'openid', 'profile', 'email'],
+  // User.Read is required for the GET /me identify call below; without it the
+  // connect flow can't resolve the account's email address.
+  scopes: ['Mail.ReadWrite', 'User.Read', 'offline_access', 'openid', 'profile', 'email'],
   usesClientSecret: false,
   identify: identifyOutlook,
 };
