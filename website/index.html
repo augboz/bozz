@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BOZZ · Your whole life, one app</title>
-<meta name="description" content="Bozz is a calm, customisable dashboard app that brings your tasks, calendar, budget, email, health and habits into one place. Free and open-source for Windows and Mac.">
+<title>BOZZ · Your morning, on screen in 90 seconds</title>
+<meta name="description" content="Bozz is the window you open before everything else — tasks, calendar, budget and email in one view, with no setup. Free, open-source, and runs entirely on your device.">
 <meta name="theme-color" content="#171721">
 <link rel="canonical" href="https://bozz-app.vercel.app/">
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon-64.png">
@@ -13,13 +13,13 @@
 <!-- Open Graph / social link previews -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://bozz-app.vercel.app/">
-<meta property="og:title" content="BOZZ · Your whole life, one app">
-<meta property="og:description" content="Tasks, calendar, budget, email, health and habits in one calm, customisable dashboard app.">
+<meta property="og:title" content="BOZZ · Your morning, on screen in 90 seconds">
+<meta property="og:description" content="The window you open before everything else — tasks, calendar, budget and email in one view. Free, open-source, runs entirely on your device.">
 <meta property="og:image" content="https://bozz-app.vercel.app/assets/hero-dark.png">
 <meta property="og:image:alt" content="The BOZZ dashboard in dark mode">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="BOZZ · Your whole life, one app">
-<meta name="twitter:description" content="Tasks, calendar, budget, email, health and habits in one calm, customisable dashboard app.">
+<meta name="twitter:title" content="BOZZ · Your morning, on screen in 90 seconds">
+<meta name="twitter:description" content="The window you open before everything else — tasks, calendar, budget and email in one view. Free, open-source, runs entirely on your device.">
 <meta name="twitter:image" content="https://bozz-app.vercel.app/assets/hero-dark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -248,6 +248,38 @@ h1 {
 .btn-ghost:active { transform: scale(0.97); transition-duration: 80ms; }
 
 /* Product frame */
+.hero-trust {
+  font-size: 13px;
+  color: var(--lead);
+  margin-top: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.hero-founder {
+  margin-top: 2rem;
+  max-width: 520px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 1.2rem 1.5rem;
+}
+[data-theme="light"] .hero-founder {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+}
+.hero-founder p {
+  font-size: 0.95rem;
+  color: var(--silver);
+  line-height: 1.6;
+  font-style: italic;
+}
+.founder-sig {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--lead);
+  margin-top: 0.7rem;
+}
+
 .hero-shot-wrap {
   margin-top: 5rem; width: min(1020px, 92vw); perspective: 1200px;
   opacity: 0; transform: translateY(48px);
@@ -481,6 +513,7 @@ kbd:active { transform: scale(0.94); opacity: 0.75; }
 .dl-main { font-family: var(--display); font-size: 15px; font-weight: 500; }
 .dl-sub  { font-size: 11px; opacity: 0.55; }
 .dl-note { font-size: 12px; color: var(--muted); margin-top: 1.25rem; }
+.dl-trust { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1.4rem; font-size: 12px; color: var(--lead); }
 
 /* ── Footer ──────────────────────────────────────────────────────── */
 footer {
@@ -595,19 +628,26 @@ footer {
 <section class="hero" aria-label="Introduction">
   <div class="hero-badge">
     <span class="badge-dot"></span>
-    Windows 10 &amp; 11 · Free · Open-source
+    Windows &amp; Mac · Free · Your data stays on your device
   </div>
 
   <h1>
-    <span class="line"><span>Your whole life,</span></span>
-    <span class="line"><span>one app.</span></span>
+    <span class="line"><span>Your morning,</span></span>
+    <span class="line"><span>on screen in 90 seconds.</span></span>
   </h1>
 
-  <p class="hero-sub">Bozz is a calm, customisable dashboard app for your tasks, calendar, budget, email, health and habits.</p>
+  <p class="hero-sub">Bozz connects your tasks, calendar, budget and email into one native desktop view — no configuration, no empty dashboard. Your actual day, before the chaos starts.</p>
 
   <div class="hero-cta-row">
     <a href="#download" class="btn-primary">Download free <span class="arr">→</span></a>
     <a href="#features" class="btn-ghost">Explore features</a>
+  </div>
+
+  <p class="hero-trust">🔒 Runs entirely on your device — your credentials never leave your computer</p>
+
+  <div class="hero-founder">
+    <p>"I built Bozz because I had six browser tabs open every morning and it was making me anxious. I use it every day. It's free because I want as many people as possible to have a calm morning."</p>
+    <span class="founder-sig">— Augustin Bozzetto, founder</span>
   </div>
 
   <div class="hero-shot-wrap">
@@ -626,8 +666,8 @@ footer {
 <!-- ── FEATURES ── -->
 <section class="section" id="features">
   <div class="reveal">
-    <h2>Everything, side by side.</h2>
-    <p class="section-sub" style="margin-left:0;max-width:520px;margin-bottom:0">The tools you'd normally scatter across a dozen tabs, now widgets you arrange yourself.</p>
+    <h2>One app. A different view for every part of your life.</h2>
+    <p class="section-sub" style="margin-left:0;max-width:520px;margin-bottom:0">Create a page for work, one for finances, one for health — each with exactly the widgets it needs. The tools you'd normally scatter across a dozen tabs, now in one window.</p>
   </div>
   <div class="features-grid">
 
@@ -736,8 +776,8 @@ footer {
 <!-- ── DOWNLOAD ── -->
 <section class="section section-center" id="download">
   <div class="download-wrap reveal">
-    <h2>Everything in one app.</h2>
-    <p class="section-sub">Free to download. Sign in once to sync across your devices. No ads, no trackers, never sold.</p>
+    <h2>Your morning, in 90 seconds.</h2>
+    <p class="section-sub">Apps like Sunsama charge £15–20/month for a focused daily view. Bozz is free, open-source, and built by one person who uses it every day.</p>
     <div class="dl-buttons">
       <a href="https://github.com/augboz/bozz/releases/latest/download/Bozz-setup.exe" class="dl-btn primary">
         <span class="dl-main">Download for Windows</span>
@@ -751,6 +791,13 @@ footer {
     <p class="dl-note">macOS isn't notarized yet. If macOS says <strong>&ldquo;Bozz is damaged and can&rsquo;t be opened&rdquo;</strong>, drag Bozz into Applications, then paste this into Terminal and press Return:</p>
     <p class="dl-note" style="margin-top:0.4rem"><code style="background:rgba(255,255,255,0.08);padding:0.28rem 0.6rem;border-radius:6px;font-size:0.9em;user-select:all;-webkit-user-select:all">xattr -dr com.apple.quarantine /Applications/Bozz.app</code></p>
     <p class="dl-note" style="margin-top:0.6rem;opacity:0.85">Free and open-source under AGPL-3.0, built by one person in the open. <a href="https://github.com/augboz/bozz" target="_blank" rel="noopener" style="color:var(--silver);text-decoration:underline">See the source</a>.</p>
+    <div class="dl-trust">
+      <span>🔒 Your data never leaves your computer</span>
+      <span>·</span>
+      <span>No ads, no trackers, never sold</span>
+      <span>·</span>
+      <span>Free forever</span>
+    </div>
     <script>
       // Auto-detect Intel Mac and swap to the right DMG
       (function() {
