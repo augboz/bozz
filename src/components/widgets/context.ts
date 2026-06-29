@@ -39,6 +39,9 @@ export interface WidgetCtx {
   widgetConfig: Record<string, unknown>;
   /** Persist an updated config for this widget instance. */
   onWidgetConfig: (config: Record<string, unknown>) => void;
+  /** Resize this widget's grid cell (in grid columns x rows). Clamped to the
+   *  widget's min size. Provided on grids that support per-widget resize. */
+  onResize?: (w: number, h: number) => void;
   /** The topic ID of the currently viewed topic page (if any). */
   currentTopicId?: string;
   /** Update a specific topic in the topics array. */

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ExternalLink, X, Minus, Plus } from 'lucide-react';
+import type { Theme } from '../../lib/types';
 import { Widget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
 import type { TopicLink } from '../../lib/types';
@@ -74,9 +75,60 @@ function FillLogo({ link, accent }: { link: TopicLink; accent: string }) {
   );
 }
 
+// Exact width/height controls for the widget's grid cell, with a one-tap Square
+// (measures the cell's real pixels and matches height to width) and a live
+// pixel readout, so the widget can be sized precisely instead of only dragged.
+function SizeControls({ t, accent, w, h, onResize }: {
+  t: Theme; accent: string; w: number; h: number; onResize: (w: number, h: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [px, setPx] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const cell = ref.current?.closest('[data-widget-id]') as HTMLElement | null;
+    if (cell) {
+      const r = cell.getBoundingClientRect();
+      setPx({ w: Math.round(r.width), h: Math.round(r.height) });
+    }
+  }, [w, h]);
+  const square = () => {
+    const cell = ref.current?.closest('[data-widget-id]') as HTMLElement | null;
+    if (!cell || h <= 0) { onResize(w, w); return; }
+    const r = cell.getBoundingClientRect();
+    const rowPx = r.height / h;             // measured px per grid row (incl. gaps)
+    onResize(w, Math.max(1, Math.round(r.width / rowPx)));
+  };
+  const box: React.CSSProperties = { display: 'flex', alignItems: 'center', border: `1px solid ${t.border}`, borderRadius: 6, padding: '0.02rem 0.05rem' };
+  const sb: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, padding: '0.1rem 0.2rem', display: 'flex', alignItems: 'center' };
+  const num: React.CSSProperties = { fontSize: '0.6rem', color: t.textMuted, minWidth: 12, textAlign: 'center' };
+  const lab: React.CSSProperties = { fontSize: '0.58rem', color: t.textDim, letterSpacing: '0.04em' };
+  return (
+    <div ref={ref} className="widget-interactive" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+      <span style={lab}>W</span>
+      <div style={box}>
+        <button style={sb} onClick={() => onResize(w - 1, h)} aria-label="Narrower"><Minus size={10} strokeWidth={2} /></button>
+        <span style={num}>{w}</span>
+        <button style={sb} onClick={() => onResize(w + 1, h)} aria-label="Wider"><Plus size={10} strokeWidth={2} /></button>
+      </div>
+      <span style={lab}>H</span>
+      <div style={box}>
+        <button style={sb} onClick={() => onResize(w, h - 1)} aria-label="Shorter"><Minus size={10} strokeWidth={2} /></button>
+        <span style={num}>{h}</span>
+        <button style={sb} onClick={() => onResize(w, h + 1)} aria-label="Taller"><Plus size={10} strokeWidth={2} /></button>
+      </div>
+      <button onClick={square} title="Make the widget square" aria-label="Make square"
+        style={{ background: accent + '18', border: `1px solid ${accent}66`, borderRadius: 6, padding: '0.1rem 0.4rem', color: accent, fontSize: '0.6rem', fontFamily: 'inherit', cursor: 'pointer' }}>
+        square
+      </button>
+      {px && <span style={{ fontSize: '0.58rem', color: t.textDim }}>{px.w}×{px.h}px</span>}
+    </div>
+  );
+}
+
 export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, topics, currentTopicId, editing, widgetConfig, onWidgetConfig } = ctx;
+  const { t, topics, currentTopicId, editing, widgetConfig, onWidgetConfig, onResize } = ctx;
   const topic = topics.find(tp => tp.id === currentTopicId);
+  const cellW = Math.round(Number(widgetConfig?._w) || 0);
+  const cellH = Math.round(Number(widgetConfig?._h) || 0);
 
   const [addingLink, setAddingLink] = useState(false);
   const [linkLabel, setLinkLabel] = useState('');
@@ -233,6 +285,12 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
         </div>
       )}
 
+      {editing && onResize && cellW > 0 && !(fill && links.length > 0) && (
+        <div style={{ marginBottom: '0.6rem' }}>
+          <SizeControls t={t} accent={accent} w={cellW} h={cellH} onResize={onResize} />
+        </div>
+      )}
+
       {editing && addingLink && (
         <div className="widget-interactive" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.65rem' }}>
           <input
@@ -323,6 +381,17 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
                   }}>
                   Fill ✕
                 </button>
+              </div>
+            )}
+            {editing && onResize && cellW > 0 && (
+              <div className="widget-interactive" style={{ position: 'absolute', bottom: 4, left: 4, right: 4, display: 'flex', justifyContent: 'center' }}>
+                <div style={{
+                  background: 'var(--glass-bg, ' + t.panel + ')', border: `1px solid ${t.border}`,
+                  borderRadius: 8, padding: '0.2rem 0.45rem',
+                  backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', maxWidth: '100%', overflowX: 'auto',
+                }}>
+                  <SizeControls t={t} accent={accent} w={cellW} h={cellH} onResize={onResize} />
+                </div>
               </div>
             )}
           </div>

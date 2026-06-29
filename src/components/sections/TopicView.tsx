@@ -325,6 +325,18 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
     updateLayout(widgetLayout.map(it => it.i === id ? { ...it, config } : it));
   };
 
+  // Resize a widget's grid cell directly (used by per-widget size controls),
+  // clamped to the widget's registered min size and the column count.
+  const updateWidgetSize = (id: string, w: number, h: number) => {
+    updateLayout(widgetLayout.map(it => {
+      if (it.i !== id) return it;
+      const meta = WIDGET_REGISTRY[it.type];
+      const cw = Math.max(meta.minSize.w, Math.min(COLS, Math.round(w)));
+      const ch = Math.max(meta.minSize.h, Math.round(h));
+      return { ...it, w: cw, h: ch };
+    }));
+  };
+
   const layout: LayoutItem[] = widgetLayout.map(({ i, x, y, w, h, type }) => {
     const meta = WIDGET_REGISTRY[type];
     return { i, x, y, w, h, minW: meta.minSize.w, minH: meta.minSize.h };
@@ -422,8 +434,9 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
             const W = meta.Component;
             const instanceCtx: WidgetCtx = {
               ...topicCtx,
-              widgetConfig: { ...it.config ?? {}, _h: it.h },
+              widgetConfig: { ...it.config ?? {}, _w: it.w, _h: it.h },
               onWidgetConfig: (cfg) => updateWidgetConfig(it.i, cfg),
+              onResize: (w, h) => updateWidgetSize(it.i, w, h),
             };
             const isTopicTodos = it.type === 'topicTodos';
             return (
@@ -505,8 +518,9 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
           const instanceCtx: WidgetCtx = {
             ...topicCtx,
             widgetId: it.i,
-            widgetConfig: { ...it.config ?? {}, _h: it.h },
+            widgetConfig: { ...it.config ?? {}, _w: it.w, _h: it.h },
             onWidgetConfig: (cfg) => updateWidgetConfig(it.i, cfg),
+            onResize: (w, h) => updateWidgetSize(it.i, w, h),
           };
           const isTopicTodos = it.type === 'topicTodos';
           return (
