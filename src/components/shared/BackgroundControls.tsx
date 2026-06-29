@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageIcon, X, ClipboardPaste, Move, RotateCcw } from 'lucide-react';
 import type { Theme } from '../../lib/types';
@@ -95,6 +95,7 @@ async function imageFromClipboard(): Promise<string | null> {
 
 export default function BackgroundControls({ t, bg, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const adjustBtnRef = useRef<HTMLButtonElement>(null);
   const [adjusting, setAdjusting] = useState(false);
 
   const pick = () => fileRef.current?.click();
@@ -139,18 +140,25 @@ export default function BackgroundControls({ t, bg, onChange }: Props) {
               style={{ width: '64px', cursor: 'pointer', accentColor: t.doingAccent }}
             />
           </div>
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setAdjusting(v => !v)}
-              title="Reposition & zoom"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: adjusting ? t.bgAlt : 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px', padding: '0.2rem 0.45rem', color: t.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.68rem' }}
-            >
-              <Move size={12} strokeWidth={1.6} /> Adjust
-            </button>
-            {adjusting && (
-              <AdjustPopover t={t} bg={bg} onChange={onChange} onClose={() => setAdjusting(false)} />
-            )}
-          </div>
+          <button
+            ref={adjustBtnRef}
+            onClick={() => setAdjusting(v => !v)}
+            title="Reposition & zoom"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: adjusting ? t.bgAlt : 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px', padding: '0.2rem 0.45rem', color: t.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.68rem' }}
+          >
+            <Move size={12} strokeWidth={1.6} /> Adjust
+          </button>
+          {adjusting && (
+            <AdjustPopover t={t} bg={bg} onChange={onChange} onClose={() => setAdjusting(false)} anchorRef={adjustBtnRef} />
+          )}
+          <button
+            onClick={() => void paste()}
+            aria-label="Paste image from clipboard"
+            title="Paste image from clipboard"
+            style={{ background: 'transparent', border: 'none', color: t.textDim, cursor: 'pointer', padding: '0.1rem', display: 'flex' }}
+          >
+            <ClipboardPaste size={13} strokeWidth={1.5} />
+          </button>
           <button
             onClick={() => onChange(null)}
             aria-label="Remove background photo"
@@ -183,14 +191,45 @@ export default function BackgroundControls({ t, bg, onChange }: Props) {
 
 // ── Reposition / zoom popover ────────────────────────────────────────────────
 
-function AdjustPopover({ t, bg, onChange, onClose }: {
+function AdjustPopover({ t, bg, onChange, onClose, anchorRef }: {
   t: Theme; bg: PageBg; onChange: (bg: PageBg) => void; onClose: () => void;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   const posX = bg.posX ?? 50;
   const posY = bg.posY ?? 50;
   const scale = bg.scale ?? 1;
+
+  // Portalled to document.body and positioned with fixed coords from the button,
+  // so the popover is never clipped by the toolbar's overflow nor painted over by
+  // widget stacking contexts below it. Clamped to the viewport, flips above the
+  // button if there isn't room below.
+  const WIDTH = 220;
+  const EST_H = 300;
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const btn = anchorRef.current;
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      const margin = 8, gap = 8;
+      const left = Math.max(margin, Math.min(r.right - WIDTH, window.innerWidth - WIDTH - margin));
+      let top = r.bottom + gap;
+      if (top + EST_H > window.innerHeight - margin) {
+        const above = r.top - gap - EST_H;
+        top = above >= margin ? above : Math.max(margin, window.innerHeight - EST_H - margin);
+      }
+      setCoords({ top, left });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [anchorRef]);
 
   const onDown = (e: React.PointerEvent) => {
     if (scale <= 1) return;
@@ -213,13 +252,16 @@ function AdjustPopover({ t, bg, onChange, onClose }: {
   };
   const onUp = () => { dragRef.current = null; };
 
-  return (
+  return createPortal(
+    <>
+    {/* Click-anywhere-off backdrop so the popover closes without hunting for the X. */}
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'transparent' }} />
     <div style={{
-      // Open downward: these controls live in the edit toolbar at the top of the
-      // page, so opening upward (bottom:100%) pushed the popover off the top edge
-      // where it was unreachable.
-      position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 300,
-      width: 220, background: t.panel, border: `1px solid ${t.borderStrong}`, borderRadius: 12,
+      position: 'fixed',
+      top: coords?.top ?? -9999, left: coords?.left ?? -9999,
+      visibility: coords ? 'visible' : 'hidden',
+      zIndex: 9999,
+      width: WIDTH, background: t.panel, border: `1px solid ${t.borderStrong}`, borderRadius: 12,
       padding: '0.7rem', boxShadow: '0 10px 32px rgba(0,0,0,0.4)',
       display: 'flex', flexDirection: 'column', gap: '0.5rem',
     }}>
@@ -261,5 +303,7 @@ function AdjustPopover({ t, bg, onChange, onClose }: {
         Zoom in, then drag the preview to reposition.
       </div>
     </div>
+    </>,
+    document.body,
   );
 }
