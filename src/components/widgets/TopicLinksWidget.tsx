@@ -20,6 +20,40 @@ type LinkSize = 'compact' | 'cozy' | 'full';
 const SIZE_ORDER: LinkSize[] = ['compact', 'cozy', 'full'];
 const SIZE_LABEL: Record<LinkSize, string> = { compact: 'Compact', cozy: 'Cozy', full: 'Full width' };
 
+// Favicon for a link's domain via Google's favicon service. Returns null for
+// unparseable URLs so the caller can fall back to a generic glyph.
+function faviconUrl(url: string, px: number): string | null {
+  try {
+    const host = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?sz=${Math.max(32, px)}&domain=${host}`;
+  } catch {
+    return null;
+  }
+}
+
+// Renders the site's favicon, falling back to a generic link glyph if the icon
+// fails to load (offline, blocked, or no favicon).
+function LinkFavicon({ url, px, accent }: { url: string; px: number; accent: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = faviconUrl(url, px * 2);
+  if (!src || failed) {
+    return <ExternalLink size={px} strokeWidth={1.5} style={{ flexShrink: 0, color: accent }} />;
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      width={px}
+      height={px}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      style={{ width: px, height: px, borderRadius: 4, objectFit: 'contain', flexShrink: 0, display: 'block' }}
+    />
+  );
+}
+
+const TILE: Record<LinkSize, number> = { compact: 36, cozy: 46, full: 58 };
+
 export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const { t, topics, currentTopicId, onTopicChange, editing, widgetConfig, onWidgetConfig } = ctx;
   const topic = topics.find(tp => tp.id === currentTopicId);
@@ -33,6 +67,9 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
     const next = SIZE_ORDER[(SIZE_ORDER.indexOf(size) + 1) % SIZE_ORDER.length];
     onWidgetConfig?.({ ...widgetConfig, linkSize: next });
   };
+  // Icons-only mode: show just the site logos as clickable tiles (no labels).
+  const iconsOnly = Boolean(widgetConfig?.iconsOnly);
+  const toggleIconsOnly = () => onWidgetConfig?.({ ...widgetConfig, iconsOnly: !iconsOnly });
 
   if (!topic || !onTopicChange) {
     return (
@@ -80,17 +117,31 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
           >
             + add
           </button>
-          <button
-            onClick={cycleSize}
-            title="Change how much space links take"
-            style={{
-              background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px',
-              padding: '0.2rem 0.55rem', cursor: 'pointer', color: t.textMuted,
-              fontSize: '0.68rem', fontFamily: 'inherit',
-            }}
-          >
-            {SIZE_LABEL[size]}
-          </button>
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={toggleIconsOnly}
+              title="Toggle between logos-only and labelled links"
+              style={{
+                background: iconsOnly ? accent + '22' : 'none',
+                border: `1px solid ${iconsOnly ? accent + '88' : t.border}`, borderRadius: '6px',
+                padding: '0.2rem 0.55rem', cursor: 'pointer', color: iconsOnly ? accent : t.textMuted,
+                fontSize: '0.68rem', fontFamily: 'inherit',
+              }}
+            >
+              {iconsOnly ? 'Logos only' : 'With names'}
+            </button>
+            <button
+              onClick={cycleSize}
+              title="Change link size"
+              style={{
+                background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px',
+                padding: '0.2rem 0.55rem', cursor: 'pointer', color: t.textMuted,
+                fontSize: '0.68rem', fontFamily: 'inherit',
+              }}
+            >
+              {SIZE_LABEL[size]}
+            </button>
+          </div>
         </div>
       )}
 
@@ -131,6 +182,46 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
         <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
           {editing ? 'No links yet — click + add to pin one.' : 'No links pinned.'}
         </div>
+      ) : iconsOnly ? (
+        // Logos-only launcher: clickable favicon tiles, no labels.
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem', alignItems: 'center' }}>
+          {links.map(l => {
+            const px = TILE[size];
+            return (
+              <div key={l.id} style={{ position: 'relative', display: 'inline-flex' }}>
+                <button
+                  onClick={() => openLink(l.url)}
+                  title={l.label}
+                  aria-label={l.label}
+                  style={{
+                    width: px, height: px, borderRadius: size === 'compact' ? 9 : 13,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: t.input, border: `1px solid ${accent}33`,
+                    cursor: 'pointer', padding: 0, transition: 'border-color 0.15s, transform 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = accent + '99'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = accent + '33'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  <LinkFavicon url={l.url} px={Math.round(px * 0.58)} accent={accent} />
+                </button>
+                {editing && (
+                  <button
+                    className="widget-interactive"
+                    onClick={() => removeLink(l.id)}
+                    aria-label={`Remove ${l.label}`}
+                    style={{
+                      position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%',
+                      background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.textMuted,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    }}
+                  >
+                    <X size={10} strokeWidth={2} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div style={{
           display: 'flex',
@@ -141,30 +232,30 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
           {links.map(l => {
             const fontSize = size === 'compact' ? '0.72rem' : size === 'full' ? '0.86rem' : '0.8rem';
             const pad = size === 'compact'
-              ? '0.18rem 0.45rem 0.18rem 0.4rem'
+              ? '0.2rem 0.5rem 0.2rem 0.35rem'
               : size === 'full'
                 ? '0.5rem 0.7rem'
-                : '0.3rem 0.6rem 0.3rem 0.5rem';
-            const icon = size === 'compact' ? 10 : size === 'full' ? 14 : 12;
+                : '0.32rem 0.65rem 0.32rem 0.45rem';
+            const icon = size === 'compact' ? 14 : size === 'full' ? 18 : 16;
             return (
               <div key={l.id} style={{
                 display: size === 'full' ? 'flex' : 'inline-flex',
                 alignItems: 'center', gap: '0.3rem',
                 width: size === 'full' ? '100%' : undefined,
-                background: accent + '18', border: `1px solid ${accent}44`,
+                background: accent + '14', border: `1px solid ${accent}3a`,
                 borderRadius: size === 'full' ? '10px' : '999px', padding: pad,
               }}>
                 <button
                   onClick={() => openLink(l.url)}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.32rem',
+                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
                     flex: size === 'full' ? 1 : undefined, minWidth: 0,
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: accent, fontFamily: 'inherit', fontSize, padding: 0,
+                    color: t.text, fontFamily: 'inherit', fontSize, padding: 0,
                     textAlign: 'left',
                   }}
                 >
-                  <ExternalLink size={icon} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                  <LinkFavicon url={l.url} px={icon} accent={accent} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span>
                 </button>
                 {editing && (
