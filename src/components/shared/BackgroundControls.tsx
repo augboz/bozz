@@ -215,7 +215,10 @@ function AdjustPopover({ t, bg, onChange, onClose }: {
 
   return (
     <div style={{
-      position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 300,
+      // Open downward: these controls live in the edit toolbar at the top of the
+      // page, so opening upward (bottom:100%) pushed the popover off the top edge
+      // where it was unreachable.
+      position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 300,
       width: 220, background: t.panel, border: `1px solid ${t.borderStrong}`, borderRadius: 12,
       padding: '0.7rem', boxShadow: '0 10px 32px rgba(0,0,0,0.4)',
       display: 'flex', flexDirection: 'column', gap: '0.5rem',
