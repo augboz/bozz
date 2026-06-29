@@ -8,6 +8,7 @@ import VoiceButton from './shared/VoiceButton';
 import ChoicePicker, { type Choice } from './shared/ChoicePicker';
 import DatePicker from './shared/DatePicker';
 import type { InboxItem, Theme, Topic, BudgetData } from '../lib/types';
+import { useFocusTrap, dialogProps } from '../hooks/useFocusTrap';
 
 /**
  * In-app quick-add modal — the browser equivalent of the desktop Ctrl+B
@@ -47,17 +48,21 @@ export default function QuickAddModal({
   const [status, setStatus] = useState('');
   const [tasks, setTasks] = useState<ParsedTask[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const parseTimer = useRef<number | null>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => () => { if (parseTimer.current) window.clearTimeout(parseTimer.current); }, []);
+  // Trap focus inside the modal, close on Escape (document-level so it fires even
+  // if focus drifts onto the page), and restore focus to the opener on close.
+  useFocusTrap(panelRef, onClose);
 
   // Destination dropdown — "Quicks" (leave in inbox) plus every topic, ordered
   // exactly like the inbox's own picker.
   const topicChoices: Choice[] = [
     { id: '', label: 'Quicks', icon: Inbox },
     ...[...topics].sort((a, b) => a.order - b.order)
-      .map(top => ({ id: top.id, label: top.name || '(unnamed)', color: top.color })),
+      .map(top => ({ id: top.id, label: top.name || 'New topic', color: top.color })),
   ];
 
   // ── Typed fast-lane: enter commits immediately to Quicks (no review step) ─────
@@ -236,9 +241,10 @@ export default function QuickAddModal({
       }}
     >
       <div
+        ref={panelRef}
         data-onb="quick-add-modal"
+        {...dialogProps('Quick add')}
         onClick={e => e.stopPropagation()}
-        onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
         style={{
           width: 'min(560px, 92vw)',
           maxHeight: '72vh', overflowY: 'auto',

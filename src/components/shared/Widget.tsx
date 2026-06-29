@@ -107,10 +107,29 @@ export function ProgressBar({ doing, todo: _todo, done, total, t }: { doing: num
   );
 }
 
-export function EmptyWidget({ text, t }: { text: string; t: Theme }) {
+export function EmptyWidget({ text, t, actionLabel, onAction }: {
+  text: string; t: Theme;
+  /** Optional inline action so an empty widget points at the next step instead
+   *  of being a dead end (matches the "Open calendar ->" pattern in Today). */
+  actionLabel?: string; onAction?: () => void;
+}) {
   return (
     <div style={{ marginTop: '1.25rem', padding: '0.75rem 0', fontSize: '0.8rem', color: t.textDim }}>
       {text}
+      {actionLabel && onAction && (
+        <>
+          {' '}
+          <button
+            onClick={onAction}
+            style={{
+              background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+              color: t.doingAccent, fontFamily: 'inherit', fontSize: '0.8rem',
+            }}
+          >
+            {actionLabel}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -482,7 +482,7 @@ export default function SettingsView({
               <optgroup label="Topics">
                 {topics
                   .filter(top => !hiddenTopicIds.includes(top.id))
-                  .map(top => <option key={top.id} value={top.id}>{top.name || '(unnamed)'}</option>)}
+                  .map(top => <option key={top.id} value={top.id}>{top.name || 'New topic'}</option>)}
               </optgroup>
             )}
           </select>

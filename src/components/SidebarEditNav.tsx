@@ -307,7 +307,7 @@ export default function SidebarEditNav({
                                           <button onClick={() => onEditTopic(topic.id)} title="Edit topic" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.34rem 0.3rem', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: topicHidden ? 0.45 : 1 }}>
                                             <Icon size={13} strokeWidth={1.5} color={topic.color} style={{ flexShrink: 0 }} />
                                             <span style={{ ...textFade, fontSize: '0.82rem', color: t.textMuted, flex: 1 }}>
-                                              {topic.name || '(unnamed)'}
+                                              {topic.name || 'New topic'}
                                             </span>
                                           </button>
                                           {!sidebarCollapsed && (
@@ -344,7 +344,7 @@ export default function SidebarEditNav({
                     <button onClick={() => onEditTopic(item.topic.id)} title="Edit topic" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.38rem 0.45rem', borderRadius: '6px', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: topicHidden ? 0.45 : 1 }}>
                       <Icon size={15} strokeWidth={1.5} color={item.topic.color} style={{ flexShrink: 0 }} />
                       <span style={{ ...textFade, fontSize: '0.84rem', color: t.textMuted, flex: 1 }}>
-                        {item.topic.name || '(unnamed)'}
+                        {item.topic.name || 'New topic'}
                       </span>
                     </button>
                     {!sidebarCollapsed && (

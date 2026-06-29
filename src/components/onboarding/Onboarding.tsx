@@ -319,7 +319,7 @@ export default function Onboarding({
         }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', marginBottom:'1.25rem' }}>
             <div>
-              <div style={{ fontSize:'1.4rem', fontWeight:750, color:t.text, letterSpacing:'-0.02em' }}>Getting started</div>
+              <h2 style={{ margin:0, fontSize:'1.4rem', fontWeight:750, color:t.text, letterSpacing:'-0.02em' }}>Getting started</h2>
               <div style={{ fontSize:'0.95rem', color:t.textMuted, marginTop:'0.35rem', lineHeight:1.5, maxWidth:'52ch' }}>
                 Four short walkthroughs set Bozz up around your life. Do them in order. Each one guides you click by click, and you can re-run any of them any time.
               </div>

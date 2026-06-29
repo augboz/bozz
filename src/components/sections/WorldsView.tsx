@@ -376,7 +376,7 @@ function PreviewModal({
                   <p style={{ fontSize: '0.74rem', color: t.textDim, fontStyle: 'italic', margin: 0 }}>No topics yet — create one first.</p>
                 ) : (
                   <select value={targetTopic} onChange={e => setTargetTopic(e.target.value)} style={inp}>
-                    {topics.map(tp => <option key={tp.id} value={tp.id}>{tp.name || '(unnamed)'}</option>)}
+                    {topics.map(tp => <option key={tp.id} value={tp.id}>{tp.name || 'New topic'}</option>)}
                   </select>
                 )}
               </div>

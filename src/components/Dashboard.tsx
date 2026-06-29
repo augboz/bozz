@@ -805,14 +805,14 @@ export default function Dashboard() {
     const topLevel: TLItem[] = [
       ...unfiled.map(tp => ({
         order: tp.order,
-        tabs: [{ id: tp.id, label: tp.name || '(unnamed)', icon: iconForTopic(tp.icon), accent: tp.color }],
+        tabs: [{ id: tp.id, label: tp.name || 'New topic', icon: iconForTopic(tp.icon), accent: tp.color }],
       })),
       ...topicFolders.filter(f => !hiddenFolderIds.includes(f.id)).map(f => ({
         order: f.order,
         tabs: allVisible
           .filter(tp => tp.folderId === f.id)
           .sort((a, b) => a.order - b.order)
-          .map(tp => ({ id: tp.id, label: tp.name || '(unnamed)', icon: iconForTopic(tp.icon), accent: tp.color })),
+          .map(tp => ({ id: tp.id, label: tp.name || 'New topic', icon: iconForTopic(tp.icon), accent: tp.color })),
       })),
     ].sort((a, b) => a.order - b.order);
 
@@ -1049,7 +1049,7 @@ export default function Dashboard() {
                 {topLevelNav.map(item => {
                   if (item.type === 'topic') {
                     const top = item.topic;
-                    return navBtn(top.id, top.name || '(unnamed)', iconForTopic(top.icon), top.color);
+                    return navBtn(top.id, top.name || 'New topic', iconForTopic(top.icon), top.color);
                   }
                   if (item.type === 'section') {
                     const s = item.section;
@@ -1093,7 +1093,7 @@ export default function Dashboard() {
                             paddingBottom: '0.2rem',
                           }}>
                             {folderTopics.map(top =>
-                              navBtn(top.id, top.name || '(unnamed)', iconForTopic(top.icon), top.color)
+                              navBtn(top.id, top.name || 'New topic', iconForTopic(top.icon), top.color)
                             )}
                           </div>
                         )}
@@ -1135,7 +1135,7 @@ export default function Dashboard() {
                           marginBottom: '0.1rem',
                         }}>
                           {folderTopics.map(top =>
-                            navBtn(top.id, top.name || '(unnamed)', iconForTopic(top.icon), top.color)
+                            navBtn(top.id, top.name || 'New topic', iconForTopic(top.icon), top.color)
                           )}
                         </div>
                       )}
@@ -1276,6 +1276,27 @@ export default function Dashboard() {
             label={false}
             iconSize={17}
           />
+          {/* Collapsed-sidebar capture entry. The full "Quick add" button only
+              shows when expanded, so without this a collapsed user (and any web
+              user, where there's no global Ctrl+B) has no visible way to capture. */}
+          {sidebarCollapsed && (
+            <button
+              onClick={() => setQuickAddOpen(true)}
+              title={isTauri() ? 'Quick add (Ctrl+B)' : 'Quick add (Ctrl+B)'}
+              aria-label="Quick add"
+              data-onb="quick-add"
+              style={{
+                background: 'transparent', border: 'none',
+                color: sT.textDim, cursor: 'pointer', borderRadius: '6px',
+                padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, transition: 'background 0.12s, color 0.12s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textDim; }}
+            >
+              <Zap size={17} strokeWidth={1.6} />
+            </button>
+          )}
           <button
             onClick={() => setActiveSection('settings')}
             title="Settings"

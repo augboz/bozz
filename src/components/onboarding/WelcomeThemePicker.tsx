@@ -70,11 +70,11 @@ export default function WelcomeThemePicker({ onChoose }: { onChoose: (mood: Pick
       <img src="/brand/bozz-mark-dark.png" alt="" width={60} height={60}
         style={{ width: '60px', height: '60px', borderRadius: '15px', objectFit: 'cover' }} />
       <div>
-        <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f2f2f2', letterSpacing: '-0.02em' }}>
+        <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: '#f2f2f2', letterSpacing: '-0.02em' }}>
           Welcome to Bozz
-        </div>
+        </h1>
         <div style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem' }}>
-          Pick a look to start with — you can change it anytime in Settings.
+          Pick a look to start with, you can change it anytime in Settings.
         </div>
       </div>
       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>

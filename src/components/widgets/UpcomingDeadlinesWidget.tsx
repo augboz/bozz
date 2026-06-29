@@ -46,7 +46,7 @@ export default function UpcomingDeadlinesWidget({ ctx }: { ctx: WidgetCtx }) {
       <WidgetHeader label="Next 7 Days" accent={sectionAccents.home} t={t} icon={CalendarClock} />
       <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, marginTop: '0.75rem' }}>
         {upcoming.length === 0
-          ? <EmptyWidget text="nothing due in the next 7 days" t={t} />
+          ? <EmptyWidget text="nothing due in the next 7 days." t={t} actionLabel="capture one →" onAction={() => setActiveSection('inbox')} />
           : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
               {groups.map(({ day, items }) => (

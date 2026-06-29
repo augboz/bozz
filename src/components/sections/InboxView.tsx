@@ -141,7 +141,7 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign }: Inbo
   // Build the destination dropdown from the user's topics
   const dests: Choice[] = [...topics]
     .sort((a, b) => a.order - b.order)
-    .map(top => ({ id: top.id, label: top.name || '(unnamed)', color: top.color }));
+    .map(top => ({ id: top.id, label: top.name || 'New topic', color: top.color }));
 
   const sorted = [...inbox].sort((a, b) => b.createdAt - a.createdAt);
 

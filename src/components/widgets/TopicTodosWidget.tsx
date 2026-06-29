@@ -307,7 +307,7 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
 
         {displayed.length === 0 && (
           <div style={{ fontSize: '0.82rem', color: t.textDim, fontStyle: 'italic', padding: '0.25rem 0' }}>
-            Nothing here yet.
+            No tasks yet. Add your first one below.
           </div>
         )}
 

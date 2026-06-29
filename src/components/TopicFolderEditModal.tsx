@@ -4,6 +4,7 @@ import type { Theme, Topic, TopicFolder, TopicStage } from '../lib/types';
 import ColorBankPicker from './shared/ColorBankPicker';
 import { DEFAULT_COLOR_BANK } from '../lib/appearance';
 import { TOPIC_ICONS, iconForTopic, normalizeStages } from './sections/settings/TopicsBlock';
+import { useFocusTrap, dialogProps } from '../hooks/useFocusTrap';
 
 const STAGE_COLORS = ['#7a93ad', '#d99a52', '#6fb088', '#dc5050', '#bfa8c9'];
 function genId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -102,6 +103,14 @@ export default function TopicFolderEditModal({
     return () => document.removeEventListener('mousedown', h);
   }, [showIcons, showColors]);
 
+  // Accessibility: trap focus inside the dialog, close on Escape, restore focus
+  // to the opener on close. Then put the caret in the Name field so the first
+  // keystroke names the topic (autoFocus is unreliable for portal-mounted modals).
+  const panelRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  useFocusTrap(panelRef, onClose);
+  useEffect(() => { nameRef.current?.focus(); nameRef.current?.select(); }, []);
+
   return (
     <div
       onClick={onClose}
@@ -112,7 +121,10 @@ export default function TopicFolderEditModal({
       }}
     >
       <div
+        ref={panelRef}
         data-onb="topic-modal"
+        {...dialogProps()}
+        aria-labelledby="topic-modal-title"
         onClick={e => e.stopPropagation()}
         style={{
           width: 'min(440px, 100%)', maxHeight: '90vh', overflowY: 'auto',
@@ -121,7 +133,7 @@ export default function TopicFolderEditModal({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1rem', color: t.text, fontWeight: 600 }}>
+          <h3 id="topic-modal-title" style={{ margin: 0, fontSize: '1rem', color: t.text, fontWeight: 600 }}>
             {isTopic ? 'Topic' : 'Folder'}
           </h3>
           <button onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', color: t.textMuted, cursor: 'pointer', padding: '0.2rem' }}>
@@ -133,14 +145,14 @@ export default function TopicFolderEditModal({
         <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
           <div style={{ flex: 1 }}>
             <label style={lbl}>Name</label>
-            <input data-onb="topic-name-input" value={name} onChange={e => setName(e.target.value)} placeholder={isTopic ? 'e.g. Job hunt' : 'e.g. Work'} autoFocus style={inp} />
+            <input ref={nameRef} data-onb="topic-name-input" value={name} onChange={e => setName(e.target.value)} placeholder={isTopic ? 'e.g. Job hunt' : 'e.g. Work'} style={inp} />
           </div>
           <div ref={popoverRef} data-onb="topic-icon-colour" style={{ position: 'relative', display: 'flex', gap: '0.4rem' }}>
             <div>
               <label style={lbl}>Icon</label>
               <button
                 onClick={() => { setShowIcons(v => !v); setShowColors(false); }}
-                title="Pick icon"
+                title="Pick icon" aria-label="Pick icon" aria-haspopup="true" aria-expanded={showIcons}
                 style={{ width: '38px', height: '38px', borderRadius: '9px', background: t.input, border: `1px solid ${t.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color }}
               >
                 <CurrentIcon size={17} strokeWidth={1.5} />
@@ -150,7 +162,7 @@ export default function TopicFolderEditModal({
               <label style={lbl}>Colour</label>
               <button
                 onClick={() => { setShowColors(v => !v); setShowIcons(false); }}
-                title="Pick colour"
+                title="Pick colour" aria-label="Pick colour" aria-haspopup="true" aria-expanded={showColors}
                 style={{ width: '38px', height: '38px', borderRadius: '9px', background: color, border: `2px solid ${t.borderStrong}`, cursor: 'pointer' }}
               />
             </div>

@@ -678,7 +678,7 @@ function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 
                   }}
                 >
                   <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: tp.color, flexShrink: 0 }} />
-                  {tp.name || '(unnamed)'}
+                  {tp.name || 'New topic'}
                 </button>
               );
             })}
