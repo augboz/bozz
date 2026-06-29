@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, X, Minus, Plus } from 'lucide-react';
 import { Widget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
-import type { TopicLink, Topic } from '../../lib/types';
+import type { TopicLink } from '../../lib/types';
 import { isTauri } from '../../lib/platform';
 import { fetchFaviconDataUrl } from '../../lib/favicon';
 
@@ -75,7 +75,7 @@ function FillLogo({ link, accent }: { link: TopicLink; accent: string }) {
 }
 
 export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, topics, currentTopicId, onTopicChange, editing, widgetConfig, onWidgetConfig } = ctx;
+  const { t, topics, currentTopicId, editing, widgetConfig, onWidgetConfig } = ctx;
   const topic = topics.find(tp => tp.id === currentTopicId);
 
   const [addingLink, setAddingLink] = useState(false);
@@ -99,18 +99,24 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const fill = Boolean(iconsOnly && widgetConfig?.fill);
   const toggleFill = () => onWidgetConfig?.({ ...widgetConfig, fill: !widgetConfig?.fill });
 
+  // Links live in THIS widget's own config so multiple Links widgets on one topic
+  // stay independent. Existing single-widget users fall back to the legacy
+  // topic.links until their first edit (or icon backfill) migrates them in.
+  const storedLinks = widgetConfig?.links as TopicLink[] | undefined;
+  const links: TopicLink[] = storedLinks ?? topic?.links ?? [];
+  const setLinks = (next: TopicLink[]) => onWidgetConfig?.({ ...widgetConfig, links: next });
+
   // Backfill missing favicons once: fetch each link's icon (Tauri native fetch
-  // bypasses CORS), cache it as a data URL on the link so it renders offline
-  // afterwards. `attempted` stops us from re-hitting the network for icons that
-  // failed this session; a fresh launch retries them.
-  const latestRef = useRef<{ topic?: Topic; onTopicChange?: (t: Topic) => void }>({});
-  latestRef.current = { topic, onTopicChange };
+  // bypasses CORS), cache it as a data URL so it renders offline afterwards.
+  // `attempted` stops us re-hitting the network for icons that failed this
+  // session; a fresh launch retries them.
+  const latestRef = useRef<{ links: TopicLink[]; setLinks: (n: TopicLink[]) => void }>({ links: [], setLinks: () => {} });
+  latestRef.current = { links, setLinks };
   const attempted = useRef<Set<string>>(new Set());
-  const linksKey = (topic?.links ?? []).map(l => l.id + (l.icon ? '1' : '0')).join('|');
+  const linksKey = links.map(l => l.id + (l.icon ? '1' : '0')).join('|');
   useEffect(() => {
-    const cur = latestRef.current.topic;
-    if (!cur || !latestRef.current.onTopicChange) return;
-    const missing = (cur.links ?? []).filter(l => !l.icon && !attempted.current.has(l.id));
+    const cur = latestRef.current.links;
+    const missing = cur.filter(l => !l.icon && !attempted.current.has(l.id));
     if (!missing.length) return;
     missing.forEach(l => attempted.current.add(l.id));
     let cancelled = false;
@@ -121,15 +127,13 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
       if (cancelled) return;
       const map = new Map(results.filter(r => r.icon).map(r => [r.id, r.icon as string]));
       if (!map.size) return;
-      const fresh = latestRef.current.topic;
-      const apply = latestRef.current.onTopicChange;
-      if (!fresh || !apply) return;
-      apply({ ...fresh, links: (fresh.links ?? []).map(l => (map.has(l.id) ? { ...l, icon: map.get(l.id) } : l)) });
+      const fresh = latestRef.current.links;
+      latestRef.current.setLinks(fresh.map(l => (map.has(l.id) ? { ...l, icon: map.get(l.id) } : l)));
     })();
     return () => { cancelled = true; };
   }, [linksKey]);
 
-  if (!topic || !onTopicChange) {
+  if (!topic) {
     return (
       <Widget t={t} accent={ACCENT}>
         <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
@@ -139,7 +143,6 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
     );
   }
 
-  const links = topic.links ?? [];
   const accent = topic.color ?? ACCENT;
 
   const inp: React.CSSProperties = {
@@ -154,12 +157,12 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
     if (!url) return;
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     const newLink: TopicLink = { id: Date.now().toString(36), label: label || url, url };
-    onTopicChange({ ...topic, links: [...links, newLink] });
+    setLinks([...links, newLink]);
     setLinkLabel(''); setLinkUrl(''); setAddingLink(false);
   };
 
   const removeLink = (id: string) =>
-    onTopicChange({ ...topic, links: links.filter(l => l.id !== id) });
+    setLinks(links.filter(l => l.id !== id));
 
   const stepBtn: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted,
@@ -277,7 +280,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
             style={{
               width: '100%', height: '100%', minHeight: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'none', border: 'none', cursor: 'pointer', padding: editing ? '0.4rem' : '0.6rem',
+              background: 'none', border: 'none', cursor: 'pointer', padding: editing ? '0.3rem' : 0,
             }}
           >
             <FillLogo link={links[0]} accent={accent} />

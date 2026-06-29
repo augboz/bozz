@@ -345,6 +345,9 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
     updateLayout([...widgetLayout, {
       i: `${type}-${Date.now()}`, type,
       x: 0, y: maxY, w: meta.defaultSize.w, h: meta.defaultSize.h,
+      // New Links widgets start empty (their own links live in per-widget config),
+      // so a second Links widget doesn't inherit the first one's links.
+      ...(type === 'topicLinks' ? { config: { links: [] } } : {}),
     }]);
   };
 
