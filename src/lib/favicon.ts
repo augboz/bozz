@@ -21,7 +21,7 @@ function hostOf(url: string): string | null {
 function sources(host: string): string[] {
   return [
     `https://icons.duckduckgo.com/ip3/${host}.ico`,
-    `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opt=TRUE&url=https://${host}&size=128`,
+    `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opt=TRUE&url=https://${host}&size=256`,
   ];
 }
 

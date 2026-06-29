@@ -57,6 +57,23 @@ function LinkFavicon({ link, px, accent }: { link: TopicLink; px: number; accent
   );
 }
 
+// Single logo stretched to fill the whole widget (Fill mode).
+function FillLogo({ link, accent }: { link: TopicLink; accent: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = link.icon ?? faviconUrl(link.url);
+  if (!src || failed) {
+    return <ExternalLink size={64} strokeWidth={1.2} style={{ color: accent, opacity: 0.6 }} />;
+  }
+  return (
+    <img
+      src={src}
+      alt={link.label}
+      onError={() => setFailed(true)}
+      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+    />
+  );
+}
+
 export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const { t, topics, currentTopicId, onTopicChange, editing, widgetConfig, onWidgetConfig } = ctx;
   const topic = topics.find(tp => tp.id === currentTopicId);
@@ -78,6 +95,9 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const logoSize = Math.min(MAX_LOGO, Math.max(MIN_LOGO, Number(widgetConfig?.logoSize) || 46));
   const changeLogoSize = (delta: number) =>
     onWidgetConfig?.({ ...widgetConfig, logoSize: Math.min(MAX_LOGO, Math.max(MIN_LOGO, logoSize + delta)) });
+  // Fill mode: a single logo stretched to fill the whole widget, nothing else.
+  const fill = Boolean(iconsOnly && widgetConfig?.fill);
+  const toggleFill = () => onWidgetConfig?.({ ...widgetConfig, fill: !widgetConfig?.fill });
 
   // Backfill missing favicons once: fetch each link's icon (Tauri native fetch
   // bypasses CORS), cache it as a data URL on the link so it renders offline
@@ -147,7 +167,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   };
 
   return (
-    <Widget t={t} accent={accent}>
+    <Widget t={t} accent={accent} noPadding={fill && !editing && links.length > 0}>
       {editing && (
         <div className="widget-interactive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.65rem' }}>
           <button
@@ -173,13 +193,21 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
             >
               {iconsOnly ? 'Logos only' : 'With names'}
             </button>
-            {iconsOnly ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem', border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0.05rem 0.1rem' }} title="Logo size">
-                <button onClick={() => changeLogoSize(-12)} aria-label="Smaller logos" style={stepBtn}><Minus size={12} strokeWidth={2} /></button>
-                <span style={{ fontSize: '0.62rem', color: t.textMuted, minWidth: 24, textAlign: 'center' }}>{logoSize}</span>
-                <button onClick={() => changeLogoSize(12)} aria-label="Bigger logos" style={stepBtn}><Plus size={12} strokeWidth={2} /></button>
-              </div>
-            ) : (
+            {iconsOnly && (
+              <button
+                onClick={toggleFill}
+                title="One logo fills the whole widget"
+                style={{
+                  background: fill ? accent + '22' : 'none',
+                  border: `1px solid ${fill ? accent + '88' : t.border}`, borderRadius: '6px',
+                  padding: '0.2rem 0.55rem', cursor: 'pointer', color: fill ? accent : t.textMuted,
+                  fontSize: '0.68rem', fontFamily: 'inherit',
+                }}
+              >
+                Fill
+              </button>
+            )}
+            {!iconsOnly ? (
               <button
                 onClick={cycleSize}
                 title="Change link size"
@@ -191,7 +219,13 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
               >
                 {SIZE_LABEL[size]}
               </button>
-            )}
+            ) : !fill ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem', border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0.05rem 0.1rem' }} title="Logo size">
+                <button onClick={() => changeLogoSize(-12)} aria-label="Smaller logos" style={stepBtn}><Minus size={12} strokeWidth={2} /></button>
+                <span style={{ fontSize: '0.62rem', color: t.textMuted, minWidth: 24, textAlign: 'center' }}>{logoSize}</span>
+                <button onClick={() => changeLogoSize(12)} aria-label="Bigger logos" style={stepBtn}><Plus size={12} strokeWidth={2} /></button>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
@@ -232,6 +266,36 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
       {links.length === 0 && !addingLink ? (
         <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
           {editing ? 'No links yet — click + add to pin one.' : 'No links pinned.'}
+        </div>
+      ) : fill && links.length > 0 ? (
+        // Fill mode: the first link's logo fills the whole widget, nothing else.
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            onClick={() => openLink(links[0].url)}
+            title={links[0].label}
+            aria-label={links[0].label}
+            style={{
+              width: '100%', height: '100%', minHeight: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none', cursor: 'pointer', padding: editing ? '0.4rem' : '0.6rem',
+            }}
+          >
+            <FillLogo link={links[0]} accent={accent} />
+          </button>
+          {editing && (
+            <button
+              className="widget-interactive"
+              onClick={() => removeLink(links[0].id)}
+              aria-label={`Remove ${links[0].label}`}
+              style={{
+                position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderRadius: '50%',
+                background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.textMuted,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+              }}
+            >
+              <X size={11} strokeWidth={2} />
+            </button>
+          )}
         </div>
       ) : iconsOnly ? (
         // Logos-only launcher: clickable logo tiles, no labels. Tile size is the
