@@ -9,6 +9,7 @@ import ChoicePicker, { type Choice } from './shared/ChoicePicker';
 import DatePicker from './shared/DatePicker';
 import type { InboxItem, Theme, Topic, BudgetData } from '../lib/types';
 import { useFocusTrap, dialogProps } from '../hooks/useFocusTrap';
+import { nextId } from '../lib/ids';
 
 /**
  * In-app quick-add modal — the browser equivalent of the desktop Ctrl+B
@@ -67,7 +68,10 @@ export default function QuickAddModal({
 
   // ── Typed fast-lane: enter commits immediately to Quicks (no review step) ─────
   const submitTyped = () => {
-    const value = (text || partial).trim();
+    // Submit exactly what the input shows (see the input's value below): in the
+    // idle/typed phase that is `text`. Using `text || partial` here could commit a
+    // stale voice partial that differs from what the user sees and edited.
+    const value = text.trim();
     if (!value) { onClose(); return; }
 
     const route = routeVoice(value, topics);
@@ -181,7 +185,13 @@ export default function QuickAddModal({
   // topic) drop into the inbox.
   const addAll = () => {
     const ready = readyTasks();
-    if (ready.length === 0) { onClose(); return; }
+    if (ready.length === 0) {
+      // Don't just vanish: if there were cards but all were blanked out, say so
+      // rather than closing silently (which reads as a lost capture).
+      if (tasks.length > 0) { setStatus('nothing to add'); setTimeout(onClose, 700); }
+      else onClose();
+      return;
+    }
     const now = Date.now();
     const inboxItems: InboxItem[] = [];
     let toTopics = 0;
@@ -192,7 +202,7 @@ export default function QuickAddModal({
         toTopics++;
       } else {
         inboxItems.push({
-          id: now + i, text: value, createdAt: now + i,
+          id: nextId(), text: value, createdAt: now + i,
           deadline: tk.deadline ?? undefined, deadlineLabel: tk.deadlineLabel ?? undefined,
         });
       }
@@ -280,7 +290,7 @@ export default function QuickAddModal({
           <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
             <input
               ref={inputRef}
-              value={partial || text}
+              value={phase === 'recording' ? partial : text}
               onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') submitTyped(); }}
               placeholder={phase === 'recording' ? 'listening…' : "what's on your mind? a thought, todo, expense…"}

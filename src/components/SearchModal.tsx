@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
 import type { SearchEntry } from '../lib/search';
 import type { Theme } from '../lib/types';
+import { useFocusTrap, dialogProps } from '../hooks/useFocusTrap';
 
 interface SearchModalProps {
   t: Theme;
@@ -20,6 +21,8 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, onClose);
 
   const fuse = useMemo(
     () => new Fuse(entries, { keys: ['label', 'sub'], threshold: 0.4, ignoreLocation: true }),
@@ -63,6 +66,8 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
       }}
     >
       <div
+        ref={panelRef}
+        {...dialogProps('Search')}
         onClick={e => e.stopPropagation()}
         style={{
           // Mobile: full-width, fills from title bar to bottom of screen

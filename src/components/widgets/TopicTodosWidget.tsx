@@ -18,6 +18,7 @@ import { Widget, WidgetHeader } from '../shared/Widget';
 import { ListTree } from 'lucide-react';
 import type { WidgetCtx } from './context';
 import type { Topic, TopicItem, SortMode } from '../../lib/types';
+import { nextId } from '../../lib/ids';
 import DonePile from '../shared/DonePile';
 import DeadlineControl from '../shared/DeadlineControl';
 
@@ -205,7 +206,7 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
   const addItem = () => {
     const text = newText.trim();
     if (!text) return;
-    const item: TopicItem = { id: Date.now(), text, stageId: filterStageId ?? defaultStageId, completedAt: null, deadline: null };
+    const item: TopicItem = { id: nextId(), text, stageId: filterStageId ?? defaultStageId, completedAt: null, deadline: null };
     updateTopic({ ...topic, items: [...topic.items, item] });
     setNewText('');
   };

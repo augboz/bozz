@@ -6,6 +6,7 @@ import {
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
 import { predictTopic } from '../lib/taskParser';
+import { nextId } from '../lib/ids';
 import VoiceButton from './shared/VoiceButton';
 import { isMobileViewport, isTauri } from '../lib/platform';
 import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
@@ -565,7 +566,7 @@ export default function Dashboard() {
     const route = routeVoice(transcript);
     setVoiceStatus(`→ ${describeRoute(route)}`);
     if (route.kind === 'inbox') {
-      setInbox(prev => [...prev, { id: Date.now(), text: route.text, createdAt: Date.now() }]);
+      setInbox(prev => [...prev, { id: nextId(), text: route.text, createdAt: Date.now() }]);
     } else if (route.kind === 'topic') {
       addTopicItem(route.topicId, route.item.text, route.item.deadline ?? null);
     } else if (route.kind === 'budget') {
@@ -678,7 +679,7 @@ export default function Dashboard() {
       const sid = targetStage?.id ?? top.stages[0]?.id ?? '';
       return {
         ...top,
-        items: [...top.items, { id: Date.now(), text, stageId: sid, completedAt: null, deadline }],
+        items: [...top.items, { id: nextId(), text, stageId: sid, completedAt: null, deadline }],
       };
     }));
   };
@@ -686,7 +687,7 @@ export default function Dashboard() {
   const addToInbox = (text: string, deadline: number | null) => {
     const suggested = predictTopic(text, topics);
     setInbox(prev => [...prev, {
-      id: Date.now(), text, createdAt: Date.now(),
+      id: nextId(), text, createdAt: Date.now(),
       suggestedTopicId: suggested?.id, deadline: deadline ?? undefined,
     }]);
   };

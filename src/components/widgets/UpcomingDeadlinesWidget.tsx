@@ -28,14 +28,21 @@ export default function UpcomingDeadlinesWidget({ ctx }: { ctx: WidgetCtx }) {
   const cutoff = now + WINDOW_MS;
   const todayMs = dayStart(now);
 
+  // Include overdue items too (deadline before today): an overdue task is the
+  // most urgent thing this widget can show, so dropping it (the old `>= todayMs`
+  // floor did) was exactly backwards. The per-item overdue styling below was
+  // dead code until this change.
   const upcoming = deadlineEntries(ctx)
-    .filter(e => e.item.deadline != null && e.item.deadline >= todayMs && e.item.deadline <= cutoff)
+    .filter(e => e.item.deadline != null && e.item.deadline <= cutoff)
     .sort((a, b) => (a.item.deadline ?? 0) - (b.item.deadline ?? 0));
 
-  // Bucket the flat list into per-day groups, preserving ascending order.
+  // Bucket into per-day groups, ascending. Everything past due collapses into a
+  // single "Overdue" group at the top (sorted ascending, so it comes first).
+  const OVERDUE_DAY = -1;
   const groups: { day: number; items: typeof upcoming }[] = [];
   for (const e of upcoming) {
-    const day = dayStart(e.item.deadline!);
+    const raw = dayStart(e.item.deadline!);
+    const day = raw < todayMs ? OVERDUE_DAY : raw;
     const last = groups[groups.length - 1];
     if (last && last.day === day) last.items.push(e);
     else groups.push({ day, items: [e] });
@@ -58,9 +65,9 @@ export default function UpcomingDeadlinesWidget({ ctx }: { ctx: WidgetCtx }) {
                     <span style={{
                       fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.04em',
                       textTransform: 'uppercase',
-                      color: day === todayMs ? sectionAccents.home : t.textMuted,
+                      color: day === OVERDUE_DAY ? t.alert : day === todayMs ? sectionAccents.home : t.textMuted,
                     }}>
-                      {dayHeading(day, todayMs)}
+                      {day === OVERDUE_DAY ? 'Overdue' : dayHeading(day, todayMs)}
                     </span>
                     <span style={{ flex: 1, height: 1, background: t.border }} />
                     <span style={{ fontSize: '0.62rem', color: t.textDim }}>{items.length}</span>
