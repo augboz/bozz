@@ -35,6 +35,8 @@ export interface TopicLink {
   id: string;
   label: string;
   url: string;
+  /** Cached site favicon as a data URL, fetched once so it renders offline. */
+  icon?: string;
 }
 
 export interface TopicFolder {

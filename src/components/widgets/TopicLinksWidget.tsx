@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { ExternalLink, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ExternalLink, X, Minus, Plus } from 'lucide-react';
 import { Widget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
-import type { TopicLink } from '../../lib/types';
+import type { TopicLink, Topic } from '../../lib/types';
 import { isTauri } from '../../lib/platform';
+import { fetchFaviconDataUrl } from '../../lib/favicon';
 
 const ACCENT = '#a1bdc7';
 
@@ -20,22 +21,26 @@ type LinkSize = 'compact' | 'cozy' | 'full';
 const SIZE_ORDER: LinkSize[] = ['compact', 'cozy', 'full'];
 const SIZE_LABEL: Record<LinkSize, string> = { compact: 'Compact', cozy: 'Cozy', full: 'Full width' };
 
-// Favicon for a link's domain via Google's favicon service. Returns null for
-// unparseable URLs so the caller can fall back to a generic glyph.
-function faviconUrl(url: string, px: number): string | null {
+const MIN_LOGO = 28;
+const MAX_LOGO = 240;
+
+// Live favicon URL (used as a fallback before the icon is cached, and on web).
+// DuckDuckGo returns the site's real icon and 404s for unknown domains, rather
+// than the grey "globe" placeholder Google's service returns.
+function faviconUrl(url: string): string | null {
   try {
     const host = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?sz=${Math.max(32, px)}&domain=${host}`;
+    return `https://icons.duckduckgo.com/ip3/${host}.ico`;
   } catch {
     return null;
   }
 }
 
-// Renders the site's favicon, falling back to a generic link glyph if the icon
-// fails to load (offline, blocked, or no favicon).
-function LinkFavicon({ url, px, accent }: { url: string; px: number; accent: string }) {
+// Renders the site's logo: the cached data-URL icon if we have it (works
+// offline), otherwise the live favicon service, otherwise a generic glyph.
+function LinkFavicon({ link, px, accent }: { link: TopicLink; px: number; accent: string }) {
   const [failed, setFailed] = useState(false);
-  const src = faviconUrl(url, px * 2);
+  const src = link.icon ?? faviconUrl(link.url);
   if (!src || failed) {
     return <ExternalLink size={px} strokeWidth={1.5} style={{ flexShrink: 0, color: accent }} />;
   }
@@ -51,8 +56,6 @@ function LinkFavicon({ url, px, accent }: { url: string; px: number; accent: str
     />
   );
 }
-
-const TILE: Record<LinkSize, number> = { compact: 36, cozy: 46, full: 58 };
 
 export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const { t, topics, currentTopicId, onTopicChange, editing, widgetConfig, onWidgetConfig } = ctx;
@@ -70,6 +73,41 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   // Icons-only mode: show just the site logos as clickable tiles (no labels).
   const iconsOnly = Boolean(widgetConfig?.iconsOnly);
   const toggleIconsOnly = () => onWidgetConfig?.({ ...widgetConfig, iconsOnly: !iconsOnly });
+  // Logo size (px) used in icons-only mode — small multiple logos up to one big
+  // logo that fills the widget. Adjusted with the +/- stepper.
+  const logoSize = Math.min(MAX_LOGO, Math.max(MIN_LOGO, Number(widgetConfig?.logoSize) || 46));
+  const changeLogoSize = (delta: number) =>
+    onWidgetConfig?.({ ...widgetConfig, logoSize: Math.min(MAX_LOGO, Math.max(MIN_LOGO, logoSize + delta)) });
+
+  // Backfill missing favicons once: fetch each link's icon (Tauri native fetch
+  // bypasses CORS), cache it as a data URL on the link so it renders offline
+  // afterwards. `attempted` stops us from re-hitting the network for icons that
+  // failed this session; a fresh launch retries them.
+  const latestRef = useRef<{ topic?: Topic; onTopicChange?: (t: Topic) => void }>({});
+  latestRef.current = { topic, onTopicChange };
+  const attempted = useRef<Set<string>>(new Set());
+  const linksKey = (topic?.links ?? []).map(l => l.id + (l.icon ? '1' : '0')).join('|');
+  useEffect(() => {
+    const cur = latestRef.current.topic;
+    if (!cur || !latestRef.current.onTopicChange) return;
+    const missing = (cur.links ?? []).filter(l => !l.icon && !attempted.current.has(l.id));
+    if (!missing.length) return;
+    missing.forEach(l => attempted.current.add(l.id));
+    let cancelled = false;
+    void (async () => {
+      const results = await Promise.all(
+        missing.map(async l => ({ id: l.id, icon: await fetchFaviconDataUrl(l.url) })),
+      );
+      if (cancelled) return;
+      const map = new Map(results.filter(r => r.icon).map(r => [r.id, r.icon as string]));
+      if (!map.size) return;
+      const fresh = latestRef.current.topic;
+      const apply = latestRef.current.onTopicChange;
+      if (!fresh || !apply) return;
+      apply({ ...fresh, links: (fresh.links ?? []).map(l => (map.has(l.id) ? { ...l, icon: map.get(l.id) } : l)) });
+    })();
+    return () => { cancelled = true; };
+  }, [linksKey]);
 
   if (!topic || !onTopicChange) {
     return (
@@ -103,6 +141,11 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const removeLink = (id: string) =>
     onTopicChange({ ...topic, links: links.filter(l => l.id !== id) });
 
+  const stepBtn: React.CSSProperties = {
+    background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted,
+    padding: '0.1rem 0.25rem', display: 'flex', alignItems: 'center',
+  };
+
   return (
     <Widget t={t} accent={accent}>
       {editing && (
@@ -117,7 +160,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
           >
             + add
           </button>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             <button
               onClick={toggleIconsOnly}
               title="Toggle between logos-only and labelled links"
@@ -130,17 +173,25 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
             >
               {iconsOnly ? 'Logos only' : 'With names'}
             </button>
-            <button
-              onClick={cycleSize}
-              title="Change link size"
-              style={{
-                background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px',
-                padding: '0.2rem 0.55rem', cursor: 'pointer', color: t.textMuted,
-                fontSize: '0.68rem', fontFamily: 'inherit',
-              }}
-            >
-              {SIZE_LABEL[size]}
-            </button>
+            {iconsOnly ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem', border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0.05rem 0.1rem' }} title="Logo size">
+                <button onClick={() => changeLogoSize(-12)} aria-label="Smaller logos" style={stepBtn}><Minus size={12} strokeWidth={2} /></button>
+                <span style={{ fontSize: '0.62rem', color: t.textMuted, minWidth: 24, textAlign: 'center' }}>{logoSize}</span>
+                <button onClick={() => changeLogoSize(12)} aria-label="Bigger logos" style={stepBtn}><Plus size={12} strokeWidth={2} /></button>
+              </div>
+            ) : (
+              <button
+                onClick={cycleSize}
+                title="Change link size"
+                style={{
+                  background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px',
+                  padding: '0.2rem 0.55rem', cursor: 'pointer', color: t.textMuted,
+                  fontSize: '0.68rem', fontFamily: 'inherit',
+                }}
+              >
+                {SIZE_LABEL[size]}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -183,10 +234,12 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
           {editing ? 'No links yet — click + add to pin one.' : 'No links pinned.'}
         </div>
       ) : iconsOnly ? (
-        // Logos-only launcher: clickable favicon tiles, no labels.
+        // Logos-only launcher: clickable logo tiles, no labels. Tile size is the
+        // user-set logoSize, so one big logo can fill the widget or many small
+        // ones can sit side by side.
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem', alignItems: 'center' }}>
           {links.map(l => {
-            const px = TILE[size];
+            const px = logoSize;
             return (
               <div key={l.id} style={{ position: 'relative', display: 'inline-flex' }}>
                 <button
@@ -194,7 +247,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
                   title={l.label}
                   aria-label={l.label}
                   style={{
-                    width: px, height: px, borderRadius: size === 'compact' ? 9 : 13,
+                    width: px, height: px, borderRadius: Math.max(8, Math.round(px * 0.22)),
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: t.input, border: `1px solid ${accent}33`,
                     cursor: 'pointer', padding: 0, transition: 'border-color 0.15s, transform 0.1s',
@@ -202,7 +255,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = accent + '99'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = accent + '33'; e.currentTarget.style.transform = 'none'; }}
                 >
-                  <LinkFavicon url={l.url} px={Math.round(px * 0.58)} accent={accent} />
+                  <LinkFavicon link={l} px={Math.round(px * 0.62)} accent={accent} />
                 </button>
                 {editing && (
                   <button
@@ -255,7 +308,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
                     textAlign: 'left',
                   }}
                 >
-                  <LinkFavicon url={l.url} px={icon} accent={accent} />
+                  <LinkFavicon link={l} px={icon} accent={accent} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span>
                 </button>
                 {editing && (
