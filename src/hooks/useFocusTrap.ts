@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 
 /**
@@ -24,6 +24,14 @@ export function useFocusTrap(
 ): void {
   const { closeOnEscape = true } = options;
 
+  // Hold the latest onClose in a ref so the effect below can stay mount-once.
+  // If onClose were an effect dependency, an inline `onClose={() => ...}` from
+  // the caller (the common case) would make this effect re-run on every render;
+  // each re-run restores focus and then re-grabs the first field, which yanked
+  // focus back to the first input (the title) on every keystroke elsewhere.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     const node = ref.current;
     const prevFocused = document.activeElement as HTMLElement | null;
@@ -46,7 +54,7 @@ export function useFocusTrap(
     const onKeyDown = (e: KeyboardEvent) => {
       if (closeOnEscape && e.key === 'Escape') {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (e.key !== 'Tab' || !node) return;
@@ -73,7 +81,10 @@ export function useFocusTrap(
         prevFocused.focus();
       }
     };
-  }, [ref, onClose, closeOnEscape]);
+    // Mount-once: deps are stable (ref identity + a primitive). onClose is read
+    // via onCloseRef so it never forces a re-run. This is what keeps focus from
+    // being stolen back to the first field while the user types in other fields.
+  }, [ref, closeOnEscape]);
 }
 
 /** Spread onto a modal's container so screen readers announce it as a dialog. */

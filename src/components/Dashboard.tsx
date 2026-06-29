@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type ElementType, type CSSProperties } from 'react';
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, LayoutGrid, Plus, ListTree, FolderPlus,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -838,8 +838,6 @@ export default function Dashboard() {
     if (!stillVisible) setActiveSection('home');
   }, [navItems, activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const today = new Date();
-
   if (loading) {
     const m = themes[DEFAULT_APPEARANCE.mood];
     return (
@@ -1329,7 +1327,7 @@ export default function Dashboard() {
             onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
             onMouseLeave={e => { e.currentTarget.style.background = activeSection === 'apps' ? sT.panel : 'transparent'; e.currentTarget.style.color = activeSection === 'apps' ? sT.text : sT.textDim; }}
           >
-            <LayoutGrid size={17} strokeWidth={1.5} />
+            <Blocks size={17} strokeWidth={1.5} />
           </button>
           <button
             onClick={() => setActiveSection('inbox')}
@@ -1350,7 +1348,7 @@ export default function Dashboard() {
             onMouseEnter={e => { e.currentTarget.style.background = sT.panel; e.currentTarget.style.color = sT.textMuted; }}
             onMouseLeave={e => { e.currentTarget.style.background = activeSection === 'inbox' ? sT.panel : 'transparent'; e.currentTarget.style.color = activeSection === 'inbox' ? sT.text : sT.textDim; }}
           >
-            <Zap size={17} strokeWidth={1.5} />
+            <Inbox size={17} strokeWidth={1.5} />
             {inbox.length > 0 && (
               <span style={{
                 position: 'absolute', top: 2, right: 2,
@@ -1359,16 +1357,6 @@ export default function Dashboard() {
               }} />
             )}
           </button>
-          {!sidebarCollapsed && (
-          <span style={{
-            fontSize: '0.7rem', color: sT.textDim,
-            letterSpacing: '0.02em', textAlign: 'right',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
-            flex: 1, minWidth: 0,
-          }}>
-            {today.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-          </span>
-          )}
         </div>
       </aside>
 
