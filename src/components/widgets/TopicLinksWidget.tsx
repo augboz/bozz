@@ -95,9 +95,11 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const logoSize = Math.min(MAX_LOGO, Math.max(MIN_LOGO, Number(widgetConfig?.logoSize) || 46));
   const changeLogoSize = (delta: number) =>
     onWidgetConfig?.({ ...widgetConfig, logoSize: Math.min(MAX_LOGO, Math.max(MIN_LOGO, logoSize + delta)) });
-  // Fill mode: a single logo stretched to fill the whole widget, nothing else.
-  const fill = Boolean(iconsOnly && widgetConfig?.fill);
+  // Fill mode: one chosen logo stretched to fill the whole widget, nothing else.
+  const fill = Boolean(widgetConfig?.fill);
   const toggleFill = () => onWidgetConfig?.({ ...widgetConfig, fill: !widgetConfig?.fill });
+  const fillId = widgetConfig?.fillId as string | undefined;
+  const setFillId = (id: string) => onWidgetConfig?.({ ...widgetConfig, fillId: id });
 
   // Links live in THIS widget's own config so multiple Links widgets on one topic
   // stay independent. Existing single-widget users fall back to the legacy
@@ -171,7 +173,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <Widget t={t} accent={accent} noPadding={fill && !editing && links.length > 0}>
-      {editing && (
+      {editing && !(fill && links.length > 0) && (
         <div className="widget-interactive" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.65rem' }}>
           <button
             onClick={() => setAddingLink(v => !v)}
@@ -196,20 +198,18 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
             >
               {iconsOnly ? 'Logos only' : 'With names'}
             </button>
-            {iconsOnly && (
-              <button
-                onClick={toggleFill}
-                title="One logo fills the whole widget"
-                style={{
-                  background: fill ? accent + '22' : 'none',
-                  border: `1px solid ${fill ? accent + '88' : t.border}`, borderRadius: '6px',
-                  padding: '0.2rem 0.55rem', cursor: 'pointer', color: fill ? accent : t.textMuted,
-                  fontSize: '0.68rem', fontFamily: 'inherit',
-                }}
-              >
-                Fill
-              </button>
-            )}
+            <button
+              onClick={toggleFill}
+              title="One logo fills the whole widget"
+              style={{
+                background: fill ? accent + '22' : 'none',
+                border: `1px solid ${fill ? accent + '88' : t.border}`, borderRadius: '6px',
+                padding: '0.2rem 0.55rem', cursor: 'pointer', color: fill ? accent : t.textMuted,
+                fontSize: '0.68rem', fontFamily: 'inherit',
+              }}
+            >
+              Fill
+            </button>
             {!iconsOnly ? (
               <button
                 onClick={cycleSize}
@@ -270,37 +270,64 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
         <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
           {editing ? 'No links yet — click + add to pin one.' : 'No links pinned.'}
         </div>
-      ) : fill && links.length > 0 ? (
-        // Fill mode: the first link's logo fills the whole widget, nothing else.
-        <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <button
-            onClick={() => openLink(links[0].url)}
-            title={links[0].label}
-            aria-label={links[0].label}
-            style={{
-              width: '100%', height: '100%', minHeight: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'none', border: 'none', cursor: 'pointer', padding: editing ? '0.3rem' : 0,
-            }}
-          >
-            <FillLogo link={links[0]} accent={accent} />
-          </button>
-          {editing && (
+      ) : fill && links.length > 0 ? ((() => {
+        // Fill mode: the chosen logo fills the whole widget, nothing else. In edit
+        // mode the widget is still just the logo (so you can resize and see it),
+        // with a small overlay to pick which logo fills, add one, or exit fill.
+        const fillLink = links.find(l => l.id === fillId) ?? links[0];
+        return (
+          <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <button
-              className="widget-interactive"
-              onClick={() => removeLink(links[0].id)}
-              aria-label={`Remove ${links[0].label}`}
+              onClick={() => openLink(fillLink.url)}
+              title={fillLink.label}
+              aria-label={fillLink.label}
               style={{
-                position: 'absolute', top: 0, right: 0, width: 20, height: 20, borderRadius: '50%',
-                background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.textMuted,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                width: '100%', height: '100%', minHeight: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
               }}
             >
-              <X size={11} strokeWidth={2} />
+              <FillLogo link={fillLink} accent={accent} />
             </button>
-          )}
-        </div>
-      ) : iconsOnly ? (
+            {editing && (
+              <div className="widget-interactive" style={{
+                position: 'absolute', top: 4, left: 4, right: 4,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem',
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.25rem', maxWidth: '72%', overflowX: 'auto',
+                  background: 'var(--glass-bg, ' + t.panel + ')', border: `1px solid ${t.border}`,
+                  borderRadius: 8, padding: '0.15rem 0.25rem',
+                  backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                }}>
+                  {links.map(l => (
+                    <button key={l.id} onClick={() => setFillId(l.id)} title={`Fill with ${l.label}`} aria-label={`Fill with ${l.label}`}
+                      style={{
+                        width: 22, height: 22, borderRadius: 6, flexShrink: 0, padding: 0, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: t.input, border: `1.5px solid ${l.id === fillLink.id ? accent : t.border}`,
+                      }}>
+                      <LinkFavicon link={l} px={14} accent={accent} />
+                    </button>
+                  ))}
+                  <button onClick={() => setAddingLink(true)} title="Add a link" aria-label="Add a link"
+                    style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: `1px dashed ${t.border}`, color: t.textMuted }}>
+                    <Plus size={12} strokeWidth={2} />
+                  </button>
+                </div>
+                <button onClick={toggleFill} title="Turn off fill" aria-label="Turn off fill"
+                  style={{
+                    flexShrink: 0, background: accent + '22', border: `1px solid ${accent}88`, borderRadius: 6,
+                    padding: '0.15rem 0.45rem', color: accent, fontSize: '0.62rem', fontFamily: 'inherit', cursor: 'pointer',
+                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                  }}>
+                  Fill ✕
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()) : iconsOnly ? (
         // Logos-only launcher: clickable logo tiles, no labels. Tile size is the
         // user-set logoSize, so one big logo can fill the widget or many small
         // ones can sit side by side.
