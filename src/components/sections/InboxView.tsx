@@ -51,10 +51,22 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
   const commitEdit = () => { const v = editText.trim(); if (v) onRename(v); setEditing(false); };
 
   return (
-    <div data-onb="inbox-row" style={{
-      background: t.todoBg, border: `1px solid ${hasSuggestion ? (suggestedColor ?? t.todoBorder) + '55' : t.todoBorder}`,
-      borderRadius: '8px', padding: '0.7rem 1rem',
-    }}>
+    <div
+      data-onb="inbox-row"
+      onKeyDown={e => {
+        // Enter while the row's controls (not the rename input) are focused files
+        // it to the currently-selected destination — keyboard triage.
+        if (e.key !== 'Enter' || editing || !dest) return;
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        onAssign(dest, deadline);
+      }}
+      style={{
+        background: t.todoBg, border: `1px solid ${hasSuggestion ? (suggestedColor ?? t.todoBorder) + '55' : t.todoBorder}`,
+        borderRadius: '8px', padding: '0.7rem 1rem',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
         {/* Task text or edit input, with optional inline predicted badge */}
         <div style={{ flex: 1, minWidth: '160px', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -145,12 +157,57 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign }: Inbo
 
   const sorted = [...inbox].sort((a, b) => b.createdAt - a.createdAt);
 
+  // Items with a confident predicted topic that's a valid destination — mirrors
+  // the per-row prediction so "Accept all" routes exactly where the badges point.
+  const predictedItems = sorted.flatMap(item => {
+    const predicted = predictTopic(item.text, topics);
+    const id = predicted && dests.some(d => d.id === predicted.id) ? predicted.id : null;
+    return id ? [{ item, topicId: id }] : [];
+  });
+
+  const acceptAllPredicted = () => {
+    for (const { item, topicId } of predictedItems) {
+      onAssign(item.text, topicId, item.deadline ?? null);
+    }
+    const filedIds = new Set(predictedItems.map(p => p.item.id));
+    setInbox(prev => prev.filter(i => !filedIds.has(i.id)));
+  };
+
   const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
   const modKey = isMac ? '⌘' : 'Ctrl';
 
   return (
     <div>
       <SectionHeader title="Quicks" t={t} hint="capture anything · triage later" />
+      {predictedItems.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap',
+          marginBottom: '0.75rem',
+        }}>
+          <button
+            onClick={acceptAllPredicted}
+            title="File every predicted item into its predicted topic"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              background: t.doingBg, border: `1px solid ${t.doingBorder}`, borderRadius: '8px',
+              padding: '0.45rem 0.8rem', color: t.doingAccent,
+              cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 500,
+            }}
+          >
+            <Sparkles size={13} strokeWidth={1.8} />
+            Accept all predicted
+            <span style={{
+              fontSize: '0.7rem', fontWeight: 600,
+              background: t.doingAccent + '22', borderRadius: '999px', padding: '0.05rem 0.4rem',
+            }}>
+              {predictedItems.length}
+            </span>
+          </button>
+          <span style={{ fontSize: '0.72rem', color: t.textDim }}>
+            files each into its predicted topic
+          </span>
+        </div>
+      )}
       {dests.length === 0 && inbox.length > 0 && (
         <div style={{
           padding: '0.85rem 1rem', marginBottom: '0.75rem',

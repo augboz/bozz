@@ -9,21 +9,37 @@ interface DeadlineControlProps {
   deadline: number | null;
   onChange: (ts: number | null) => void;
   t: Theme;
+  /** Optional time-of-day, minutes from local midnight (null = all-day). */
+  dueMin?: number | null;
+  /** Persist a changed time-of-day. Omit to keep deadlines all-day. */
+  onDueMin?: (next: number | null) => void;
 }
 
-export default function DeadlineControl({ deadline, onChange, t }: DeadlineControlProps) {
+/** "14:30" for a minutes-from-midnight value. */
+function dueMinLabel(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export default function DeadlineControl({ deadline, onChange, t, dueMin, onDueMin }: DeadlineControlProps) {
   const [open, setOpen] = useState(false);
   const overdue = deadline != null && isOverdue(deadline);
+  const hasTime = onDueMin != null && dueMin != null;
 
   // When open, show DatePicker that immediately opens its calendar.
   // When DatePicker closes (selection or outside click), sync back.
+  // In time mode the picker stays open after a date pick so the time can be set,
+  // so we only close on an explicit onClose (selection-set / outside click).
   if (open) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
         <DatePicker
           t={t}
           value={deadline}
-          onChange={(ts) => { onChange(ts); if (ts != null) setOpen(false); }}
+          onChange={(ts) => { onChange(ts); if (ts != null && onDueMin == null) setOpen(false); }}
+          dueMin={onDueMin != null ? dueMin : undefined}
+          onDueMin={onDueMin}
           allowClear
           defaultOpen
           onClose={() => setOpen(false)}
@@ -68,7 +84,7 @@ export default function DeadlineControl({ deadline, onChange, t }: DeadlineContr
         {overdue && (
           <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: t.alert, display: 'inline-block' }} />
         )}
-        {deadlineLabel(deadline)}
+        {deadlineLabel(deadline)}{hasTime ? ` · ${dueMinLabel(dueMin!)}` : ''}
       </button>
       <button
         onClick={() => onChange(null)}

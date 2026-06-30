@@ -1,25 +1,35 @@
 /**
- * TodayWidget — unified "Today" home widget.
+ * TodayWidget — auto-generated morning brief ("your morning in 90 seconds").
  *
- * Shows two sections, each toggleable via the gear config panel:
- *   Events  — timed calendar events (with exact time range) + all-day + deadline dots
- *   Tasks   — today's daily-plan items (with stage pill + check to advance)
+ * Aggregates the day's REAL signals rather than waiting on the manual planner:
+ *   Summary  — one narrated line ("1 overdue · 2 due today · next event 14:00")
+ *   Priorities — overdue deadlines first, then due-today, then due-this-week
+ *                (from deadlineEntries) — always shown, this is the promise.
+ *   Events   — timed calendar events + all-day + deadline dots (toggle showEvents)
+ *   Tasks    — the manually-curated daily-plan items (toggle showTasks)
  *
  * Config keys (stored in widgetConfig / HomeWidgetItem.config):
  *   showEvents: boolean  (default true)
  *   showTasks:  boolean  (default true)
  */
 
-import { Check } from 'lucide-react';
+import type React from 'react';
+import { Check, AlertTriangle, Flag } from 'lucide-react';
 import type { WidgetCtx } from './context';
 import { Widget, WidgetHeader } from '../shared/Widget';
 import { CalendarDays, Clock } from 'lucide-react';
 import type { CalendarEvent } from '../../lib/types';
+import { deadlineEntries, dueTimestamp, type DeadlineEntry } from './util';
 
 const ACCENT = '#bfa8c9';
+const WARNING = '#e0a23b';
 const MAX_TIMED  = 3;
 const MAX_ALLDAY = 2;
 const MAX_TASKS  = 5;
+const MAX_PRIORITIES = 5;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,7 +51,128 @@ function getEndMin(e: CalendarEvent, startMin: number): number {
   return startMin + 60;
 }
 
+function dayStart(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+type Bucket = 'overdue' | 'today' | 'week';
+
+interface Priority extends DeadlineEntry {
+  bucket: Bucket;
+  due: number;
+}
+
+/** Overdue → due-today → due-this-week, each ascending by precise due time. */
+function priorities(ctx: WidgetCtx, todayMs: number): Priority[] {
+  const out: Priority[] = [];
+  const weekCutoff = todayMs + WEEK_MS;
+  for (const e of deadlineEntries(ctx)) {
+    const due = dueTimestamp(e.item);
+    if (due == null) continue;
+    const dayMs = dayStart(e.item.deadline!);
+    let bucket: Bucket;
+    if (dayMs < todayMs) bucket = 'overdue';
+    else if (dayMs === todayMs) bucket = 'today';
+    else if (due <= weekCutoff) bucket = 'week';
+    else continue;
+    out.push({ ...e, bucket, due });
+  }
+  const rank: Record<Bucket, number> = { overdue: 0, today: 1, week: 2 };
+  return out.sort((a, b) => rank[a.bucket] - rank[b.bucket] || a.due - b.due);
+}
+
 // ── Sub-sections ──────────────────────────────────────────────────────────────
+
+function SummaryLine({ overdue, dueToday, nextEvent, t }: {
+  overdue: number; dueToday: number; nextEvent: CalendarEvent | null; t: WidgetCtx['t'];
+}) {
+  const parts: { text: string; color: string }[] = [];
+  if (overdue > 0)  parts.push({ text: `${overdue} overdue`, color: t.alert });
+  if (dueToday > 0) parts.push({ text: `${dueToday} due today`, color: WARNING });
+  if (nextEvent) {
+    const sm = getStartMin(nextEvent);
+    parts.push({ text: `next event ${minToLabel(sm)}`, color: t.textMuted });
+  }
+  if (parts.length === 0) parts.push({ text: 'nothing pressing — a clear morning', color: t.textMuted });
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap',
+      fontSize: '0.72rem', lineHeight: 1.4, marginBottom: '0.6rem',
+    }}>
+      {parts.map((p, i) => (
+        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+          {i > 0 && <span style={{ color: t.textDim }}>·</span>}
+          <span style={{ color: p.color, fontWeight: 500 }}>{p.text}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function PrioritiesSection({ items, t, setActiveSection }: {
+  items: Priority[];
+  t: WidgetCtx['t'];
+  setActiveSection: (id: string) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
+        Nothing due soon.{' '}
+        <button onClick={() => setActiveSection('inbox')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>
+          Capture a task →
+        </button>
+      </div>
+    );
+  }
+
+  const visible = items.slice(0, MAX_PRIORITIES);
+  const overflow = items.length - visible.length;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      {visible.map(p => {
+        const isOverdue = p.bucket === 'overdue';
+        const labelColor = isOverdue ? t.alert : p.bucket === 'today' ? WARNING : t.textMuted;
+        const label = isOverdue ? 'overdue' : p.bucket === 'today' ? 'today' : 'this week';
+        return (
+          <button
+            key={`${p.section}-${p.item.id}`}
+            onClick={() => setActiveSection(p.section)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.3rem 0.45rem',
+              background: isOverdue ? t.alertBg : t.bgAlt,
+              border: `1px solid ${isOverdue ? t.alertBorder : t.border}`,
+              borderLeft: `3px solid ${p.accent}`,
+              borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
+              textAlign: 'left', width: '100%',
+            }}
+          >
+            {isOverdue
+              ? <AlertTriangle size={11} strokeWidth={2} color={t.alert} style={{ flexShrink: 0 }} />
+              : <Flag size={10} strokeWidth={2} color={labelColor} style={{ flexShrink: 0 }} />}
+            <span style={{
+              flex: 1, fontSize: '0.78rem', color: isOverdue ? t.alert : t.text,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {p.item.text}
+            </span>
+            <span style={{ fontSize: '0.6rem', fontWeight: 600, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {label}
+            </span>
+          </button>
+        );
+      })}
+      {overflow > 0 && (
+        <div style={{ fontSize: '0.68rem', color: t.textDim, paddingLeft: '0.1rem' }}>+{overflow} more due soon</div>
+      )}
+    </div>
+  );
+}
 
 function EventsSection({ events, t, setActiveSection }: {
   events: CalendarEvent[];
@@ -227,6 +358,26 @@ function TasksSection({ ctx, todayKey }: { ctx: WidgetCtx; todayKey: string }) {
   );
 }
 
+// ── Section heading ─────────────────────────────────────────────────────────────
+
+function SectionLabel({ icon: Icon, label, count, t }: {
+  icon: React.ElementType; label: string; count?: number; t: WidgetCtx['t'];
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0.35rem',
+      fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+      color: t.textDim, marginBottom: '0.4rem',
+    }}>
+      <Icon size={9} strokeWidth={1.8} />
+      {label}
+      {count != null && count > 0 && (
+        <span style={{ marginLeft: '0.2rem', color: t.textMuted }}>{count}</span>
+      )}
+    </div>
+  );
+}
+
 // ── Main widget ───────────────────────────────────────────────────────────────
 
 export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
@@ -235,17 +386,29 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
   const showEvents = widgetConfig.showEvents !== false;
   const showTasks  = widgetConfig.showTasks  !== false;
 
-  const todayKey = (() => { const d = new Date(); d.setHours(0,0,0,0); return String(d.getTime()); })();
+  const todayMs = dayStart(Date.now());
+  const todayKey = String(todayMs);
+
+  // Real signals
+  const prios = priorities(ctx, todayMs);
+  const overdueCount = prios.filter(p => p.bucket === 'overdue').length;
+  const dueTodayCount = prios.filter(p => p.bucket === 'today').length;
+
+  const timedSorted = todayEvents.filter(e => !e.allDay).sort((a, b) => a.start - b.start);
+  const nextEvent = timedSorted.find(e => e.start >= Date.now()) ?? timedSorted[0] ?? null;
 
   const timedCount = todayEvents.filter(e => !e.allDay).length;
   const allDayCount = todayEvents.filter(e => e.allDay && e.source !== 'deadline').length;
   const taskCount = (ctx.dailyPlan?.[todayKey] ?? []).length;
 
-  const hasBoth = showEvents && showTasks;
+  // Section labels are only shown when more than one block is visible (keeps the
+  // single-block layout clean). Priorities always counts as a block.
+  const blockCount = 1 + (showEvents ? 1 : 0) + (showTasks ? 1 : 0);
+  const labelled = blockCount > 1;
 
   return (
     <Widget t={t} accent={ACCENT}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
         <WidgetHeader label="Today" accent={ACCENT} t={t} icon={CalendarDays} />
         <span style={{
           fontSize: '0.6rem', color: t.textDim,
@@ -255,50 +418,35 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
         </span>
       </div>
 
-      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: hasBoth ? '0.75rem' : '0' }}>
-          {showEvents && (
-            <div>
-              {hasBoth && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.35rem',
-                  fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase',
-                  color: t.textDim, marginBottom: '0.4rem',
-                }}>
-                  <Clock size={9} strokeWidth={1.8} />
-                  Events
-                  {(timedCount + allDayCount) > 0 && (
-                    <span style={{ marginLeft: '0.2rem', color: t.textMuted }}>
-                      {timedCount + allDayCount}
-                    </span>
-                  )}
-                </div>
-              )}
-              <EventsSection events={todayEvents} t={t} setActiveSection={setActiveSection} />
-            </div>
-          )}
+      {/* Narrated morning brief summary */}
+      <SummaryLine overdue={overdueCount} dueToday={dueTodayCount} nextEvent={nextEvent} t={t} />
 
-          {hasBoth && (
-            <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />
+      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: labelled ? '0.75rem' : '0' }}>
+          {/* Priorities — always shown; this is the morning-brief promise */}
+          <div>
+            {labelled && <SectionLabel icon={Flag} label="Priorities" count={prios.length} t={t} />}
+            <PrioritiesSection items={prios} t={t} setActiveSection={setActiveSection} />
+          </div>
+
+          {showEvents && (
+            <>
+              {labelled && <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />}
+              <div>
+                {labelled && <SectionLabel icon={Clock} label="Events" count={timedCount + allDayCount} t={t} />}
+                <EventsSection events={todayEvents} t={t} setActiveSection={setActiveSection} />
+              </div>
+            </>
           )}
 
           {showTasks && (
-            <div>
-              {hasBoth && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.35rem',
-                  fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase',
-                  color: t.textDim, marginBottom: '0.4rem',
-                }}>
-                  <Check size={9} strokeWidth={2} />
-                  Tasks
-                  {taskCount > 0 && (
-                    <span style={{ marginLeft: '0.2rem', color: t.textMuted }}>{taskCount}</span>
-                  )}
-                </div>
-              )}
-              <TasksSection ctx={ctx} todayKey={todayKey} />
-            </div>
+            <>
+              {labelled && <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />}
+              <div>
+                {labelled && <SectionLabel icon={Check} label="My plan" count={taskCount} t={t} />}
+                <TasksSection ctx={ctx} todayKey={todayKey} />
+              </div>
+            </>
           )}
         </div>
       </div>

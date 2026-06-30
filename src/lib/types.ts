@@ -27,6 +27,9 @@ export interface TopicItem {
   completedAt: number | null;
   /** Optional deadline (unix ms at local midnight). */
   deadline: number | null;
+  /** Optional time-of-day for the deadline, minutes from local midnight.
+   *  null/undefined = all-day (legacy behaviour — due at local midnight). */
+  dueMin?: number | null;
   /** Free-form notes. */
   notes?: string;
 }
@@ -496,6 +499,9 @@ export interface ListItem {
   completedAt: number | null;
   /** Optional due date, unix ms at local midnight. */
   deadline: number | null;
+  /** Optional time-of-day for the deadline, minutes from local midnight.
+   *  null/undefined = all-day (legacy behaviour — due at local midnight). */
+  dueMin?: number | null;
 }
 
 export interface Theme {

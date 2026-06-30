@@ -34,12 +34,13 @@ interface TodoRowProps {
   onAdvance: () => void;
   onDelete: () => void;
   onDeadlineChange: (dl: number | null) => void;
+  onDueMinChange: (dueMin: number | null) => void;
   onTextChange: (text: string) => void;
 }
 
 function SortableTodoRow({
   item, t, stageLabel, stageColor, isLastStage, sortMode,
-  onAdvance, onDelete, onDeadlineChange, onTextChange,
+  onAdvance, onDelete, onDeadlineChange, onDueMinChange, onTextChange,
 }: TodoRowProps) {
   const disabled = sortMode !== 'manual';
   const [editing, setEditing] = useState(false);
@@ -132,7 +133,7 @@ function SortableTodoRow({
         </span>
       )}
       {/* Deadline */}
-      <DeadlineControl deadline={item.deadline} onChange={onDeadlineChange} t={t} />
+      <DeadlineControl deadline={item.deadline} onChange={onDeadlineChange} dueMin={item.dueMin} onDueMin={onDueMinChange} t={t} />
       {/* Delete */}
       <button
         onClick={onDelete}
@@ -297,7 +298,8 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
                     sortMode={sortMode}
                     onAdvance={() => advanceStage(item)}
                     onDelete={() => deleteItem(item.id)}
-                    onDeadlineChange={(dl) => updateItem({ ...item, deadline: dl })}
+                    onDeadlineChange={(dl) => updateItem({ ...item, deadline: dl, dueMin: dl == null ? null : item.dueMin })}
+                    onDueMinChange={(dueMin) => updateItem({ ...item, dueMin })}
                     onTextChange={(text) => updateItem({ ...item, text })}
                   />
                 );

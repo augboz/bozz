@@ -20,6 +20,15 @@ interface Props {
   disabled?: boolean;
   defaultOpen?: boolean;
   onClose?: () => void;
+  /**
+   * Optional time-of-day mode for deadlines. When `onDueMin` is supplied the
+   * picker keeps `value` as a local-midnight date (so existing callers are
+   * unaffected) and reports the chosen time separately as minutes from local
+   * midnight, or null for "all day". Backwards compatible: omit it and the
+   * picker behaves exactly as before.
+   */
+  dueMin?: number | null;
+  onDueMin?: (next: number | null) => void;
 }
 
 const POPOVER_W = 266;
@@ -30,13 +39,27 @@ export default function DatePicker({
   t, value, onChange, placeholder = 'pick date',
   allowClear, showTime, size = 'md', align = 'left',
   min, disabled, defaultOpen, onClose,
+  dueMin, onDueMin,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const [month, setMonth] = useState<Date>(value ? new Date(value) : new Date());
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
 
+  // "dueMin" mode: a separate time-of-day picked alongside an all-day date.
+  const dueMinMode = onDueMin != null;
+
+  // Convert minutes-from-midnight to the {hour, minute, period} editing shape.
+  const minToState = (m: number) => {
+    let h = Math.floor(m / 60);
+    const period = h >= 12 ? 'PM' : 'AM';
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return { hour: String(h).padStart(2, '0'), minute: String(m % 60).padStart(2, '0'), period: period as 'AM' | 'PM' };
+  };
+
   // Time state (extracted from value when it has time, otherwise defaults)
   const initTime = (v: number | null) => {
+    if (dueMinMode) return dueMin != null ? minToState(dueMin) : { hour: '09', minute: '00', period: 'AM' as const };
     if (!v) return { hour: '12', minute: '00', period: 'AM' as const };
     const d = new Date(v);
     let h = d.getHours();
@@ -63,14 +86,14 @@ export default function DatePicker({
     const r = btn.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const popH = showTime ? POPOVER_H_TIME : POPOVER_H_DATE;
+    const popH = (showTime || dueMinMode) ? POPOVER_H_TIME : POPOVER_H_DATE;
     let left = align === 'right' ? r.right - POPOVER_W : r.left;
     let top = r.bottom + 6;
     if (left + POPOVER_W > vw - 8) left = vw - POPOVER_W - 8;
     if (left < 8) left = 8;
     if (top + popH > vh - 8) top = Math.max(8, r.top - popH - 6);
     setCoords({ top, left });
-  }, [align, showTime]);
+  }, [align, showTime, dueMinMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -115,18 +138,37 @@ export default function DatePicker({
     return date.getTime();
   };
 
+  // Convert the editing {hour, minute, period} shape to minutes from midnight.
+  const stateToMin = (ts: typeof timeState): number => {
+    let h = parseInt(ts.hour, 10);
+    if (ts.period === 'PM' && h < 12) h += 12;
+    if (ts.period === 'AM' && h === 12) h = 0;
+    return h * 60 + parseInt(ts.minute, 10);
+  };
+
   const pick = (d: Date) => {
-    const v = buildTimestamp(d, timeState);
+    // In dueMin mode the date stays at local midnight; the time lives separately.
+    const v = dueMinMode
+      ? new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+      : buildTimestamp(d, timeState);
     if (min && v < min) return;
     onChange(v);
-    if (!showTime) close();
+    // Keep open in time modes so the user can refine the time.
+    if (!showTime && !dueMinMode) close();
   };
 
   const applyTime = () => {
+    if (dueMinMode) {
+      onDueMin?.(stateToMin(timeState));
+      close();
+      return;
+    }
     if (!value) return;
     onChange(buildTimestamp(new Date(value), timeState));
     close();
   };
+
+  const clearTime = () => { onDueMin?.(null); };
 
   const triggerPad = size === 'sm' ? '0.34rem 0.55rem' : '0.45rem 0.7rem';
   const triggerFontSize = size === 'sm' ? '0.78rem' : '0.82rem';
@@ -198,11 +240,18 @@ export default function DatePicker({
       </div>
 
       {/* Time picker row */}
-      {showTime && (
+      {(showTime || dueMinMode) && (
         <div style={{ marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: `1px solid ${t.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
             <Clock size={12} strokeWidth={1.6} color={t.textDim} />
-            <span style={{ fontSize: '0.68rem', color: t.textDim, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Time</span>
+            <span style={{ fontSize: '0.68rem', color: t.textDim, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {dueMinMode ? 'Time (optional)' : 'Time'}
+            </span>
+            {dueMinMode && dueMin != null && (
+              <button onClick={clearTime} style={{ ...textBtnStyle(t), marginLeft: 'auto', color: t.textDim, fontSize: '0.66rem', padding: '0.1rem 0.35rem' }}>
+                all day
+              </button>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <select value={timeState.hour} onChange={e => setTimeState(s => ({ ...s, hour: e.target.value }))} style={selStyle('3.8rem')}>
@@ -218,7 +267,7 @@ export default function DatePicker({
               <option value="AM">AM</option>
               <option value="PM">PM</option>
             </select>
-            {value && (
+            {(value || dueMinMode) && (
               <button onClick={applyTime} style={{ marginLeft: 'auto', background: t.text, color: t.bg, border: 'none', borderRadius: '7px', padding: '0.28rem 0.65rem', fontSize: '0.75rem', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 500 }}>
                 Set
               </button>
@@ -264,7 +313,9 @@ export default function DatePicker({
           {value
             ? showTime
               ? format(new Date(value), 'd MMM yyyy, h:mm a')
-              : format(new Date(value), 'd MMM yyyy')
+              : dueMinMode && dueMin != null
+                ? `${format(new Date(value), 'd MMM yyyy')}, ${format(new Date(value + dueMin * 60_000), 'h:mm a')}`
+                : format(new Date(value), 'd MMM yyyy')
             : placeholder}
         </span>
       </button>
