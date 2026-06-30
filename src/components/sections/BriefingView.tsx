@@ -36,7 +36,7 @@ export default function BriefingView({ ctx }: { ctx: WidgetCtx }) {
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
       {/* Greeting */}
-      <div style={{ fontSize: '0.82rem', color: t.text, fontWeight: 500, marginBottom: '0.85rem' }}>
+      <div style={{ fontSize: '0.82rem', color: t.text, fontWeight: 500, marginBottom: '0.75rem' }}>
         {greeting()}
       </div>
 

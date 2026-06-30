@@ -108,8 +108,8 @@ function SummaryLine({ overdue, dueToday, nextEvent, t }: {
     }}>
       {parts.map((p, i) => (
         <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-          {i > 0 && <span style={{ color: t.textDim }}>·</span>}
-          <span style={{ color: p.color, fontWeight: 500 }}>{p.text}</span>
+          {i > 0 && <span style={{ color: t.textMuted }}>·</span>}
+          <span style={{ color: p.color, fontWeight: i === 0 ? 600 : 500 }}>{p.text}</span>
         </span>
       ))}
     </div>
@@ -732,7 +732,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
       {/* P-B informational "start now" red flag for big tasks due very soon. */}
       <BigTaskWarning items={bigTaskWarnings} t={t} setActiveSection={setActiveSection} />
 
-      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, paddingBottom: '0.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: labelled ? '0.75rem' : '0' }}>
           {/* Priorities — always shown; this is the morning-brief promise */}
           <div>
@@ -744,7 +744,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
 
           {showEvents && (
             <>
-              {labelled && <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />}
+              {labelled && <div style={{ height: '1px', background: t.border, margin: '0.25rem -0.5rem' }} />}
               <div>
                 {labelled && <SectionLabel icon={Clock} label="Events" count={timedCount + allDayCount} t={t} />}
                 <EventsSection events={todayEvents} t={t} setActiveSection={setActiveSection} onOpenEvent={openCalendarOnDate} />
@@ -754,7 +754,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
 
           {showTasks && (
             <>
-              {labelled && <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />}
+              {labelled && <div style={{ height: '1px', background: t.border, margin: '0.25rem -0.5rem' }} />}
               <div>
                 {labelled && <SectionLabel icon={Check} label="My plan" count={taskCount} t={t} />}
                 <TasksSection ctx={ctx} todayKey={todayKey} prios={prios} />

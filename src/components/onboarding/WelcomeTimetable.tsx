@@ -39,10 +39,12 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
     return (
       <button
         onClick={() => setTab(id)}
+        onMouseEnter={e => { if (!on) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+        onMouseLeave={e => { if (!on) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; }}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
           background: on ? 'rgba(94,196,216,0.16)' : 'transparent',
-          border: `1px solid ${on ? '#5ec4d8' : 'rgba(255,255,255,0.14)'}`,
+          border: `1.5px solid ${on ? '#5ec4d8' : 'rgba(255,255,255,0.14)'}`,
           color: on ? '#bfeaf2' : 'rgba(255,255,255,0.55)',
           borderRadius: '9px', padding: '0.4rem 0.85rem', cursor: 'pointer',
           fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 500,
@@ -101,7 +103,7 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
                   background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  color: 'rgba(94,196,216,0.9)', fontSize: '0.8rem', marginTop: '0.6rem', padding: '0.2rem',
+                  color: 'rgba(94,196,216,0.9)', fontSize: '0.8rem', marginTop: '0.6rem', padding: '0.2rem', textDecoration: 'underline',
                 }}
               >
                 <HelpCircle size={13} strokeWidth={1.6} /> where do I find this?

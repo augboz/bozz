@@ -1678,7 +1678,7 @@ export default function Dashboard() {
             />
           )}
           <div style={{ display: activeSection === 'home' && homeLanding === 'board' ? undefined : 'none' }}>
-            {activeSection === 'home' && homeLanding === 'board' && welcomePhase == null && (
+            {activeSection === 'home' && homeLanding === 'board' && welcomePhase == null && homeItems.length > 0 && (
               <HomeCoachChip
                 t={t}
                 signals={{

@@ -26,7 +26,7 @@ function ThemeCard({ mood, label, hint, onChoose }: {
       aria-label={`Use ${label} mode`}
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '0.85rem',
-        background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
+        background: hover ? 'rgba(94,196,216,0.06)' : 'transparent', cursor: 'pointer', fontFamily: 'inherit',
         border: `1.5px solid ${hover ? '#5ec4d8' : 'rgba(255,255,255,0.14)'}`,
         borderRadius: '18px', padding: '0.9rem', width: '230px',
         transform: hover ? 'translateY(-3px)' : 'none',

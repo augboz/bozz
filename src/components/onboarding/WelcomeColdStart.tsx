@@ -112,11 +112,12 @@ export default function WelcomeColdStart({ onChoose, onSkip }: {
       >
         Continue
       </button>
-      {selected.size === 0 && (
-        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>
-          Pick at least one to continue.
-        </div>
-      )}
+      <div style={{
+        fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)',
+        opacity: selected.size === 0 ? 1 : 0, transition: 'opacity 0.18s',
+      }}>
+        Pick at least one to continue.
+      </div>
 
       <button
         onClick={onSkip}

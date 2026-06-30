@@ -234,7 +234,10 @@ export default function TopicFolderEditModal({
               </div>
               <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
                 <input value={newStage} onChange={e => setNewStage(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addStage(); }} placeholder="add a stage…" style={inp} />
-                <button onClick={addStage} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.4rem 0.7rem', color: t.textMuted, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.76rem', flexShrink: 0 }}>
+                <button onClick={addStage}
+                  onMouseEnter={e => { e.currentTarget.style.background = t.bgAlt; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.4rem 0.7rem', color: t.textMuted, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.76rem', flexShrink: 0, transition: 'background 0.15s ease' }}>
                   <Plus size={12} strokeWidth={1.6} /> Add
                 </button>
               </div>

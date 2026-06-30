@@ -92,12 +92,12 @@ function DayColumn({ day, t, setActiveSection, onOpenEvent }: {
       display: 'flex', flexDirection: 'column', gap: '0.3rem',
       background: day.isToday ? ACCENT + '12' : t.bgAlt + '66',
       border: `1px solid ${day.isToday ? ACCENT + '55' : t.border}`,
-      borderRadius: '9px', padding: '0.45rem 0.4rem',
+      borderRadius: '9px', padding: '0.45rem 0.45rem',
     }}>
       {/* Day header */}
       <div style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-        gap: '0.3rem', marginBottom: '0.1rem',
+        gap: '0.3rem', marginBottom: '0.15rem',
       }}>
         <span style={{
           fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',

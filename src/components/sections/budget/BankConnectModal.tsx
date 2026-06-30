@@ -489,12 +489,12 @@ export default function BankConnectModal({ t, budget, onClose, onMerge }: Props)
 }
 
 const ghostBtn = (t: Theme): React.CSSProperties => ({
-  background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '9px',
+  background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
   padding: '0.55rem 1.1rem', color: t.textMuted, cursor: 'pointer',
   fontFamily: 'inherit', fontSize: '0.84rem',
 });
 const primaryBtn = (t: Theme): React.CSSProperties => ({
-  background: t.doingAccent, border: 'none', borderRadius: '9px',
+  background: t.doingAccent, border: 'none', borderRadius: '8px',
   padding: '0.55rem 1.25rem', color: '#fff', cursor: 'pointer',
   fontFamily: 'inherit', fontSize: '0.84rem', fontWeight: 500,
 });
