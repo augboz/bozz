@@ -133,6 +133,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   const [addingLink, setAddingLink] = useState(false);
   const [linkLabel, setLinkLabel] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [openingAll, setOpeningAll] = useState(false);
 
   const size: LinkSize = (widgetConfig?.linkSize as LinkSize) ?? 'cozy';
   const cycleSize = () => {
@@ -217,6 +218,23 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const removeLink = (id: string) =>
     setLinks(links.filter(l => l.id !== id));
+
+  // "Open all" — the Monday-morning launcher: open every pinned link at once.
+  // Uses openLink (the system default browser on desktop), so each site loads in
+  // the browser where the user is already signed in. A small stagger keeps the
+  // tabs opening in order and stops the OS dropping a rapid burst of opens.
+  const openAll = async () => {
+    if (openingAll || links.length === 0) return;
+    setOpeningAll(true);
+    try {
+      for (const l of links) {
+        await openLink(l.url);
+        await new Promise(r => setTimeout(r, 120));
+      }
+    } finally {
+      setOpeningAll(false);
+    }
+  };
 
   const stepBtn: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted,
@@ -321,6 +339,25 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
               Add
             </button>
           </div>
+        </div>
+      )}
+
+      {!editing && !fill && links.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <button
+            onClick={() => void openAll()}
+            disabled={openingAll}
+            title="Open every link in your browser"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: accent + '18', border: `1px solid ${accent}55`, borderRadius: '999px',
+              padding: '0.25rem 0.7rem', cursor: openingAll ? 'default' : 'pointer',
+              color: accent, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'inherit',
+              opacity: openingAll ? 0.6 : 1,
+            }}
+          >
+            <ExternalLink size={12} strokeWidth={2} /> {openingAll ? 'Opening…' : `Open all (${links.length})`}
+          </button>
         </div>
       )}
 
