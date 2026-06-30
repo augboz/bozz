@@ -21,7 +21,6 @@ import { Widget, WidgetHeader } from '../shared/Widget';
 import { CalendarDays, Clock } from 'lucide-react';
 import type { CalendarEvent } from '../../lib/types';
 import { deadlineEntries, dueTimestamp, type DeadlineEntry } from './util';
-import DeadlineQuickAdd from './DeadlineQuickAdd';
 import SnoozeControl from '../shared/SnoozeControl';
 import { isSnoozeable, snoozeItem } from '../../lib/snooze';
 import { markTodayCleared, isTodayCleared } from '../../lib/clearStreak';
@@ -741,7 +740,6 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
             {actionable.length === 0
               ? <CloseOutCard ctx={ctx} prios={prios} todayMs={todayMs} t={t} setActiveSection={setActiveSection} />
               : <PrioritiesSection items={prios} ctx={ctx} t={t} setActiveSection={setActiveSection} />}
-            <DeadlineQuickAdd ctx={ctx} accent={ACCENT} />
           </div>
 
           {showEvents && (
