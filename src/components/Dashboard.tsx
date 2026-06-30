@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback, type ElementType, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense, type ElementType, type CSSProperties } from 'react';
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
   PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus,
@@ -22,7 +22,6 @@ import { listen } from '@tauri-apps/api/event';
 import { getItem, setItem, initBackup } from '../lib/storage';
 import { themes } from '../lib/themes';
 import { DEFAULT_APPEARANCE, applyAppearanceVars } from '../lib/appearance';
-import { fetchFeed } from '../lib/ical';
 import { DEFAULT_BUDGET } from '../lib/budget';
 import { buildSearchIndex } from '../lib/search';
 import { DEFAULT_REVIEW_SETTINGS, pendingWeekStart, weekEndFromStart } from '../lib/review';
@@ -41,33 +40,33 @@ import {
 } from '../lib/alerts';
 import { loadEntitlement } from '../lib/plus';
 import { BgLayer } from './shared/BackgroundControls';
-import WorldsView from './sections/WorldsView';
+const WorldsView = lazy(() => import('./sections/WorldsView'));
 import TopicFolderEditModal from './TopicFolderEditModal';
 import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
 import BriefingView from './sections/BriefingView';
 import WeekView from './sections/WeekView';
-import TopicView from './sections/TopicView';
-import SettingsView from './sections/SettingsView';
-import AppsView from './sections/AppsView';
+const TopicView = lazy(() => import('./sections/TopicView'));
+const SettingsView = lazy(() => import('./sections/SettingsView'));
+const AppsView = lazy(() => import('./sections/AppsView'));
 import Onboarding from './onboarding/Onboarding';
 import WelcomeThemePicker from './onboarding/WelcomeThemePicker';
 import WelcomeColdStart from './onboarding/WelcomeColdStart';
 import WelcomeTimetable from './onboarding/WelcomeTimetable';
 import HomeCoachChip from './onboarding/HomeCoachChip';
 import FirstHoverHints from './shared/FirstHoverHint';
-import CalendarView from './sections/calendar/CalendarView';
+const CalendarView = lazy(() => import('./sections/calendar/CalendarView'));
 import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
-import DailyPlannerView from './sections/DailyPlannerView';
-import HabitsView from './sections/HabitsView';
-import HealthView from './sections/HealthView';
+const DailyPlannerView = lazy(() => import('./sections/DailyPlannerView'));
+const HabitsView = lazy(() => import('./sections/HabitsView'));
+const HealthView = lazy(() => import('./sections/HealthView'));
 import QuickAddModal from './QuickAddModal';
-import BudgetView from './sections/budget/BudgetView';
-import InboxView from './sections/InboxView';
-import ReviewView from './sections/review/ReviewView';
-import EmailView from './sections/email/EmailView';
-import SearchModal from './SearchModal';
+const BudgetView = lazy(() => import('./sections/budget/BudgetView'));
+const InboxView = lazy(() => import('./sections/InboxView'));
+const ReviewView = lazy(() => import('./sections/review/ReviewView'));
+const EmailView = lazy(() => import('./sections/email/EmailView'));
+const SearchModal = lazy(() => import('./SearchModal'));
 import ErrorBoundary from './ErrorBoundary';
 
 const EMAIL_REFRESH_MS = 15 * 60 * 1000;
@@ -188,9 +187,17 @@ export default function Dashboard() {
       let loadedHomeItems: HomeWidgetItem[] | null = null;
       let gridV = 2; // assume new format unless we see an old-style array
 
-      for (const key of keys) {
+      // Read all persisted keys in parallel. This was a sequential await per key
+      // (~22 IndexedDB round-trips before the app could render); fetching them
+      // concurrently and then processing in the original key order keeps every
+      // migration branch below unchanged while cutting startup latency.
+      const fetched = await Promise.all(
+        keys.map(key => getItem(key)
+          .then(result => ({ key, result }))
+          .catch(() => ({ key, result: null as Awaited<ReturnType<typeof getItem>> }))),
+      );
+      for (const { key, result } of fetched) {
         try {
-          const result = await getItem(key);
           if (result?.value) {
             const val: unknown = JSON.parse(result.value);
             if (key === 'darkMode') {
@@ -863,6 +870,9 @@ export default function Dashboard() {
     syncingRef.current = true;
     setFeedsSyncing(true);
     const feeds: CalendarCache['feeds'] = {};
+    // Load the iCal parser (ical.js) on demand, only when actually syncing a
+    // feed, so it stays out of the startup bundle.
+    const { fetchFeed } = await import('../lib/ical');
     await Promise.all(calendarFeeds.map(async (feed, idx) => {
       const color = FEED_COLORS[idx % FEED_COLORS.length];
       try {
@@ -1717,6 +1727,7 @@ export default function Dashboard() {
           </div>
           </ErrorBoundary>
           <ErrorBoundary key={activeSection} label="this section" onReset={() => setActiveSection('home')}>
+          <Suspense fallback={<div style={{ padding: '2rem', color: t.textDim, fontSize: '0.82rem' }}>Loading…</div>}>
           {activeSection === 'calendar' && (
             <CalendarView
               t={t}
@@ -1927,6 +1938,7 @@ export default function Dashboard() {
               onOpenWorlds={() => setActiveSection('worlds')}
             />
           )}
+          </Suspense>
           </ErrorBoundary>
         </main>
         </div>
@@ -1975,6 +1987,7 @@ export default function Dashboard() {
       })()}
 
       {searchOpen && (
+        <Suspense fallback={null}>
         <SearchModal
           t={t}
           entries={buildSearchIndex({
@@ -1988,6 +2001,7 @@ export default function Dashboard() {
           isMobile={isMobile}
           tbOffset={tbOffset}
         />
+        </Suspense>
       )}
 
       {/* Bottom tab bar — mobile only */}
