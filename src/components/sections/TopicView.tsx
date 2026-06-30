@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
+import WidgetSizeStepper from '../shared/WidgetSizeStepper';
 import { Plus, X, Link, StickyNote, ChevronDown, ExternalLink, Pencil, Check, Settings2 } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { TopicLink } from '../../lib/types';
@@ -535,6 +536,11 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
               outline: editMode ? `2px dashed ${t.doneAccent}` : 'none',
               outlineOffset: '2px', borderRadius: '14px',
             }}>
+              {editMode && (
+                <div className="widget-remove" style={{ position: 'absolute', top: '-13px', left: 0, zIndex: 6 }}>
+                  <WidgetSizeStepper t={t} w={it.w} h={it.h} maxW={COLS} onResize={(w, h) => updateWidgetSize(it.i, w, h)} />
+                </div>
+              )}
               {editMode && !isTopicTodos && (
                 <button className="widget-remove" onClick={() => removeWidget(it.i)} aria-label={`Remove ${meta.label}`}
                   style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>

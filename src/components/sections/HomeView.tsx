@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
 import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen } from 'lucide-react';
+import WidgetSizeStepper from '../shared/WidgetSizeStepper';
 import type { HomeWidgetItem, Theme, ImapAccount, WidgetShape, WidgetBorder } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
 import { WIDGET_REGISTRY, WIDGET_LIST, STARTER_TEMPLATES, type StarterTemplate } from '../widgets/registry';
@@ -139,6 +140,19 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
 
   const updateWidgetConfig = (id: string, config: Record<string, unknown>) => {
     setItems(prev => prev.map(it => it.i === id ? { ...it, config } : it));
+  };
+
+  // Precise resize from the +/- stepper: clamp to the widget's min and the grid width.
+  const setWidgetSize = (id: string, w: number, h: number) => {
+    setItems(prev => prev.map(it => {
+      if (it.i !== id) return it;
+      const meta = WIDGET_REGISTRY[it.type];
+      return {
+        ...it,
+        w: Math.max(meta.minSize.w, Math.min(COLS, Math.round(w))),
+        h: Math.max(meta.minSize.h, Math.round(h)),
+      };
+    }));
   };
 
   // Listen for viewport changes so resizing the desktop window or rotating
@@ -395,6 +409,9 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             }}>
               {editMode && (
                 <>
+                  <div className="widget-remove" style={{ position: 'absolute', top: '-13px', left: 0, zIndex: 6 }}>
+                    <WidgetSizeStepper t={t} w={it.w} h={it.h} maxW={COLS} onResize={(w, h) => setWidgetSize(it.i, w, h)} />
+                  </div>
                   <button className="widget-remove" onClick={() => removeWidget(it.i)} aria-label={`Remove ${meta.label}`}
                     style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                     <X size={12} strokeWidth={2} />

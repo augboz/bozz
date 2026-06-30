@@ -116,38 +116,6 @@ function SummaryLine({ overdue, dueToday, nextEvent, t }: {
   );
 }
 
-/**
- * BigTaskWarning — P-B "start now" red flag. Shown when a high-effort (L) task is
- * due within ~2 days: a big job with little runway. INFORMATIONAL ONLY — it links
- * to the task's section, it never schedules or time-blocks anything.
- */
-function BigTaskWarning({ items, t, setActiveSection }: {
-  items: Priority[]; t: WidgetCtx['t']; setActiveSection: (id: string) => void;
-}) {
-  if (items.length === 0) return null;
-  const first = items[0];
-  const extra = items.length - 1;
-  return (
-    <button
-      onClick={() => setActiveSection(first.section)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%',
-        padding: '0.4rem 0.55rem', marginBottom: '0.6rem',
-        background: t.alertBg, border: `1px solid ${t.alertBorder}`,
-        borderLeft: `3px solid ${t.alert}`, borderRadius: '7px',
-        cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-      }}
-    >
-      <AlertTriangle size={12} strokeWidth={2} color={t.alert} style={{ flexShrink: 0 }} />
-      <span style={{ fontSize: '0.7rem', color: t.alert, lineHeight: 1.35, minWidth: 0 }}>
-        <span style={{ fontWeight: 600 }}>Start now</span>, big task, little time:{' '}
-        <span style={{ fontWeight: 500 }}>{first.item.text}</span>
-        {extra > 0 && <span style={{ color: t.textMuted }}> +{extra} more</span>}
-      </span>
-    </button>
-  );
-}
-
 /** "in 18 min" / "in 2h 5m" / "now" — relative label for the next event start. */
 function untilLabel(ms: number): string {
   if (ms <= 0) return 'now';
@@ -685,12 +653,6 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
   const actionable = prios.filter(p => p.bucket === 'overdue' || p.bucket === 'today');
 
   // P-B (informational ONLY): a high-effort (L) task due within ~2 days is a
-  // "start now" signal — a big task with little time before it's due. We never
-  // auto-create planner blocks or schedule anything; this is a red flag, no more.
-  const bigTaskWarnings = prios.filter(p =>
-    p.effort === 'L' && p.due - Date.now() <= 2 * DAY_MS,
-  );
-
   const timedSorted = todayEvents.filter(e => !e.allDay).sort((a, b) => a.start - b.start);
   const nextEvent = timedSorted.find(e => e.start >= Date.now()) ?? timedSorted[0] ?? null;
 
@@ -728,9 +690,6 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
       {showEvents && nextEvent && nextEvent.start >= Date.now() && (
         <NextClassBanner event={nextEvent} t={t} onOpen={openCalendarOnDate} />
       )}
-
-      {/* P-B informational "start now" red flag for big tasks due very soon. */}
-      <BigTaskWarning items={bigTaskWarnings} t={t} setActiveSection={setActiveSection} />
 
       <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, paddingBottom: '0.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: labelled ? '0.75rem' : '0' }}>
