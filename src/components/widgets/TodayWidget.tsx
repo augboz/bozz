@@ -20,6 +20,7 @@ import { Widget, WidgetHeader } from '../shared/Widget';
 import { CalendarDays, Clock } from 'lucide-react';
 import type { CalendarEvent } from '../../lib/types';
 import { deadlineEntries, dueTimestamp, type DeadlineEntry } from './util';
+import DeadlineQuickAdd from './DeadlineQuickAdd';
 
 const ACCENT = '#bfa8c9';
 const WARNING = '#e0a23b';
@@ -471,6 +472,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
           <div>
             {labelled && <SectionLabel icon={Flag} label="Priorities" count={prios.length} t={t} />}
             <PrioritiesSection items={prios} t={t} setActiveSection={setActiveSection} />
+            <DeadlineQuickAdd ctx={ctx} accent={ACCENT} />
           </div>
 
           {showEvents && (

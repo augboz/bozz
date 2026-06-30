@@ -50,6 +50,8 @@ import AppsView from './sections/AppsView';
 import Onboarding from './onboarding/Onboarding';
 import WelcomeThemePicker from './onboarding/WelcomeThemePicker';
 import WelcomeColdStart from './onboarding/WelcomeColdStart';
+import WelcomeTimetable from './onboarding/WelcomeTimetable';
+import HomeCoachChip from './onboarding/HomeCoachChip';
 import FirstHoverHints from './shared/FirstHoverHint';
 import CalendarView from './sections/calendar/CalendarView';
 import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
@@ -113,9 +115,10 @@ export default function Dashboard() {
   const [onbForced, setOnbForced] = useState(false);
   const onbInit = useRef(false);
   // First-run flow — shown once to brand-new accounts before anything else.
-  // 'theme' = pick dark/light, then 'coldstart' = guided "what are you here for?"
-  // seeding, then null = done. Both steps are skippable.
-  const [welcomePhase, setWelcomePhase] = useState<'theme' | 'coldstart' | null>(null);
+  // 'theme' = pick dark/light, 'coldstart' = guided "what are you here for?"
+  // seeding, 'timetable' = paste your real calendar feed, then null = done. Every
+  // step is skippable.
+  const [welcomePhase, setWelcomePhase] = useState<'theme' | 'coldstart' | 'timetable' | null>(null);
   // Topic/folder rename modal (opened from sidebar edit mode); declared early so
   // the onboarding ctx signals below can read the topic being edited.
   const [editTopicId, setEditTopicId] = useState<string | null>(null);
@@ -347,25 +350,37 @@ export default function Dashboard() {
     setWelcomePhase('coldstart');
   };
 
-  // Guided cold-start: seed a real topic (with sample timed deadlines) + the
-  // matching home layout from the user's "what are you here for?" answer. Only
-  // ever runs for brand-new accounts (gated by welcomePhase), so existing users
-  // are unaffected.
+  // Guided cold-start: seed a real (empty) colour-coded topic + the matching home
+  // layout from the user's "what are you here for?" answer, then advance to the
+  // timetable step so their REAL classes fill Today + the calendar. Only ever runs
+  // for brand-new accounts (gated by welcomePhase), so existing users are unaffected.
   const chooseColdStart = (option: import('../lib/coldStart').ColdStartOption) => {
     void (async () => {
       const { seedColdStart } = await import('../lib/coldStart');
       const { topic, homeItems: seededHome } = seedColdStart(option);
       setTopics(prev => [...prev, topic]);
       setHomeItems(seededHome);
-      setActiveSection('home');
-      setWelcomePhase(null);
-      void save('welcomeComplete', true);
+      setWelcomePhase('timetable');
     })();
   };
 
   const skipColdStart = () => {
+    setWelcomePhase('timetable');
+  };
+
+  // Finish the welcome flow: land on the populated home and mark welcome done so
+  // the flow never re-runs.
+  const finishWelcome = () => {
+    setActiveSection('home');
     setWelcomePhase(null);
     void save('welcomeComplete', true);
+  };
+
+  // Timetable step: the validated feed lands via setCalendarFeeds (the existing
+  // refreshFeeds effect then fetches + caches it, filling Today + the calendar).
+  const addWelcomeFeed = (feed: import('../lib/types').CalendarFeed) => {
+    setCalendarFeeds(prev => [...prev, feed]);
+    finishWelcome();
   };
 
   const dismissOnboarding = () => {
@@ -717,6 +732,44 @@ export default function Dashboard() {
     }]);
   };
 
+  // First-class, topic-free deadline capture. Routes a dated task to a sensible
+  // default destination so logging "stats essay due friday" works even on a
+  // zero-topic account: predict a topic if one matches, else reuse/lazily create
+  // a single "Deadlines" bucket. Done in one setTopics updater so the create +
+  // append never races. `setActiveSection` is intentionally not called — capture
+  // shouldn't yank the user off Home.
+  const DEADLINES_TOPIC_NAME = 'Deadlines';
+  const addDeadline = (text: string, deadline: number | null) => {
+    setTopics(prev => {
+      // 1. Best matching existing topic (keyword/name/description scoring).
+      const predicted = predictTopic(text, prev);
+      // 2. Else an existing "Deadlines" bucket, if the user already has one.
+      const existingDeadlines = prev.find(tp => tp.name.trim().toLowerCase() === DEADLINES_TOPIC_NAME.toLowerCase());
+      // 3. Else any existing topic at all (so a single-topic account just files there).
+      const target = predicted ?? existingDeadlines ?? prev[0] ?? null;
+
+      const newItem = (t: Topic) => ({
+        id: nextId(),
+        text,
+        stageId: (t.stages.find(s => !s.done) ?? t.stages[0])?.id ?? '',
+        completedAt: null,
+        deadline,
+      });
+
+      if (target) {
+        return prev.map(tp => tp.id === target.id ? { ...tp, items: [...tp.items, newItem(tp)] } : tp);
+      }
+
+      // 4. Zero topics — lazily spin up a real "Deadlines" topic to capture into.
+      const bucket = makeBlankTopic(prev.length, appearance.colorBank ?? []);
+      bucket.name = DEADLINES_TOPIC_NAME;
+      bucket.icon = 'flame';
+      bucket.keywords = ['deadline', 'due', 'exam', 'submission', 'coursework', 'assignment'];
+      bucket.items = [newItem(bucket)];
+      return [...prev, bucket];
+    });
+  };
+
   const onAdvanceStage = (topicId: string, itemId: number) => {
     setTopics(prev => prev.map(top => {
       if (top.id !== topicId) return top;
@@ -780,6 +833,19 @@ export default function Dashboard() {
     ];
     return eventsOnDay(allEvents, new Date());
   }, [topics, feedEvents, calendarNotes]);
+
+  // Calendar events over the next ~14 days (from today's local midnight), fed to
+  // deadline-aware widgets so imported exams/coursework appear in Today Priorities
+  // and Upcoming deadlines. Topic deadlines are intentionally excluded here —
+  // deadlineEntries() already surfaces those from topic items, so re-adding them
+  // would double-count.
+  const upcomingEvents = useMemo<CalendarEvent[]>(() => {
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const from = startOfToday.getTime();
+    const to = from + 14 * 24 * 60 * 60 * 1000;
+    return [...feedEvents, ...noteEvents(calendarNotes)]
+      .filter(e => e.start >= from && e.start <= to);
+  }, [feedEvents, calendarNotes]);
 
   // Fetch Google Calendar events whenever there's an enabled connection.
   const gcalConn = useMemo(
@@ -1408,6 +1474,14 @@ export default function Dashboard() {
           {welcomePhase === 'coldstart' && (
             <WelcomeColdStart onChoose={chooseColdStart} onSkip={skipColdStart} />
           )}
+          {welcomePhase === 'timetable' && (
+            <WelcomeTimetable
+              t={t}
+              colorBank={appearance.colorBank ?? []}
+              onAdd={addWelcomeFeed}
+              onSkip={finishWelcome}
+            />
+          )}
           <FirstHoverHints />
           {(activeSection === 'home' || onbKeepMounted) && showOnboarding && (
             <ErrorBoundary label="the getting-started guide">
@@ -1433,6 +1507,18 @@ export default function Dashboard() {
               widget grid never re-animates — see gridReady in HomeView. */}
           <ErrorBoundary label="the home view">
           <div style={{ display: activeSection === 'home' ? undefined : 'none' }}>
+            {activeSection === 'home' && welcomePhase == null && (
+              <HomeCoachChip
+                t={t}
+                signals={{
+                  feedCount: calendarFeeds.length,
+                  inboxCount: inbox.length,
+                  plannedToday: (dailyPlan[String(new Date().setHours(0, 0, 0, 0))] ?? []).length,
+                  emailConnected: oauthAccounts.length > 0,
+                }}
+                setActiveSection={setActiveSection}
+              />
+            )}
             <HomeView
               visible={activeSection === 'home'}
               items={homeItems}
@@ -1445,10 +1531,10 @@ export default function Dashboard() {
               ctx={{
                 t, budget, emails,
                 setActiveSection,
-                topics, addTopicItem, addToInbox, dailyPlan, onDailyPlanChange: setDailyPlan,
+                topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
-                todayEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
+                todayEvents, upcomingEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
               }}
             />
@@ -1554,6 +1640,21 @@ export default function Dashboard() {
                   };
                 }));
               }}
+              onCreateTopicFromQuick={(text, deadline) => {
+                // First capture on a zero-topic account: spin up a real topic
+                // seeded with this quick, then open the editor so the user can
+                // name + tweak it — no dead-end, no Settings detour.
+                const fresh = makeBlankTopic(topics.length, appearance.colorBank ?? []);
+                fresh.items = [{
+                  id: nextId(),
+                  text,
+                  stageId: (fresh.stages.find(s => !s.done) ?? fresh.stages[0])?.id ?? '',
+                  completedAt: null,
+                  deadline,
+                }];
+                setTopics(prev => [...prev, fresh]);
+                setEditTopicId(fresh.id);
+              }}
             />
           )}
           {(() => {
@@ -1567,10 +1668,10 @@ export default function Dashboard() {
                   ctx={{
                     t, budget, emails,
                     setActiveSection,
-                    topics, addTopicItem, addToInbox, dailyPlan, onDailyPlanChange: setDailyPlan,
+                    topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                     onAdvanceStage, colorBank: appearance.colorBank ?? [],
                     habits, onHabitsChange: setHabits,
-                    todayEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
+                    todayEvents, upcomingEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                     widgetConfig: {}, onWidgetConfig: () => {},
                     currentTopicId: activeTopic.id,
                     onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
@@ -1659,6 +1760,7 @@ export default function Dashboard() {
           onAddInbox={(items) => setInbox(prev => [...prev, ...items])}
           onAddBudget={(transaction) => setBudget(b => ({ ...b, transactions: [...b.transactions, transaction] }))}
           onAddToTopic={(topicId, text, deadline) => addTopicItem(topicId, text, deadline)}
+          onAddDeadline={addDeadline}
         />
       )}
 

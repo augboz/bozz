@@ -17,6 +17,10 @@ export interface WidgetCtx {
   addTopicItem: (topicId: string, text: string, deadline: number | null, stageId?: string) => void;
   /** Add a captured item to Quicks (inbox), with a suggested topic attached if one matches. */
   addToInbox: (text: string, deadline: number | null) => void;
+  /** Capture a dated deadline with NO topic chosen — routes to a predicted topic
+   *  if one matches, else a lazily-created "Deadlines" bucket. Works on a
+   *  zero-topic account. Optional so older ctx call sites stay valid. */
+  addDeadline?: (text: string, deadline: number | null) => void;
   /** Today's daily plan — maps dateKey → TopicItem id strings. */
   dailyPlan: DailyPlan;
   /** Update the daily plan. */
@@ -29,6 +33,9 @@ export interface WidgetCtx {
   onHabitsChange?: (habits: Habit[]) => void;
   /** Today's calendar events (feed + deadlines + notes). */
   todayEvents?: CalendarEvent[];
+  /** Calendar events over the next ~14 days (feed + notes), so deadline-aware
+   *  widgets can surface imported exams/coursework alongside topic deadlines. */
+  upcomingEvents?: CalendarEvent[];
   /** User-created calendar notes. */
   calendarNotes?: CalendarNote[];
   /** Update calendar notes. */

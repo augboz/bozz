@@ -3,6 +3,7 @@ import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
 import { sectionAccents } from '../../lib/themes';
 import { isOverdue } from '../../lib/dates';
 import { deadlineEntries, dueTimestamp } from './util';
+import DeadlineQuickAdd from './DeadlineQuickAdd';
 import type { Theme } from '../../lib/types';
 import type { WidgetCtx } from './context';
 
@@ -95,7 +96,12 @@ export default function UpcomingDeadlinesWidget({ ctx }: { ctx: WidgetCtx }) {
       <WidgetHeader label="Next 7 Days" accent={sectionAccents.home} t={t} icon={CalendarClock} />
       <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, marginTop: '0.75rem' }}>
         {upcoming.length === 0
-          ? <EmptyWidget text="nothing due in the next 7 days." t={t} actionLabel="capture one →" onAction={() => setActiveSection('inbox')} />
+          ? (
+            <div>
+              <EmptyWidget text="nothing due in the next 7 days." t={t} actionLabel="capture one →" onAction={() => setActiveSection('inbox')} />
+              <DeadlineQuickAdd ctx={ctx} accent={sectionAccents.home} />
+            </div>
+          )
           : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
               {groups.map(({ day, items }) => (
@@ -152,6 +158,7 @@ export default function UpcomingDeadlinesWidget({ ctx }: { ctx: WidgetCtx }) {
                   </div>
                 </div>
               ))}
+              <DeadlineQuickAdd ctx={ctx} accent={sectionAccents.home} />
             </div>
           )}
       </div>

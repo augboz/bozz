@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, ArrowRight, Sparkles, Pencil, Check, Zap, Command } from 'lucide-react';
+import { X, ArrowRight, Sparkles, Pencil, Check, Zap, Command, FolderPlus } from 'lucide-react';
 import type { InboxItem, Theme, Topic } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import ChoicePicker, { type Choice } from '../shared/ChoicePicker';
@@ -14,15 +14,21 @@ interface InboxViewProps {
   topics: Topic[];
   /** Routes the inbox item into the given topic. */
   onAssign: (text: string, topicId: string, deadline: number | null) => void;
+  /** Spin up a brand-new topic seeded with this quick's text + deadline, so a
+   *  first capture on a zero-topic account never stalls with nowhere to go. */
+  onCreateTopicFromQuick?: (text: string, deadline: number | null) => void;
 }
 
-function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
+function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCreateTopic }: {
   item: InboxItem; t: Theme;
   dests: Choice[];
   topics: Topic[];
   onAssign: (topicId: string, deadline: number | null) => void;
   onDelete: () => void;
   onRename: (text: string) => void;
+  /** Present only when there are no topics to send to — spins up a new topic
+   *  from this quick instead of leaving the row with a disabled "send". */
+  onCreateTopic?: (deadline: number | null) => void;
 }) {
   // Re-predicted on every render against the CURRENT topic list — never
   // cached — so a topic created after this item was captured still gets
@@ -100,14 +106,16 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
         }}>
           {editing ? <Check size={14} strokeWidth={1.5} /> : <Pencil size={13} strokeWidth={1.5} />}
         </button>
-        <ChoicePicker
-          t={t}
-          value={dest}
-          onChange={(v) => { touchedRef.current = true; setDest(v); }}
-          options={dests}
-          size="sm"
-          minWidth={132}
-        />
+        {dests.length > 0 && (
+          <ChoicePicker
+            t={t}
+            value={dest}
+            onChange={(v) => { touchedRef.current = true; setDest(v); }}
+            options={dests}
+            size="sm"
+            minWidth={132}
+          />
+        )}
         <DatePicker
           t={t}
           value={deadline}
@@ -116,21 +124,37 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
           allowClear
           size="sm"
         />
-        <button
-          onClick={() => onAssign(dest, deadline)}
-          disabled={!dest}
-          data-onb="inbox-send"
-          title="Send to topic"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-            background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
-            padding: '0.4rem 0.7rem', color: t.textMuted,
-            cursor: dest ? 'pointer' : 'not-allowed', opacity: dest ? 1 : 0.4,
-            fontFamily: 'inherit', fontSize: '0.78rem',
-          }}
-        >
-          send <ArrowRight size={13} strokeWidth={1.5} />
-        </button>
+        {dests.length === 0 && onCreateTopic ? (
+          <button
+            onClick={() => onCreateTopic(deadline)}
+            data-onb="inbox-new-topic"
+            title="Create a topic from this quick"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: t.doingBg, border: `1px solid ${t.doingBorder}`, borderRadius: '8px',
+              padding: '0.4rem 0.7rem', color: t.doingAccent,
+              cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 500,
+            }}
+          >
+            <FolderPlus size={13} strokeWidth={1.6} /> new topic
+          </button>
+        ) : (
+          <button
+            onClick={() => onAssign(dest, deadline)}
+            disabled={!dest}
+            data-onb="inbox-send"
+            title="Send to topic"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
+              padding: '0.4rem 0.7rem', color: t.textMuted,
+              cursor: dest ? 'pointer' : 'not-allowed', opacity: dest ? 1 : 0.4,
+              fontFamily: 'inherit', fontSize: '0.78rem',
+            }}
+          >
+            send <ArrowRight size={13} strokeWidth={1.5} />
+          </button>
+        )}
         <button onClick={onDelete} aria-label="Delete" style={{
           background: 'transparent', border: 'none', color: t.textMuted,
           cursor: 'pointer', padding: '0.2rem', display: 'flex',
@@ -142,11 +166,15 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename }: {
   );
 }
 
-export default function InboxView({ t, inbox, setInbox, topics, onAssign }: InboxViewProps) {
+export default function InboxView({ t, inbox, setInbox, topics, onAssign, onCreateTopicFromQuick }: InboxViewProps) {
   const remove = (id: number) => setInbox(prev => prev.filter(i => i.id !== id));
   const rename = (id: number, text: string) => setInbox(prev => prev.map(i => i.id === id ? { ...i, text } : i));
   const assign = (item: InboxItem, topicId: string, deadline: number | null) => {
     onAssign(item.text, topicId, deadline);
+    remove(item.id);
+  };
+  const createTopicFrom = (item: InboxItem, deadline: number | null) => {
+    onCreateTopicFromQuick?.(item.text, deadline);
     remove(item.id);
   };
 
@@ -214,7 +242,9 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign }: Inbo
           background: t.todoBg, border: `1px dashed ${t.border}`, borderRadius: '10px',
           fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.55,
         }}>
-          You have items but no topics yet — create a topic in <strong style={{ color: t.text }}>Settings → Topics</strong> to send these somewhere.
+          {onCreateTopicFromQuick
+            ? <>No topics yet — hit <strong style={{ color: t.text }}>new topic</strong> on any quick below to spin one up from it, or create topics in <strong style={{ color: t.text }}>Settings → Topics</strong>.</>
+            : <>You have items but no topics yet — create a topic in <strong style={{ color: t.text }}>Settings → Topics</strong> to send these somewhere.</>}
         </div>
       )}
       <div style={{ display: 'grid', gap: '0.4rem' }}>
@@ -228,6 +258,7 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign }: Inbo
             onAssign={(topicId, deadline) => assign(item, topicId, deadline)}
             onDelete={() => remove(item.id)}
             onRename={(text) => rename(item.id, text)}
+            onCreateTopic={onCreateTopicFromQuick ? (deadline) => createTopicFrom(item, deadline) : undefined}
           />
         ))}
         {inbox.length === 0 && (

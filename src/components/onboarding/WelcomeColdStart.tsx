@@ -1,8 +1,9 @@
 /**
  * WelcomeColdStart — the guided step shown to brand-new accounts right after the
  * theme pick. One question ("What are you here for?") with tappable chips; each
- * choice seeds a real colour-coded topic, sample timed deadlines and a matching
- * home layout, so the user lands on a POPULATED dashboard instead of empty shells.
+ * choice seeds a real colour-coded topic and a matching home layout, so the user
+ * lands on a tailored dashboard. The next step pastes their real timetable to
+ * fill it, rather than fabricating placeholder tasks.
  *
  * Skippable. Neutral full-screen overlay (renders before the live theme matters),
  * matching WelcomeThemePicker so the two steps feel like one flow.
@@ -32,7 +33,7 @@ export default function WelcomeColdStart({ onChoose, onSkip }: {
           What are you here for?
         </h1>
         <div style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', maxWidth: '420px' }}>
-          Pick one and we’ll set up a starting board with example tasks — change or add more anytime.
+          Pick one and we’ll tailor your board to match — change or add more anytime.
         </div>
       </div>
 

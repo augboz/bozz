@@ -36,12 +36,16 @@ interface QuickAddModalProps {
   onAddBudget: (transaction: BudgetData['transactions'][number]) => void;
   /** Files a task straight into a topic (the inbox→topic "send" path). */
   onAddToTopic: (topicId: string, text: string, deadline: number | null) => void;
+  /** Topic-free dated capture: routes a deadline (no topic chosen) to a predicted
+   *  topic or a lazily-created "Deadlines" bucket, so a dated card never stalls in
+   *  Quicks on a zero-topic account. */
+  onAddDeadline?: (text: string, deadline: number | null) => void;
 }
 
 type Phase = 'idle' | 'recording' | 'review';
 
 export default function QuickAddModal({
-  t, topics, onClose, onAddInbox, onAddBudget, onAddToTopic,
+  t, topics, onClose, onAddInbox, onAddBudget, onAddToTopic, onAddDeadline,
 }: QuickAddModalProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [text, setText] = useState('');
@@ -200,6 +204,11 @@ export default function QuickAddModal({
       if (tk.topicId) {
         onAddToTopic(tk.topicId, value, tk.deadline ?? null);
         toTopics++;
+      } else if (tk.deadline != null && onAddDeadline) {
+        // Topic-free but dated — first-class deadline capture rather than letting
+        // it stall in Quicks (which has no destination on a zero-topic account).
+        onAddDeadline(value, tk.deadline);
+        toTopics++;
       } else {
         inboxItems.push({
           id: nextId(), text: value, createdAt: now + i,
@@ -210,7 +219,7 @@ export default function QuickAddModal({
     if (inboxItems.length) onAddInbox(inboxItems);
     setStatus(
       toTopics && inboxItems.length ? `→ ${toTopics} filed · ${inboxItems.length} to Quicks`
-      : toTopics ? `→ ${toTopics} filed to topics`
+      : toTopics ? `→ ${toTopics} filed`
       : `→ Quicks (${inboxItems.length})`
     );
     setTimeout(onClose, 600);
