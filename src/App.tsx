@@ -45,17 +45,47 @@ export default function App() {
 
   useEffect(() => {
     if (!isTauri()) return;
-    const timer = setTimeout(async () => {
+    let cancelled = false;
+    let lastCheck = 0;
+    // Don't hammer GitHub: ignore focus-driven re-checks within 30 min of the
+    // last one. Forced checks (launch + periodic timer) bypass this.
+    const MIN_GAP = 30 * 60 * 1000;
+
+    const runCheck = async (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastCheck < MIN_GAP) return;
+      lastCheck = now;
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
         const found = await check();
+        if (cancelled || !found) return;
         // Show the themed prompt instead of the native confirm() dialog. The
         // install + relaunch is handled inside UpdatePrompt, which surfaces any
-        // error instead of silently swallowing it.
-        if (found) setUpdate(found);
+        // error instead of silently swallowing it. Don't clobber a prompt that's
+        // already open.
+        setUpdate(prev => prev ?? found);
       } catch (err) { console.warn('[updater]', err); }
-    }, 5000);
-    return () => clearTimeout(timer);
+    };
+
+    // Bozz minimises to the system tray on close, so most instances are launched
+    // once and then live for days. A single check on launch means tray-resident
+    // copies never notice a release. So in addition to the launch check we re-check
+    // periodically AND whenever the window is brought back to the foreground (e.g.
+    // clicked open from the tray) — the natural moment to notice an update.
+    const timer = setTimeout(() => { void runCheck(true); }, 5000);
+    const interval = setInterval(() => { void runCheck(true); }, 6 * 60 * 60 * 1000);
+    const onFocus = () => { void runCheck(); };
+    const onVisible = () => { if (document.visibilityState === 'visible') void runCheck(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   const sp = new URLSearchParams(window.location.search);
