@@ -3,17 +3,22 @@ import {
   format, addMonths, addWeeks, addDays, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar, CalendarPlus } from 'lucide-react';
 import type {
-  CalendarEvent, CalendarNote, CalendarViewMode, Theme, Topic,
+  CalendarEvent, CalendarFeed, CalendarNote, CalendarViewMode, Theme, Topic,
 } from '../../../lib/types';
 import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../../../lib/calendar';
 import { SectionHeader } from '../../shared/ui';
 import ColorBankPicker from '../../shared/ColorBankPicker';
+import AddFeedForm from './AddFeedForm';
 
 interface CalendarViewProps {
   t: Theme;
   feedEvents: CalendarEvent[];
+  /** The user's subscribed ICS feeds (timetables). Drives the empty-state card. */
+  calendarFeeds?: CalendarFeed[];
+  /** Add a validated feed (from the "Add your timetable" front door). */
+  onAddFeed?: (feed: CalendarFeed) => void;
   topics?: Topic[];
   onAddTopicItem?: (topicId: string, text: string, deadline: number) => void;
   calendarNotes?: CalendarNote[];
@@ -703,6 +708,7 @@ function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 
 
 export default function CalendarView({
   t, feedEvents, topics, onAddTopicItem,
+  calendarFeeds = [], onAddFeed,
   calendarNotes = [], onCalendarNotesChange,
   calendarConnections = [],
   onCalendarConnectionsChange,
@@ -716,6 +722,12 @@ export default function CalendarView({
   const [selected, setSelected] = useState<Date | null>(null);
   const [createFor, setCreateFor] = useState<{ day: Date; startMin?: number } | null>(null);
   const [colorPickingFor, setColorPickingFor] = useState<string | null>(null);
+  const [addFeedOpen, setAddFeedOpen] = useState(false);
+
+  // The "Add your timetable" front door is only useful when the parent wired the
+  // callback. Show the empty-state card prominently until the user has any feed.
+  const canAddFeed = !!onAddFeed;
+  const noFeeds = calendarFeeds.length === 0;
 
   const events = useMemo<CalendarEvent[]>(
     () => [
@@ -767,6 +779,15 @@ export default function CalendarView({
         t={t}
         right={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {canAddFeed && (
+              <button
+                onClick={() => { setAddFeedOpen(true); setSelected(null); setCreateFor(null); }}
+                style={{ ...ghostBtn(t), color: t.text, borderColor: t.borderStrong }}
+                title="Add a timetable / calendar subscription"
+              >
+                <CalendarPlus size={13} strokeWidth={1.6} /> Add timetable
+              </button>
+            )}
             <Segmented mode={mode} setMode={setMode} t={t} />
             <button onClick={() => setCursor(new Date())} style={ghostBtn(t)}>today</button>
             <button onClick={() => step(-1)} aria-label="Previous" style={ghostBtn(t)}>
@@ -890,6 +911,44 @@ export default function CalendarView({
         </div>
       )}
 
+      {/* "Add your timetable" front door — shown prominently until the user has a
+          feed. The calendar-feed pipeline already merges into the grid + Today;
+          this card is the missing way to actually add one. */}
+      {canAddFeed && noFeeds && !addFeedOpen && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
+          background: t.bgAlt, border: `1px dashed ${t.borderStrong}`, borderRadius: '12px',
+          padding: '1.1rem 1.25rem', marginBottom: '1.25rem',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '42px', height: '42px', borderRadius: '11px', flexShrink: 0,
+            background: t.doingAccent + '22', color: t.doingAccent,
+          }}>
+            <CalendarPlus size={20} strokeWidth={1.6} />
+          </div>
+          <div style={{ flex: 1, minWidth: '180px' }}>
+            <div style={{ fontSize: '0.92rem', color: t.text, fontWeight: 500, marginBottom: '0.15rem' }}>
+              Add your timetable
+            </div>
+            <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
+              Paste your university or work calendar link and your classes fill the grid and Today in seconds.
+            </div>
+          </div>
+          <button
+            onClick={() => setAddFeedOpen(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              background: t.doingAccent, border: 'none', borderRadius: '8px', color: '#fff',
+              padding: '0.55rem 1.1rem', fontFamily: 'inherit', fontSize: '0.82rem',
+              fontWeight: 500, cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <Plus size={14} strokeWidth={2} /> Add timetable
+          </button>
+        </div>
+      )}
+
       {mode === 'month' && (
         <MonthGrid t={t} cursor={cursor} events={events} onPick={handlePickDay} />
       )}
@@ -927,6 +986,23 @@ export default function CalendarView({
             t={t}
             columns={[{ day: cursor, events: eventsOnDay(events, cursor) }]}
             onClickSlot={handleClickSlot}
+          />
+        </div>
+      )}
+
+      {/* Add timetable panel */}
+      {canAddFeed && addFeedOpen && (
+        <div style={{
+          position: 'fixed', top: tbOffset, right: 0, bottom: 0, width: '360px', zIndex: 50,
+          background: t.panel, borderLeft: `1px solid ${t.border}`,
+          padding: '1.5rem', overflowY: 'auto', boxShadow: '-8px 0 24px rgba(0,0,0,0.18)',
+          animation: 'bozz-slide-in 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
+        }}>
+          <AddFeedForm
+            t={t}
+            colorBank={colorBank}
+            onAdd={(feed) => onAddFeed?.(feed)}
+            onClose={() => setAddFeedOpen(false)}
           />
         </div>
       )}

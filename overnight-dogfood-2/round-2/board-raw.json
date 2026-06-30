@@ -1,0 +1,985 @@
+{
+  "summary": "One aggressive dogfood round for Bozz: discover, board meeting, A/B experiments, synthesize a plan",
+  "agentCount": 25,
+  "logs": [],
+  "result": {
+    "round": 1,
+    "boardAvgSatisfaction": 4.833333333333333,
+    "boardWantMore": true,
+    "board": [
+      {
+        "role": "CEO",
+        "satisfaction": 5,
+        "wantMore": true,
+        "verdict": "We have built a beautiful, deeply-plumbed engine with no front door. I verified the most damning claim myself: the entire calendar-feed pipeline exists and works (calendarFeeds state, fetchFeed/parseICal, feed events merged into the grid and Today), yet setCalendarFeeds has exactly ONE caller in the whole codebase, Dashboard.tsx itself. No UI anywhere lets a user paste a timetable. So our primary persona, a uni student whose stated #1 need is \"one place for my timetable\", literally cannot get her timetable in. That is a north-star failure, not a feature gap. It compounds: a brand-new account gets DEFAULT_HOME = [] and a cosmetic dark/light picker, lands on an empty home with an empty sidebar and empty calendar, and our smartest asset, the offline NLP parser, is inert because predictTopic returns null when topics.length === 0. We have a Ferrari engine with no ignition and no fuel. Meanwhile the team has poured energy into a long tail of freelancer/power-user features (Client Pulse, time-billing, command palette, recurring tasks). Those are good, but they are second-morning problems for a user who never reached a first morning. The app today does NOT deliver \"your morning in 90 seconds\" for a new student, and that is the only thing that matters this round. We fix the front door before we decorate more rooms. Score is a 5: world-class foundations, but a stranger cannot get value in their first session, which for a young-person tool is close to fatal.",
+        "topPriorities": [
+          "FRONT DOOR (ship-defining): Paste-your-timetable. A prominent 'Add your timetable' card on the empty Calendar AND in first-run that takes a webcal/https .ics URL, fetches+parses via the existing fetchFeed, names/colours it, and instantly fills the calendar and Today. The plumbing is 100% done and verified; this is pure self-contained React wiring on setCalendarFeeds. This single change converts a blank app into 'her actual week' in 30 seconds and is the truest realisation of the north star. Non-negotiable for this round.",
+          "ALIVE ON FIRST PAINT: Replace the theme-only WelcomeThemePicker + the four opt-in walkthroughs with a single 2-3 question conversational first-run ('What are you here for? -> Uni') that auto-creates a ready 'Uni / Modules' topic with sensible stages, seeds 2-3 example deadlines so Today/Upcoming/MiniCalendar light up immediately, and applies the Student starter layout. This also un-bricks our NLP: predictTopic and 'Accept all predicted' stay dead until a topic exists. The app must feel like HER life on first paint, not a blank canvas plus homework.",
+          "FRICTION-FREE DEADLINES + CAPTURE THAT CREATES ITS DESTINATION: A dedicated 'Add a deadline' surface (title + due date + optional course, defaulting to an auto-created Uni topic) reachable from the Today header, the empty Calendar, and Quick-add, so 'essay due Friday' becomes a tracked, counted-down deadline in one step without first scaffolding a topic. Pair with one-tap 'Create [Uni] and file this here' in Quicks so the first capture spins up its own topic instead of dead-ending. This makes the assignment-with-a-due-date a first-class object and unlocks the existing urgency machinery immediately.",
+          "CLOSE THE CAPTURE-TO-TODAY GAP: Make 'Today' auto-include tasks whose deadline is today/overdue (the data is already there via deadlineEntries/priorities) instead of reading ONLY from the manually-built dailyPlan[todayKey]. Right now a captured, dated, triaged task silently never appears in the morning view unless the user discovers the separate planner ritual, which a new user will read as 'the app lost my task'. This is a smaller fix but it protects the integrity of every change above; the demote-the-manual-planner work makes the core promise actually hold."
+        ]
+      },
+      {
+        "role": "CPO (Product) — activation, retention, the core daily loop",
+        "satisfaction": 4,
+        "wantMore": true,
+        "verdict": "The engine is impressive; the car has no ignition. I verified the three claims that matter most and they all hold. (1) The entire calendar-feed pipeline exists end to end — calendarFeeds state, fetchFeed/parseICal, recurring expansion, merge into the grid and Today — yet setCalendarFeeds is called ONLY from storage hydration (Dashboard.tsx:199); there is zero UI to add a feed. For a uni student whose #1 need is \"one place for my timetable\", the front door is literally absent. (2) Cold start is a theme picker over a blank canvas: brandNewAccount (Dashboard.tsx:306) → WelcomeThemePicker → DEFAULT_HOME=[] (registry.tsx:111), zero topics. And the smart machinery is INERT until topics exist: predictTopic returns null when topics.length===0 (taskParser.ts:263), so Quicks prediction and Accept-all do nothing for the exact user who most needs them. (3) There is a silent dead-end between capture and the promise: TodayWidget's TasksSection reads strictly from dailyPlan[todayKey] (TodayWidget.tsx:275), populated only by a separate manual drag ritual in DailyPlannerView. A task captured and triaged with a deadline of TODAY does not appear in Today — a new user will conclude the app lost it. So Bozz today is a beautiful, differentiated engine (offline NLP, Worlds, topic pages) wired to a first run that delivers a blank screen. The north star is \"your morning in 90 seconds\"; right now the first morning never arrives. Round 1 is not about new surfaces — it is about making the value the app ALREADY computes actually reach the screen on day one. I am at a 4: high ceiling, broken floor. I want more rounds, but this round must close the activation loop or nothing else matters.",
+        "topPriorities": [
+          "P1 — Build the missing front door: a prominent 'Add your timetable' card on the empty Calendar AND in first-run that takes a webcal/https .ics URL, names+colours it, and pipes it through the EXISTING fetchFeed/parseICal/merge so the calendar and Today fill in ~30s. This is the single highest-leverage change because 100% of the plumbing exists and it directly is the north star for the primary persona. Self-contained React wiring on setCalendarFeeds.",
+          "P2 — Replace the theme-only welcome with a 2-3 question guided cold-start ('What are you here for? → Uni / Job hunt / Gym') that auto-creates a real topic via the existing worldToTopic/STARTER_TEMPLATES machinery, seeds 2-3 example deadlines so Today/Upcoming/MiniCalendar light up immediately, and applies the matching starter layout. The app must feel alive on first paint. Critically this also un-gates predictTopic (topics.length>0) so Quicks intelligence works from capture #1.",
+          "P3 — Close the capture-to-Today gap: make 'Today' auto-include tasks whose deadline is today/overdue (TodayWidget already computes priorities() from deadlineEntries — pull from that, not only dailyPlan[todayKey]), and demote the manual DailyPlanner to an optional power feature. This makes the entire capture→triage→deadline flow finally pay off in the morning view, which is the retention loop.",
+          "P4 — Friction-free 'Add a deadline' surface (title + due date + optional course) reachable from the Today header, the empty Calendar, and Quick-add, defaulting to an auto-created Uni/Deadlines topic. The assignment-with-a-due-date is the student's PRIMARY object; today it requires scaffolding a topic + stages first. This makes 'essay due Friday' a counted-down deadline in one step and feeds the existing Upcoming/Today urgency machinery."
+        ]
+      },
+      {
+        "role": "CTO (Engineering)",
+        "satisfaction": 5,
+        "wantMore": true,
+        "verdict": "The engine is real; the ignition is missing. I verified the standout claim directly: the entire calendar-feed pipeline (calendarFeeds state at Dashboard.tsx:80, fetchFeed/parseICal in src/lib/ical.ts, merge into events at Dashboard.tsx:712-748) is fully built and WORKING, yet setCalendarFeeds is never called from any UI surface (only the load/persist effects at lines 199 and 382 touch it). We shipped dead plumbing. Same pattern across the cold-start path: DEFAULT_HOME = [] (registry.tsx:111), a theme-only welcome, and predictTopic hard-returning null at topics.length===0 (taskParser.ts:262) means our genuinely-differentiated offline NLP, Quicks prediction, and 'Accept all predicted' are all inert for the brand-new user who needs them most. And capture-to-Today is a silent dead-end: TodayWidget reads ONLY dailyPlan[todayKey] (TodayWidget.tsx:275), so nothing a user captures shows up in the morning view without a separate undocumented planning ritual, which directly breaks 'your morning in 90 seconds' at the data-flow level. On engineering health: TypeScript is green (tsc --noEmit exits 0, confirmed), which is good, but there are ZERO automated tests anywhere (no vitest/jest/playwright in package.json, no *.test/*.spec files) across ~28.7k LOC, Dashboard.tsx is a 1707-line god component with 42 useState hooks, and several section files run 600-930 lines. That is a manageable baseline today, but this round wants bold DATA-MODEL changes (recurring tasks, grades/GPA, time tracking), and green TypeScript will happily ship logically-broken behavior with no safety net to catch it. So: 5/10. The architecture is sound and the hard parts (offline parser, ical expansion, worlds/templates, sync) are done and high quality, but the product is currently unreachable for a first-run user and has accreted enough untested complexity that I want guardrails before we pile on ambition.",
+        "topPriorities": [
+          "FRONT DOOR (ship first, lowest risk/highest ROI): Add the 'Paste your timetable' UI on the empty Calendar and in first-run. It is pure React/TS wiring onto fetchFeed/parseICal which already work; the only reason it doesn't exist is that no component calls setCalendarFeeds. This converts a blank app into the user's real week in 30 seconds and unblocks Today/Upcoming/MiniCalendar for free.",
+          "GUIDED COLD-START that makes the app alive on first paint: replace the theme-only WelcomeThemePicker with a 2-3 question setup that auto-creates a ready topic with pipeline stages + 2-3 seed deadlines and applies a starter layout. This is the unlock for everything else, because predictTopic, Quicks routing, and 'Accept all predicted' are all gated on topics existing (taskParser.ts:262). Without this our smartest code stays dormant for new users.",
+          "CLOSE THE CAPTURE-TO-TODAY GAP: make TodayWidget auto-include tasks whose deadline is today/overdue (priorities()/deadlineEntries already compute exactly this) instead of reading only the manually-built dailyPlan[todayKey]. Add a one-tap 'add to today' on triage and topic tasks. This is a small, self-contained change that makes the core promise actually hold; the manual DailyPlanner becomes an optional power feature, not a hidden prerequisite.",
+          "ADD A MINIMAL SAFETY NET before the bold data-model work: stand up vitest and write focused unit tests around the pure logic we're about to extend and depend on — taskParser (parseVoiceTasks, predictTopic, extractDeadline), ical recurrence expansion, and deadlineEntries/urgency. No tests across 28.7k LOC plus a 1707-line/42-state Dashboard means recurring-tasks/grades regressions will pass tsc and reach users. Tests here are cheap (these modules are already pure) and protect every other priority this round."
+        ]
+      },
+      {
+        "role": "CMO (Growth)",
+        "satisfaction": 4,
+        "wantMore": true,
+        "verdict": "Bozz has a beautiful engine and no front door. From a growth lens this is the most frustrating possible state: the hard, defensible work is already done, and it is invisible to the person we are trying to win. Three facts decided my read this round. (1) The single most-stated need of our primary user, \"one place for my timetable,\" is unreachable: the full .ics fetch/parse/merge pipeline exists and flows into the calendar and Today, but setCalendarFeeds is only ever called from storage hydration (Dashboard.tsx:199), never from any UI. Maya cannot get her week in. (2) The first paint is blank: brand-new accounts get DEFAULT_HOME = [] (registry.tsx:111) and a cosmetic dark/light picker, then an empty home, an empty sidebar, and an empty calendar, while the smart bits stay inert because predictTopic returns null with zero topics (taskParser.ts:263). \"Your morning in 90 seconds\" currently delivers a void in 90 seconds. (3) The capture-to-payoff loop is silently broken: TasksSection reads ONLY dailyPlan[todayKey] (TodayWidget.tsx:275), populated by a separate manual drag in the planner, so anything a student captures and dates never appears in their morning view, they conclude the app lost it. The wow moment we should be selling, the offline brain-dump-to-sorted-plan NLP, is real and genuinely uncopyable by Notion/Things/Sunsama without a backend, but today it dead-ends into an inbox no first-run user has a topic to file into. The positioning writes itself; the product just has to let the user reach it. This round must build the front door and make the first 90 seconds land, not polish tiles.",
+        "topPriorities": [
+          "Paste-your-timetable: ship the missing front door. A prominent 'Add your timetable' card on the empty Calendar AND in first-run that takes a webcal/https .ics URL, fetches+parses via the existing fetchFeed, names/colours it, and instantly fills the calendar and Today. This is pure self-contained wiring on plumbing that already exists, and it is the single highest-leverage growth move: it converts a blank app into 'her actual week' in 30 seconds and is the truest realisation of the north star. Without it our headline claim is false on first use.",
+          "Guided cold-start that makes the first paint alive. Replace the theme-only welcome with a 2-3 question setup ('What are you here for? -> Uni / job hunt / gym') that auto-creates a ready topic with sensible stages, seeds 2-3 example deadlines so Today/Upcoming/MiniCalendar light up immediately, and applies the matching starter layout (reusing makeBlankTopic + Worlds/STARTER_TEMPLATES). This also un-blocks predictTopic, so capture and 'Accept all predicted' actually fire from minute one. The first morning has to feel like her life, not a tutorial gate.",
+          "Make the offline NLP brain-dump the hero demo and close the capture->Today gap. Promote parseVoiceTasks into a full-screen 'Brain Dump' that live-previews messy paragraphs as editable, dated, topic-coloured chips with one 'File all' (compose existing parser + VoiceTaskReview + onAssign). Critically, make Today auto-include tasks due today/overdue (TodayWidget already computes priorities() from deadlineEntries) so captured items surface without the hidden planner ritual. This is the 15-second landing-page GIF none of the four competitors can ship, and it finally makes capture pay off in the morning view.",
+          "First-class 'Add a deadline' surface that needs no topic first. A friction-free title + due date (+ optional course) reachable from the Today header, the empty Calendar, and Quick-add, defaulting into an auto-created Uni/Deadlines topic. The assignment-with-a-due-date is the student's primary object; right now reaching it means scaffolding a topic and stages first. This makes the Upcoming/Today urgency machinery pay off instantly and serves the impatient persona directly."
+        ]
+      },
+      {
+        "role": "Head of Design",
+        "satisfaction": 6,
+        "wantMore": true,
+        "verdict": "The craft on individual surfaces is real and ahead of the competition. The TodayWidget is a genuinely beautiful auto-generated morning brief (narrated summary line, urgency-coloured priority cards, deadline dots), the spotlight onboarding overlay is polished, the Worlds system is a true aesthetic moat, and the favicon link tiles show care. But the product's FIRST sixty seconds are emotionally flat, and that is a design failure, not an engineering one. I verified it in the code: a brand-new account (Dashboard.tsx:306 brandNewAccount, DEFAULT_HOME=[] in registry.tsx:111) sees a cosmetic Dark/Light picker (WelcomeThemePicker.tsx), then lands on a blank grid whose only content is a 'Getting started' card offering FOUR separate walkthroughs to 'Do them in order' (Onboarding.tsx FLOW_STEPS) using words a first-year doesn't know (stages, widgets, topics). Worse, the single most differentiated piece of plumbing in the whole app, the .ics timetable feed, has NO door: setCalendarFeeds (Dashboard.tsx:80) is wired end to end (fetch at 716, cache, merge into calendar at 742, persist at 382) but is never called from any UI component, I grepped every view. So Maya literally cannot get her timetable in. And the smart layer is inert at zero state: predictTopic returns null when topics.length===0 (taskParser.ts:263), so Quicks prediction and 'Accept all predicted' do nothing for exactly the user who most needs the help. The whole thing is a gorgeous house with no front door. THIS round is about making the first paint feel alive and giving that pipeline a beautiful, one-step entrance. The morning-in-90-seconds promise has to land on the first morning, not the third.",
+        "topPriorities": [
+          "FRONT DOOR: 'Paste your timetable' as a delightful, prominent card on the empty Calendar AND in first-run. One field takes a webcal/https .ics URL, fetches+parses via the existing fetchFeed, lets you name and colour it, then animates the week filling in. This is pure self-contained wiring on top of plumbing that already exists (calendarFeeds is fully built but UI-less) and it is the truest realisation of the north star. Pair it with a paste-detect (recognise a webcal:// or .ics URL on the clipboard) so it feels magic.",
+          "ALIVE ON FIRST PAINT: replace the theme-only WelcomeThemePicker with a single conversational 2-3 question first-run ('What are you juggling? Uni / Job hunt / Gym') that, in one tap, auto-creates a real seeded topic via the existing worldToTopic() pipeline (the Study and Job Hunt templates in worlds.ts already ship full pages + pipeline stages), seeds 2-3 example deadlines so Today/Upcoming/MiniCalendar light up, and applies the matching starter layout. The four walkthroughs demote to optional 'learn more', not the gate to value. The home should never be blank.",
+          "HERO MOMENT, the party trick competitors can't copy: a full-screen 'Brain Dump' surface (big textarea + mic) that live-previews parseVoiceTasks() as animated chips, each showing its predicted-topic colour and extracted deadline, editable inline, with one 'File all'. This is the offline-NLP differentiator made visible and is the one thing that belongs in a 15-second landing GIF. Must work for a brand-new user, which forces priority #2's seeding so prediction actually fires.",
+          "POLISH THE COLD STATES + UNCLIP THE GRID: fix the empty calendar (currently hardcoded 06:00-22:00, GRID_START_HOUR/END_HOUR in CalendarView.tsx clips early lectures and late shifts) to fit the actual day's events, and make zero-state empty states feel intentional and warm rather than dead ends pointing to Settings. Add the small momentum payoff: a tasteful 'morning done' moment when Today's priorities clear, so opening Bozz has an emotional beat, not just a list."
+        ]
+      },
+      {
+        "role": "COO / Ops",
+        "satisfaction": 5,
+        "wantMore": true,
+        "verdict": "The engine is real but the front door is bricked up. Three things I verified in code change my whole read of where we are. (1) The entire .ics/timetable pipeline already works end-to-end (calendarFeeds state, fetchFeed/parseICal, feedEvents merged into the calendar at Dashboard.tsx:741) and yet only Dashboard.tsx calls setCalendarFeeds — there is NO UI anywhere that lets a user add a feed. We built the plumbing and forgot the tap. For our stated primary user (a uni student whose #1 need is \"my timetable in one place\"), the single most valuable feature in the product is currently unreachable. That is not a missing feature, it's a shipped feature with no on-switch. (2) Cold start is actively hostile to our own intelligence: a brand-new account is DEFAULT_HOME=[] with zero topics, and predictTopic returns null when topics.length===0 (taskParser.ts:263). So every smart thing we own — Quicks prediction, \"Accept all predicted\", domain routing — is dead on arrival for exactly the person we're trying to win in 90 seconds. The app is smartest for users who least need it and dumbest for the newcomer. (3) The capture-to-Today gap is a trust-killer: TodayWidget already computes priorities() from deadlineEntries (overdue/today/week, TodayWidget.tsx:68) completely independent of dailyPlan, yet \"My plan\" reads ONLY dailyPlan[todayKey], which is populated by a separate manual drag ritual in DailyPlannerView. A user captures \"essay due Friday,\" it never appears in Today, and they conclude we lost it. From an ops lens: we have over-invested in depth (Worlds, ambient audio, fill-mode logos) while three load-bearing seams between capture and the core promise are unwired. The good news is the cost-to-value ratio this round is extraordinary — every one of my top priorities is a wiring job on top of code that already exists and already round-trips through storage. No schema, no auth, no payments touched.",
+        "topPriorities": [
+          "SHIP THE TIMETABLE FRONT DOOR (boldness 4, highest ROI in the building). Add a prominent 'Add your timetable' card on the empty Calendar AND in first-run that takes a webcal/https .ics URL, names+colours it, and calls the EXISTING fetchFeed/setCalendarFeeds path. This is the truest realisation of the north star and the plumbing (ical.ts, feedEvents merge) is already proven. It converts a blank app into 'her actual week' in 30 seconds. This is non-negotiable for round 1 — we cannot keep shipping a timetable feature with no way to add a timetable.",
+          "GUIDED COLD-START THAT SEEDS A LIVE DASHBOARD (boldness 5). Replace the theme-only WelcomeThemePicker (gated cleanly by the brandNewAccount guard at Dashboard.tsx:306-308, so this stays strictly additive and skippable) with a 2-3 question setup ('What are you here for? → Uni') that auto-creates a ready topic with real stages, seeds 2-3 example deadlines so Today/Upcoming/MiniCalendar light up, and applies the Student starter layout via the existing STARTER_TEMPLATES + worldToTopic machinery. This single change flips predictTopic from null to useful and makes the app feel alive on first paint. Pair it with the timetable card so the first morning literally lands in 90 seconds.",
+          "CLOSE THE CAPTURE-TO-TODAY GAP (boldness 4, near-zero cost). Make 'Today' auto-include tasks whose deadline is today/overdue — the data is ALREADY computed by priorities() in TodayWidget.tsx; we just stop treating manual dailyPlan as a prerequisite. Add a one-tap 'add to today' on topic tasks and on Quicks triage so the planner becomes an optional power feature, not a hidden ritual. This makes our entire existing urgency machinery (UpcomingDeadlines, Today summary line) finally pay off for a user who only ever captures, which is most of them.",
+          "FRICTION-FREE 'ADD A DEADLINE' that doesn't require building a topic first (boldness 4). For a student the assignment-with-a-due-date IS the primary object, but today it only exists inside a Topic stage you have to scaffold first. Add a dedicated 'Add a deadline' surface (title + due date + optional course, defaulting to an auto-created 'Uni'/'Deadlines' topic) reachable from the Today header, the empty Calendar, and Quick-add. Composes perfectly with priorities #2 and #3 and serves the impatient persona directly."
+        ]
+      }
+    ],
+    "opportunities": [
+      {
+        "title": "Paste-your-timetable: a one-step .ics / timetable import (the missing front door)",
+        "area": "Calendar / onboarding / integrations",
+        "rationale": "The single biggest gap for a uni student. The whole feed pipeline already exists and works (calendarFeeds state in Dashboard.tsx:80, fetchFeed/parseICal in src/lib/ical.ts, feedEvents merged into the calendar at Dashboard.tsx:741), but there is NO UI anywhere to add a feed URL. I searched IntegrationsBlock, AppsView, SettingsView and CalendarView: nothing calls setCalendarFeeds from the UI. So Maya, whose #1 need is 'one place for my timetable', literally cannot get her timetable in, even though every uni VLE (Moodle, Canvas, Outlook) exports a webcal/.ics link. Bold move: a prominent 'Add your timetable' card (on the empty Calendar AND in the first-run flow) that takes a webcal/https .ics URL, fetches+parses it via the existing fetchFeed, names it, colours it, and instantly fills the calendar and the Today widget. This converts a blank app into 'her actual week' in 30 seconds and is the truest realisation of 'your morning in 90 seconds'. It is self-contained React/TS wiring on top of plumbing that already exists.",
+        "boldness": 4
+      },
+      {
+        "title": "Guided cold-start that seeds a real 'Uni' topic + sample deadlines instead of a blank canvas",
+        "area": "Onboarding / cold-start / topics",
+        "rationale": "A brand-new account gets DEFAULT_HOME = [] (registry.tsx:111), zero topics, and a single dark/light theme picker (WelcomeThemePicker.tsx) before being dropped on an empty home with an empty sidebar and an empty calendar. The four onboarding walkthroughs (Onboarding.tsx) are opt-in and entirely manual: an impatient first-year will bounce before building a topic from scratch, picking an icon, defining stages, etc. Worse, the smart bits are inert until topics exist: predictTopic returns null when topics.length===0 (taskParser.ts:263), so Quicks prediction and 'Accept all predicted' (InboxView.tsx) do nothing for a new user, and the empty-topics state just says 'go to Settings'. Bold move: replace the theme-only welcome with a 2-3 question setup ('What are you here for? -> Uni') that auto-creates a ready 'Uni / Modules' topic with Applied-style stages (To do / Doing / Submitted), seeds 2-3 example assignment deadlines so Today/Upcoming/MiniCalendar light up immediately, and applies the Student starter layout. The app should feel alive on first paint, not blank.",
+        "boldness": 5
+      },
+      {
+        "title": "First-class assignments/deadlines that don't require building a topic first",
+        "area": "Tasks / deadlines / capture",
+        "rationale": "Deadlines are second-class: a TopicItem.deadline (types.ts:30) only exists if you first create a Topic, then add an item into one of its stages. For a student the assignment-with-a-due-date IS the primary object, and right now reaching it means scaffolding a topic, choosing stages, then adding the item. The Calendar's 'Add task with this deadline' (CalendarView.tsx DayPanel) also requires an existing topic and disappears entirely when topics.length===0. Quick-add can capture text and parse a date (taskParser extractDeadline), but with no topics it just lands as loose text in Quicks. Bold move: a dedicated, friction-free 'Add a deadline' surface (title + due date + optional course, defaulting to an auto-created 'Deadlines'/'Uni' topic) reachable from the Today widget header, the empty Calendar, and Quick-add, so 'essay due Friday' becomes a tracked, counted-down deadline in one step. This directly serves the impatient persona and makes the existing Upcoming/Today urgency machinery (UpcomingDeadlinesWidget urgency labels) pay off immediately.",
+        "boldness": 4
+      },
+      {
+        "title": "A real weekly timetable: recurring classes instead of one-off events",
+        "area": "Calendar / data model / widgets",
+        "rationale": "There is no concept of a repeating class. CalendarNote (types.ts:282) is a single dated event; the only recurrence support is read-only expansion of imported iCal feeds (ical.ts isRecurring). So a student without an .ics export has to hand-enter every 9am Monday lecture, every week, forever, and the calendar grid is even hardcoded to 06:00-22:00 (CalendarView GRID_START_HOUR/END_HOUR) which clips early/late sessions. This is the 'timetable' half of Maya's stated need and it's effectively absent. Bold move: add a lightweight recurring-class model ('Mondays 9-11, Lecture: Stats, weeks 1-12'), an 'Add a class' affordance, expansion into the existing CalendarEvent stream so it flows through the month/week/day grid and the Today widget for free, and a compact 'This week' timetable widget for the home. Self-contained frontend work that turns Bozz into an actual academic planner rather than a generic to-do board.",
+        "boldness": 5
+      },
+      {
+        "title": "Grades & GPA tracker tied to deadlines — the all-term stickiness hook",
+        "area": "New feature / topics / review",
+        "rationale": "There is no grades/marks/GPA concept anywhere (confirmed by search; only incidental 'upgrade' matches). Deadlines and tasks are inherently short-lived: once an essay is submitted it goes to a Done stage and disappears, giving a student no reason to keep opening the app across a whole term. Marks are the opposite, they accumulate and matter all semester. Bold move: let a submitted assignment carry a grade and weighting, roll module marks into a running module result and a term GPA/average, and surface 'you need X on the final to hit a 2:1' style projections. This converts Bozz from a disposable weekly to-do into something a student checks all term, and it composes naturally with the existing topic/stage model (a 'Submitted'/'Graded' stage) and the weekly Review section (ReviewView already aggregates per-topic progress) rather than being a bolt-on.",
+        "boldness": 5
+      },
+      {
+        "title": "Make capture-to-action instant for a topic-less student (smart quick-add that creates the destination)",
+        "area": "Quicks / quick-add / prediction",
+        "rationale": "The capture flow is genuinely good (QuickAddModal ramble + parse, Ctrl+B QuickCapture, InboxView triage with predicted badges and 'Accept all predicted'), but its intelligence is gated on topics already existing: predictTopic needs topics (taskParser.ts:262), and a new user with none gets predictions that never fire and an inbox that can only say 'create a topic in Settings'. The result is captures pile up in Quicks with nowhere to go, which is exactly the friction an impatient persona won't tolerate. Bold move: when a captured item clearly implies a domain (the DOMAIN_KEYWORDS map already encodes study/work/finance/etc. in taskParser.ts), offer one-tap 'Create [Uni] and file this here', so the first capture can spin up its own topic instead of dead-ending. Pair with surfacing the predicted date inline so 'maths pset due tuesday' becomes a dated, topic'd task from a single sentence with zero prior setup.",
+        "boldness": 4
+      },
+      {
+        "title": "Client Pulse: a cross-topic command board that shows where every client stands in one glance",
+        "area": "New section / flagship view (sits alongside Home; reads topics, deadlineEntries, dailyPlan, todayEvents)",
+        "rationale": "As Tom with 4 clients, the single biggest friction is that the app has NO surface that answers 'where does each client stand right now?' Topics (src/components/sections/TopicView.tsx) are per-client silos: to compare clients I click into each one. The aggregate widgets (TodayWidget.tsx, UpcomingDeadlinesWidget.tsx) flatten everything by deadline via deadlineEntries() (src/components/widgets/util.ts), deliberately throwing away the per-client grouping I care most about. BOLD fix: a 'Clients' board, one card per topic (or per folder), each card showing that client's open count by stage, next deadline + urgency (reuse the urgency() logic in UpcomingDeadlinesWidget), overdue flag, last-touched, and a one-click 'open workspace'. This is the literal 'your morning in 90 seconds' promise applied to a freelancer: scan 4 cards, know who's on fire, click in. It reuses existing Topic/TopicItem/TopicStage data with zero schema changes and turns siloed topics into a portfolio dashboard. This is the single change that would make me pick Bozz over a wall of browser tabs.",
+        "boldness": 5
+      },
+      {
+        "title": "Time tracking that lives on the topic and feeds the budget: 'work done' becomes 'money owed'",
+        "area": "Pomodoro/topic widgets + Budget (src/components/widgets/PomodoroWidget.tsx, TopicTodosWidget.tsx, lib/types.ts TopicItem, budget owed-to-me)",
+        "rationale": "I confirmed via grep that there is zero time-tracking or billing anywhere; the Pomodoro timer (PomodoroWidget.tsx) is a standalone countdown that logs nothing and is attributed to no topic. Meanwhile the budget already models 'owed-to-me' transactions (lib/types.ts TransactionType) but nothing connects hours worked to money owed. For a freelancer, 'at-a-glance status' MUST include 'who owes me and how much' - that's the whole job. BOLD fix: add a lightweight per-topic timer (or 'log 1.5h' chip) that records sessions against a topic + an optional hourly rate, surfaces 'X hrs this week / Y unbilled' on the topic page and the Client Pulse card, and offers one tap 'invoice this' that drops an owed-to-me transaction into the existing budget. No new auth/payments needed - it's local state plus the existing budget model. This turns Bozz from a to-do board into the freelancer's actual operating system and is a natural Bozz Plus hook.",
+        "boldness": 5
+      },
+      {
+        "title": "Per-client workspaces: pinned-tab sets you open in one click (and capture from the current page)",
+        "area": "TopicLinks + topic links model (src/components/widgets/TopicLinksWidget.tsx, lib/types.ts TopicLink, TopicView.tsx pinned links)",
+        "rationale": "I live in browser tabs - one set per client (their Figma, their Drive, their staging site, their brief). Today links are per-topic, added one at a time by hand in the topic Dashboard (TopicView.tsx addLink), and there is no way to launch a whole client's tab-set at once. TopicLinksWidget already fetches favicons and has compact/cozy/full/fill rendering, so the visual foundation is there. BOLD fix: an 'open all' launcher per Links widget that fires every link (already have openUrl/window.open per link), plus the ability to save the current browser session as a client tab-set and reorder via drag. Reframe a topic's links as that client's 'workspace' I resume in one click instead of rebuilding 8 tabs every morning. Self-contained on the existing TopicLink array; massive daily-speed win for a tab-dweller.",
+        "boldness": 4
+      },
+      {
+        "title": "Make Quicks client-aware: proper-noun routing + a 'New client' fast path",
+        "area": "Quicks triage + prediction (src/lib/taskParser.ts predictTopic/DOMAIN_KEYWORDS, src/components/sections/InboxView.tsx)",
+        "rationale": "The Quicks 'Accept all predicted' flow (InboxView.tsx) is genuinely nice, but the predictor (taskParser.ts predictTopic -> topicScore) only matches generic domain keywords (music/work/fitness...) and exact topic-name words. My clients are proper nouns - 'Acme', 'Nordic Studio' - which never match unless I manually add keywords per topic, so as a multi-client user almost nothing gets predicted and I'm back to picking a destination per row. BOLD fix: auto-derive client keywords from the topic name + recent item text (so 'send Acme the logo' routes to the Acme topic without setup), boost recently-active topics, and add a 'send to new client' option in the InboxRow destination picker that spins up a topic inline from the captured text. Capture is supposed to be the friction-free entry point; for a 4-client user it currently degrades to manual filing. Pure frontend change to existing scoring + triage UI.",
+        "boldness": 4
+      },
+      {
+        "title": "A real Freelancer World/template that scaffolds a client the way clients actually work",
+        "area": "Starter templates + Worlds (src/components/widgets/registry.tsx STARTER_TEMPLATES, lib/worlds.ts BozzWorld template kind, TopicStage)",
+        "rationale": "The 'Freelancer' starter template (registry.tsx STARTER_TEMPLATES) is thin and generic - today/budget/clock/quickAdd - and topics default to To do/Doing/Done (Dashboard.tsx normalizeStages). Real client work has a pipeline: Brief -> In progress -> In review -> Approved -> Invoiced -> Paid. The BozzWorld type already supports template kinds with bespoke stages and topicWidgets (lib/types.ts BozzWorld.stages/topicWidgets), but there's no client-shaped one. BOLD fix: a 'Client project' template that, when applied, creates a folder + per-client topics pre-wired with the freelance pipeline stages, a Links 'workspace' widget, a deliverables checklist, and (with #2) a time/billing widget - so onboarding a new client is one action, not fifteen. This makes the generic onboarding (Onboarding.tsx) concretely about my job and gives the existing Worlds/template machinery a flagship freelancer use-case.",
+        "boldness": 4
+      },
+      {
+        "title": "Status I can send: shareable per-client snapshot so I stop writing 'where are we' emails",
+        "area": "Topic export/share (src/components/sections/TopicView.tsx, Topic items/stages, existing sync/Supabase share plumbing)",
+        "rationale": "A huge chunk of freelance overhead is telling each client 'here's where your project is' - I retype status into email/Slack constantly, and Bozz already holds the exact truth (a topic's stages, open items, deadlines, deliverables). Nothing today turns that internal state into something client-facing. BOLD fix: a 'Share status' action on a topic that renders a clean, read-only client summary (current stage, what's done, what's next, next deadline) as copyable text or a lightweight shareable view, generated from the topic's items/stages. It doesn't touch auth/payments/schema - it's a read-only projection of data I already maintain. This makes Bozz earn its place in my workflow beyond personal organisation: it becomes the thing that produces the client update for me, which is the chore I'd most love automated.",
+        "boldness": 4
+      },
+      {
+        "title": "Skip the setup climb: a 60-second guided first-run that builds Priya's whole dashboard in one flow",
+        "area": "Onboarding / first-run",
+        "rationale": "Today a brand-new account (Dashboard.tsx brandNewAccount path, DEFAULT_HOME = []) sees a cosmetic Dark/Light picker (WelcomeThemePicker.tsx), then an empty home with a 'Getting started' card offering FOUR separate walkthroughs to 'Do them in order' (Onboarding.tsx FLOW_STEPS: sidebar, topicPage, connect, quicks). For a non-techy 19-year-old who stalls without the next step, that is four mini-projects before any value. The walkthroughs even depend on terms she doesn't know ('stages', 'widgets', 'topic'). BOLD fix: replace the theme picker + 4-walkthrough card with a single conversational first-run that asks 2-3 questions ('What are you juggling right now? Uni, a job hunt, the gym...') and AUTO-GENERATES her topics (reusing makeBlankTopic + the Worlds/STARTER_TEMPLATES machinery already in WorldsView.tsx/registry.tsx) AND a populated home layout in one tap, landing her on a home that already shows her stuff. The walkthroughs become optional 'learn more' rather than the gate to value. This directly serves the north star ('your morning in 90 seconds') by making the FIRST morning land in 90 seconds.",
+        "boldness": 5
+      },
+      {
+        "title": "Close the capture-to-Today gap: auto-surface due/overdue tasks in 'Today' without a separate planning ritual",
+        "area": "Daily plan / Today widget flow",
+        "rationale": "There is a silent dead-end between capture and the promise. Priya captures via Quicks (QuickAddModal/QuickCapture), triages to a topic+deadline (InboxView.tsx), and reasonably expects it to show up in her morning view. But TodayWidget.tsx 'My plan' (TasksSection) reads ONLY from ctx.dailyPlan[todayKey], which is populated by a SEPARATE manual step in DailyPlannerView.tsx (dragging items into day columns). Nothing she captured appears in 'today' unless she performs this second, non-obvious ritual she was never told about. A non-techy user will conclude the app 'lost' her task. BOLD fix: make 'Today' auto-include tasks whose deadline is today/overdue (the data is already there: TodayWidget already computes priorities() from deadlineEntries), and add a one-tap 'add to today' on any topic task and on Quicks triage, so the manual planner becomes an optional power feature, not a prerequisite for the core promise.",
+        "boldness": 4
+      },
+      {
+        "title": "One-tap topic templates AT creation time instead of blank topics buried behind Worlds",
+        "area": "Topics / topic page building",
+        "rationale": "Creating a topic from the sidebar (addTopicFromNav -> makeBlankTopic in Dashboard.tsx) yields an empty topic with generic 'To do/Doing/Done' stages, and its page (TopicView.tsx) opens with just a small topicTodos widget. To make it useful Priya must enter edit mode and add widgets one-by-one from a 320px panel (AddPanel) full of jargon labels. Meanwhile fully-built, beautiful template pages (BUNDLED_WORLDS templates with topicWidgets, previewed richly in WorldsView.tsx) already exist, but are hidden in Settings -> Worlds and framed around 'themes vs templates' which a 19-year-old won't parse. BOLD fix: when Priya adds a topic, immediately offer 'Start from a ready page' cards (Uni module, Job hunt, Gym, Trip) powered by the existing worldToTopic() pipeline, so a new topic arrives pre-populated with the right widgets and stages. This collapses a 6-step build into one choice and reuses code that's already written.",
+        "boldness": 4
+      },
+      {
+        "title": "A daily momentum loop: a single end-of-morning payoff and a reason to come back tomorrow",
+        "area": "Engagement / retention",
+        "rationale": "Nothing rewards completion or pulls Priya back. The Summary widget (SummaryWidget.tsx) shows cold doing/to-do/done counts; Habits track streaks in isolation; TodayWidget's best-case empty state is a flat 'nothing pressing'. For the primary persona (students/young people) there is no satisfying 'you did it' beat and no daily hook. BOLD fix: add a lightweight daily ritual that bookends the morning, when Priya clears her Today priorities/plan she gets an explicit celebratory 'morning done' state (progress ring + streak of mornings checked), and an optional gentle daily nudge. This turns the 'morning in 90 seconds' from a tool you remember to open into a habit with a payoff. Self-contained in React state + existing storage keys (dailyPlan, habits), no backend changes.",
+        "boldness": 4
+      },
+      {
+        "title": "Make voice/Quick capture the front door, and make it forgiving for messy, non-techy phrasing",
+        "area": "Quick capture / task parsing",
+        "rationale": "Capture is genuinely good (QuickAddModal ramble mode + parseVoiceTasks in taskParser.ts splits multi-task rambles, predicts topic, extracts dates, all offline). But for Priya it is under-surfaced and brittle at the edges: the desktop Ctrl+B path just dumps to inbox; predictTopic relies on hardcoded English DOMAIN_KEYWORDS and a score threshold so her real phrasing ('sort my student finance thing', 'the essay due wednesday') often yields no predicted topic and lands cold in Quicks; and she has no idea voice exists unless she finds the mic. BOLD fix: promote capture to a persistent, obvious primary action (big 'What's on your mind?' bar on home + prominent mic), and make prediction learn from her actual triage choices (when she sends a Quick to a topic, remember the words->topic mapping and feed it back into predictTopic) so the app gets smarter at HER language over time instead of staying frozen on a static keyword table. Both pieces are self-contained frontend changes over existing inbox/topics state.",
+        "boldness": 4
+      },
+      {
+        "title": "Turn Cmd+K into a real command palette that runs actions, not just a section jumper",
+        "area": "Global navigation / keyboard speed",
+        "rationale": "Today Cmd+K (SearchModal.tsx + search.ts) only fuzzy-matches a static index and calls onJump(section) — it cannot DO anything. For a keyboard-first power user this is the single biggest miss. Rebuild it as an action-first palette: typing runs commands (complete/advance a task, file a Quick to a topic, start a 25-min pomodoro, add to today's plan, create topic, toggle a habit, switch World, capture a task via taskParser) in addition to navigation. Verb-prefix grammar (>complete, @topic, /pomodoro, plain text = capture). All wiring already exists in Dashboard handlers (addTopicItem, onAdvanceStage, setActiveSection, onAddInbox) and parsing is local (parseVoiceTasks/routeVoice) so zero token cost. This single change converts the whole app from click-driven to command-driven and is implementable purely in React/TS by extending SearchModal into a CommandPalette fed by a new actions registry. Self-contained, no auth/payments/schema touched.",
+        "boldness": 5
+      },
+      {
+        "title": "Auto-draft today's plan from real signals (one-key 'Plan my day')",
+        "area": "Daily planning / automation",
+        "rationale": "TodayWidget already computes a ranked priority list (priorities(): overdue -> due-today -> due-this-week, sorted by precise due time) but DailyPlannerView forces the user to hand-assign every item by opening per-topic dropdowns. A power user wants their morning auto-built. Add an 'Auto-plan today' action that seeds dailyPlan[todayKey] from the existing priorities() output (overdue + due-today + top N this-week, capped, dedup against already-planned), shown as a reviewable draft you can accept/trim with keys. Reuses existing deadlineEntries/dueTimestamp utils and the dailyPlan state already persisted in Dashboard — no new data model. Delivers the 'morning in 90 seconds' north star far more literally than the current manual planner. Frontend-only, self-contained.",
+        "boldness": 4
+      },
+      {
+        "title": "Recurring tasks (daily/weekly/custom) for topics",
+        "area": "Task model / repeat automation",
+        "rationale": "There is NO recurrence for tasks — RecurringItem (types.ts:167) is budget-only and TopicItem has no repeat field. Power users live on routines (standup, weekly review, gym, water plants). Add an optional recurrence to TopicItem (e.g. {freq:'daily'|'weekly'|'weekdays'|'custom', interval, byDay, nextDue}) and a regenerate pass that, when a recurring item is advanced to a done stage, clones a fresh instance with the next deadline. DeadlineControl/DatePicker already exist for the editor UI; advanceStage in TopicTodosWidget is the single hook point for regeneration. This is a bold, ambitious feature (genuinely new capability, touches the task model) but stays entirely client-side: it's a new optional field on the local Topic/TopicItem types plus regeneration logic, no Supabase schema change required since topics already round-trip as JSON. Keeps TS green via optional fields.",
+        "boldness": 5
+      },
+      {
+        "title": "Keyboard-driven, batch Quicks triage (vim-style j/k + quick-file)",
+        "area": "Quicks inbox / triage flow",
+        "rationale": "InboxView.tsx triage is mouse-bound: each row needs a ChoicePicker click, DatePicker click, then Send. Enter-to-file only works once row controls are focused and there's no keyboard way to change the destination or jump rows. For someone clearing 20 captures this is painful. Add a focused-row model with j/k to move, number keys (1-9) to file into the matching top topic, t to retag, d to set a relative date (today/tomorrow/next-week via taskParser's date phrases), x to delete, and Enter to accept the predicted topic. 'Accept all predicted' already proves the routing logic (acceptAllPredicted) — this just makes single-item triage equally fast without leaving the keyboard. Self-contained in InboxView + a small key handler; reuses predictTopic and existing onAssign.",
+        "boldness": 4
+      },
+      {
+        "title": "Multi-select + bulk actions on topic tasks (with keyboard advance / plan / schedule)",
+        "area": "Topic task management / density",
+        "rationale": "TopicTodosWidget.tsx only supports one task at a time: click a stage chip to advance, click X to delete, drag to reorder. A power user managing a 30-item topic wants to select several and advance/schedule/add-to-today in one move. Add checkbox/shift-click multi-select with a contextual bar (Advance stage, Set deadline, Add to today's plan, Move to topic, Delete) and keyboard equivalents (space to select, e to advance, p to add to plan). All mutations already exist (updateItem, advanceStage, deleteItem) plus dailyPlan wiring is available via ctx — this is a density and throughput multiplier, fully client-side and self-contained in the widget.",
+        "boldness": 4
+      },
+      {
+        "title": "Saved daily routines / templates that materialize a checklist with one tap",
+        "area": "Automation / repeatable workflows",
+        "rationale": "There is no concept of a reusable routine: every 'morning routine' or 'ship checklist' must be retyped. Power users want to define a named template (an ordered set of task texts, optional per-item topic + relative deadline) and instantiate it into Quicks or directly into a topic/today's plan in one action. Lighter and more flexible than full recurrence, and complementary to it. Store templates as a new optional client-side array (mirrors how topics/dailyPlan already persist as JSON through Dashboard's storage effects), build the instantiation from the same onAddInbox/onAddToTopic/dailyPlan paths, and expose 'Run routine ...' as a command in the new palette. Bold (new primitive) yet self-contained and TS-safe via additive types; no auth/payments/CI/schema involvement.",
+        "boldness": 4
+      },
+      {
+        "title": "\"Brain dump → sorted day\" — turn the offline NLP parser into Bozz's signature party trick",
+        "area": "Capture & triage (taskParser.ts, voiceRouter.ts, QuickCapture.tsx, InboxView.tsx)",
+        "rationale": "Bozz already has something no competitor ships: a fully OFFLINE, zero-API natural-language engine (src/lib/taskParser.ts + voiceRouter.ts) that splits a rambling sentence into multiple tasks, predicts a topic per task via DOMAIN_KEYWORDS scoring, extracts deadlines from phrases like 'by next Friday' / 'end of June', and even routes money talk to the budget. Today this power is half-hidden: QuickCapture dumps everything to the Quicks inbox, and InboxView triages one row at a time with a quiet 'Accept all predicted' button. Notion/Things make you fill a form; Sunsama/Akiflow gate NLP behind cloud AI and a login. BOLD MOVE: make 'talk/type one messy paragraph, watch it explode into a sorted, dated, topic-routed plan' the hero demo of the whole product. Add a full-screen 'Brain Dump' mode (a big textarea + mic) that live-previews the parse as animated chips — each chip shows predicted topic colour + extracted deadline, editable inline, with a single 'File all' that lands every task in its topic in one gesture. This is implementable today purely by composing parseVoiceTasks() with a new review surface (VoiceTaskReview.tsx already exists as a starting point) and routing through Dashboard's existing onAssign. It directly serves the north-star 'zero setup' promise (works for a brand-new user with no keywords configured) and the brand boundary (no cloud AI). It is the one thing Bozz can put in a 15-second landing-page GIF that none of the four competitors can copy without a backend.",
+        "boldness": 5
+      },
+      {
+        "title": "Make the Today widget a full-screen \"Morning\" ritual that competitors literally cannot ship",
+        "area": "Morning brief (TodayWidget.tsx, SummaryWidget.tsx, review.ts, alerts.ts)",
+        "rationale": "The north star is literally 'your morning in 90 seconds' and TodayWidget.tsx already aggregates the real signals: a narrated summary line ('1 overdue · 2 due today · next event 14:00'), priorities bucketed overdue/today/week, calendar events, and the day's plan. Right now it lives as one tile in a grid you have to assemble. BOLD MOVE: promote it into a dedicated, opt-in full-screen 'Morning' view that Bozz can open to on launch — a calm, single-column, large-type briefing that reads like a person talking to you, pulling from the data already wired into WidgetCtx: weather (WeatherWidget), next event, top 3 priorities, one habit nudge (HabitsView streak logic), and a single 'what spent yesterday' line (review.ts weeklyStats pattern). End it with one decisive CTA: 'Start the day' that drops you into the daily planner. This is Things' My Day, Sunsama's daily planning ritual, and a student planner's agenda — but auto-generated with zero manual entry, which is the exact thing those tools make you do by hand every morning. It weaponises the existing aggregation code into the product's emotional centre and its sharpest marketing claim, without touching the won't-build list.",
+        "boldness": 4
+      },
+      {
+        "title": "Bozz Worlds as a living \"home you can theme\" — push the aesthetic moat to where Notion/Things are weakest",
+        "area": "Theming & templates (worlds.ts, WorldsView.tsx, AppearancePrefs, ambient.ts)",
+        "rationale": "Bozz already has a genuinely differentiated system: Worlds (src/lib/worlds.ts) bundle a mood, palette, font, SVG-gradient wallpaper, AND optional ambient looping audio + pre-built topic pages with bespoke pipeline stages (Job Hunt ships Applied/Interviewing/Offer/Rejected; Study, Shopping, Holiday, Deep Work, Calm). Notion is famously ugly out of the box, Things is rigidly one-look, Akiflow/Sunsama are utilitarian. The young/student audience cares enormously about aesthetics — this is Bozz's emotional unfair advantage. BOLD MOVE: lean all the way in. Ship a much larger free World library and a 'World of the week' drop cadence, add per-time-of-day auto-shifting (a 'Dawn→Dusk' World that warms the palette as the day passes, driven by existing appearance patching), and surface Worlds in onboarding so a first-run user picks a vibe in one tap before they see a single task — turning setup into delight. Pair templates with their stages so applying 'Job Hunt' instantly gives a student a ready-to-use applications tracker (the worldToTopic/stages plumbing already exists in worlds.ts). This makes 'switch your whole life dashboard's mood in one click, with matching sounds' a thing only Bozz does, and feeds the Bozz Plus monetisation already in flight.",
+        "boldness": 4
+      },
+      {
+        "title": "Streak-and-momentum layer: make finishing tasks feel like a student planner's satisfaction, system-wide",
+        "area": "Gamification / motivation (HabitsView.tsx, review.ts, TopicItem.completedAt, SummaryWidget.tsx)",
+        "rationale": "HabitsView.tsx already computes current streak and all-time best with a flame icon, and every TopicItem/ListItem records completedAt, every weekly review (review.ts) counts done-per-topic with progress bars. The raw signals for momentum exist but are siloed in Habits and the weekly Review. Notion has zero native motivation; Things is deliberately austere; physical student planners win precisely on the dopamine of ticking boxes and not breaking a streak. BOLD MOVE: build a unifying 'momentum' layer that turns Bozz from a list into something you don't want to disappoint. Compute a daily 'done' count and a cross-app completion streak from the completedAt timestamps already stored, surface it as a small persistent flame/ring in the home header, fire a tasteful confetti/affirmation micro-moment when the last planned task of the day is checked off (the daily-plan completion is already tracked in TodayWidget's TasksSection), and add a 'this week you shipped N things across M topics' celebration to the existing Review view. All of it derives from data already persisted — no schema change — and it targets the student/young-person emotional hook that the cold productivity tools refuse to touch, while staying calm enough not to become Duolingo-aggressive.",
+        "boldness": 4
+      },
+      {
+        "title": "\"One topic = one beautiful page\" — out-build Notion's workspace at the single thing students actually need",
+        "area": "Topic pages (Topic.widgetLayout/links/pinnedNote/pageBg, TopicLinksWidget, TopicNoteWidget, registry.tsx)",
+        "rationale": "Topics already support a per-topic widget grid (widgetLayout), pinned links with cached offline favicons (TopicLink.icon — see recent commits on Fill-mode logos), a pinned freeform note, a page background photo with reposition/zoom, and custom stages. That is, each topic can already be a self-contained mini-dashboard. Students adopt Notion to make 'a page per module/project' with links, notes, and a task board — then drown in its complexity and slowness. BOLD MOVE: position the topic page as 'a Notion page that builds itself and looks finished in 5 seconds.' Make topic-page widgets a first-class, celebrated surface: a one-tap 'auto-arrange this topic' that drops in the right widgets for the topic type (a Study topic gets todos + deadlines + pinned course links + a pomodoro; a Job Hunt topic gets the pipeline board + links + notes — reusing the template topicWidgets already in worlds.ts), richer link cards that render the cached favicon as a proper launcher tile, and a 'pin from anywhere' flow so any URL/note captured in Quicks can be sent to a topic page, not just a task. This reframes Bozz head-to-head against Notion on the exact use case students hire Notion for, but with zero blank-page paralysis and instant beauty — and every shared topic page satisfies the north-star promise that 'every shared link shows a real product, not a blank card.'",
+        "boldness": 4
+      }
+    ],
+    "agenda": {
+      "priorities": [
+        {
+          "title": "Ship the timetable front door: a 'Paste your timetable' card on the empty Calendar AND in first-run",
+          "why": "Unanimous #1 from all six board members, independently verified in code. The entire .ics pipeline is built and working end-to-end (calendarFeeds state at Dashboard.tsx:80, fetchFeed/parseICal in lib/ical.ts, merged into feedEvents at Dashboard.tsx:741 and todayEvents at :753), yet setCalendarFeeds is only ever called from storage hydration (Dashboard.tsx:199), never from any UI. Our primary persona's #1 need, 'one place for my timetable', is literally unreachable. This is a shipped feature with no on-switch, not a feature gap. The fix is pure self-contained React wiring onto setCalendarFeeds: one field takes a webcal/https .ics URL, names+colours it, and the existing pipeline fills the Calendar and Today in ~30 seconds. Add clipboard paste-detect for a webcal:// or .ics URL so it feels magic. Highest leverage in the building because 100% of the hard plumbing already exists and it is the truest realisation of the north star. Non-negotiable this round. Also unclip the calendar grid (CalendarView.tsx hardcodes GRID_START_HOUR=6/GRID_END_HOUR=22, clipping early lectures and late shifts) so the filled week renders correctly."
+        },
+        {
+          "title": "Guided cold-start that seeds a live dashboard and un-bricks the NLP",
+          "why": "Ranked #2 by every board member. A brand-new account hits DEFAULT_HOME=[] (registry.tsx:111), a cosmetic theme-only WelcomeThemePicker (gated cleanly by brandNewAccount at Dashboard.tsx:306, so this stays strictly additive/skippable), then a blank home, sidebar, and calendar. Critically the smartest asset is inert: predictTopic hard-returns null when topics.length===0 (taskParser.ts:263), so Quicks prediction, domain routing, and 'Accept all predicted' are dead for exactly the user who needs them most. Replace the theme picker with a 2-3 question conversational setup ('What are you here for? -> Uni / Job hunt / Gym') that auto-creates a real seeded topic via the EXISTING worldToTopic() + STARTER_TEMPLATES machinery (the 'study' and 'job-hunt' templates already ship full pages + pipeline stages in worlds.ts), seeds 2-3 example deadlines so Today/Upcoming/MiniCalendar light up immediately, and applies the matching starter layout. This single change flips predictTopic from null to useful from capture #1 and makes the first paint feel like her life, not a tutorial gate. The four opt-in walkthroughs demote to optional 'learn more'. Pairs with priority 1 so the first morning literally lands in 90 seconds."
+        },
+        {
+          "title": "Close the capture-to-Today gap and make brain-dump the hero, so capture finally pays off in the morning view",
+          "why": "Verified as a silent trust-killer ranked top-3 across the board. TodayWidget already computes priorities() from deadlineEntries (overdue/today/week, TodayWidget.tsx:68) completely independent of dailyPlan, yet TasksSection reads STRICTLY from dailyPlan[todayKey] (TodayWidget.tsx:275), populated only by a separate manual drag ritual in DailyPlannerView. A task captured and triaged with a deadline of TODAY never appears in Today, so a new user concludes the app lost it: this breaks 'your morning in 90 seconds' at the data-flow level. Fix: make Today auto-include tasks due today/overdue by pulling from priorities()/deadlineEntries, not only dailyPlan, and demote the manual planner to an optional power feature. Add one-tap 'add to today' on Quicks triage and topic tasks. Pair this with the bolder demo move the design+growth chiefs both want: promote parseVoiceTasks into a full-screen 'Brain Dump' that live-previews messy paragraphs as editable, dated, topic-coloured chips with one 'File all', composing the existing parser + VoiceTaskReview + onAssign. Also add a friction-free 'Add a deadline' surface (title + due date + optional course, defaulting to an auto-created Uni topic) reachable from the Today header, empty Calendar, and Quick-add, since the assignment-with-a-due-date is the student's primary object and today requires scaffolding a topic + stages first. This is the offline-NLP differentiator made visible (the 15-second landing GIF none of Notion/Things/Sunsama can ship without a backend) AND it makes the entire capture->triage->deadline loop finally reach the screen, which is the retention loop."
+        }
+      ],
+      "boardAvgSatisfaction": 4.83,
+      "wantMore": true
+    },
+    "experiments": [
+      {
+        "priority": "Ship the timetable front door: a 'Paste your timetable' card on the empty Calendar AND in first-run",
+        "variants": [
+          {
+            "name": "Variant A — Inline empty-state card on the Calendar",
+            "approach": "Lowest-risk, highest-fit realisation. Thread two new props into CalendarView (rendered at Dashboard.tsx:1431): calendarFeeds (already in scope, Dashboard.tsx:80) and an onAddFeed(feed: CalendarFeed) callback that does setCalendarFeeds(prev => [...prev, feed]). When the Calendar has no .ics feeds (calendarFeeds.length === 0) AND no gcal connection, render a prominent 'Paste your timetable' card ABOVE the month/week grid inside CalendarView. The card is a single text input plus a name field and a ColorBankPicker swatch row (ColorBankPicker is already imported in CalendarView.tsx:12), with a 'webcal:// or .ics URL' placeholder and one example line ('e.g. your university timetable export link'). On submit: normalise webcal:// -> https:// (new 4-line helper, e.g. url.replace(/^webcal:/i,'https:')), build {id: rand, label: name||'My timetable', url}, call onAddFeed. The existing effect at Dashboard.tsx:730 fires refreshFeeds() automatically, fetchFeed/parseICal run, and feedEvents (741) + todayEvents (750) fill within ~1-2s. Add clipboard magic: a small 'Paste from clipboard' button that calls navigator.clipboard.readText() and auto-fills the input if it matches /^(webcal:|https?:).*(\\.ics|ical|calendar)/i, plus an onPaste handler on the input that strips whitespace. Add a tiny inline status line driven by the existing feedsSyncing flag (thread it as a prop) and the per-feed error in calendarCache.feeds[id].error so a bad URL surfaces 'Couldn't read that link' instead of failing silently. Once a feed exists, replace the card with a compact 'Timetable feeds' management strip (list each feed with its colour + a remove button calling setCalendarFeeds filter), mirroring the existing per-account toggle strip pattern at CalendarView.tsx:819. Grid unclip is bundled here: change GRID_START_HOUR=6 to 0 and GRID_END_HOUR=22 to 24 (or, better, derive them dynamically — compute min start hour / max end hour across the week's timed events, clamped to [0,24] with a sensible default window of 7-19 when empty — so early 08:00 lectures and 21:00 shifts both render). The dynamic-range version is self-contained inside TimeGrid: scan columns' timed events for min/max hour, fall back to defaults, and auto-scroll the grid to ~08:00 on mount so the default viewport still feels tight. Scope: CalendarView.tsx (card + grid) and ~4 lines of prop wiring in Dashboard.tsx. Cleanest, ships fastest, but the front door only appears once the user is already on the Calendar tab."
+          },
+          {
+            "name": "Variant B — First-run 'Add your timetable' step woven into onboarding/welcome",
+            "approach": "Puts the timetable front door where 100% of new users land, not just those who find the Calendar tab. Build one shared, self-contained <TimetableConnect> component (the input + name + ColorBankPicker + clipboard paste-detect + webcal normalisation + live fetch-status, exactly the logic from Variant A) and mount it in TWO places. Place 1: directly after WelcomeThemePicker (Dashboard.tsx:1382). After the dark/light pick in chooseWelcomeMood (Dashboard.tsx:340), instead of immediately hiding welcome, advance to a second welcome panel headlined 'Put your week in Bozz — paste your timetable link' with a big paste field and a 'Skip for now' link. On submit it calls the same setCalendarFeeds path; a success tick ('Imported 34 events — your week is set') is derived from counting events in calendarCache after refresh, then it dismisses. Place 2: reuse the SAME component as the empty-Calendar card (so Variant A's surface is included for free for users who skipped). Optionally also add a 5th 'timetable' WalkStep to the Onboarding 'connect' flow (Onboarding.tsx:102, Flow type + steps array) that spotlights the Calendar nav item and auto-advances when calendarFeeds.length > 0 — using the existing StepCtx/advance pattern, this needs a new ctx field (e.g. timetableConnected) threaded from Dashboard. This is the boldest and most on-north-star ('your morning in 90 seconds' starts at first run) but touches three surfaces (welcome flow state machine, shared component, onboarding step model), so it is the largest diff and needs care to keep the welcome flow's 'never shown again' guarantee intact (gate the new panel on the same welcomeComplete flag). Grid unclip handled identically to Variant A (dynamic or 0-24 window). Highest leverage on activation, moderate risk from the multi-surface state wiring."
+          },
+          {
+            "name": "Variant C — 'Smart paste anywhere' detector + dedicated full-width Timetable hub",
+            "approach": "Treats the timetable as a first-class object rather than a calendar setting, and makes paste truly magic via a global clipboard sense. Two parts. Part 1 (the magic): a lightweight app-level paste sense — a document 'paste' listener (mounted once near the Dashboard root, suppressed while a walkthrough's body.dataset.walkActive is set, matching the existing FirstHoverHint guard) that inspects pasted text for a webcal:// or *.ics URL via regex. On a hit it pops a small non-modal confirm toast: 'Looks like a calendar link — add it to Bozz?' with a name input prefilled from the URL host and a colour swatch; confirming calls setCalendarFeeds. This means a student can paste their timetable URL literally anywhere in the app and Bozz catches it. Part 2 (the home): a dedicated, full-width 'Timetable' panel that becomes the Calendar's empty state AND is linkable from the Apps/connect screen — an editorial card with a short 'How to get your link' helper (one collapsible line: 'In your timetable site, look for Subscribe / Export / .ics / webcal'), the paste field, name + ColorBankPicker, and after import a feeds-management list with per-feed colour + remove (setCalendarFeeds filter) and a 'last synced' line from calendarCache.lastSync. All writes funnel through one onAddFeed(feed) callback into setCalendarFeeds, so the existing fetchFeed -> parseICal -> feedEvents -> todayEvents pipeline (Dashboard.tsx:716-757) does all the work untouched. Grid unclip is the dynamic-range approach (compute min/max event hour across the week, clamp [0,24], default 7-19, auto-scroll to 08:00) so a freshly-imported full week with 08:00 lectures and 21:00 shifts renders without clipping. This variant is the most ambitious in feel (paste-anywhere capture is a genuine wow moment and a distinctive dogfood-v2 bold move) and decouples the front door from the Calendar tab via the global listener, but the document-level paste handler is the trickiest piece to get right (must not hijack pastes into inputs/textareas — gate on event.target being the body/non-editable, and on no feed already matching the URL)."
+          }
+        ],
+        "winner": "Variant A — Inline empty-state card on the Calendar",
+        "votes": [
+          {
+            "preferred": "Variant B — First-run 'Add your timetable' step woven into onboarding/welcome",
+            "why": "As Maya, a first-year who just installed this, Variant B is the one that actually changes my life on day one. The whole pitch is \"your morning in 90 seconds,\" but that promise is empty if my week is empty. Variant A is genuinely clean and I'd be happy it exists, but it only fires once I've already wandered into the Calendar tab and noticed it's blank. Realistically, a brand-new student pokes at the home grid, maybe gets confused, and bounces before ever finding Calendar. The single most valuable thing Bozz can do for me is catch my timetable link the moment I land, because that one paste is what makes every other widget (today, upcoming deadlines, the morning view) suddenly full of MY stuff instead of demo emptiness. The \"Imported 34 events, your week is set\" tick is the exact aha moment that would make me keep the app.\n\nWhat sells B over C specifically: C's paste-anywhere document listener is a cute demo but it's a trap for me. As a first-year I paste things constantly (essay snippets, Discord links, messy notes), and a global toast that keeps guessing \"is this a calendar link?\" would feel like the app is grabbing at my clipboard. I'd find it creepy long before I'd find it magic, and the variant itself admits the document-level handler is the trickiest piece to not break (must dodge inputs/textareas). For a dogfood-v2 ship that has to stay TypeScript-green and self-contained, betting the headline feature on the most fragile mechanism is the wrong trade. B reuses A's empty-Calendar card for free (so people who skip first-run still get caught later), which means B contains A's surface as a subset — I get both the front door AND the safety net, without C's risky global capture.\n\nI did check the code to make sure B is buildable and not just nice-sounding, and there's one honest caveat the orchestrator should know. B is the largest diff for a real reason: the welcome flow today is NOT a multi-panel state machine. chooseWelcomeMood (Dashboard.tsx:340) does setShowWelcome(false) + save('welcomeComplete', true) in one shot, and WelcomeThemePicker is a single component rendered at Dashboard.tsx:1382. So B's \"advance to a second welcome panel\" means building that second-panel state from scratch and keeping the 'never shown again' guarantee intact by gating on the same welcomeComplete flag. The optional 5th onboarding WalkStep is also real work: Onboarding.tsx:102 has Flow = 'sidebar'|'topicPage'|'connect'|'quicks' and StepCtx (line 104) would need a new timetableConnected field threaded from Dashboard. My recommendation as the user: ship B but make the onboarding WalkStep the explicitly cuttable part — the welcome-panel + shared component is the high-leverage 80%, and the spotlight step can follow if time is tight.\n\nTwo correctness notes that apply to whichever variant is built (so they don't bite during implementation): (1) The auto-pipeline the variants rely on is verified real — setCalendarFeeds (Dashboard.tsx:80) triggers the effect at Dashboard.tsx:731 which calls refreshFeeds, and feedEvents/todayEvents (741/750) refill automatically. Good, that wiring is sound. (2) The ColorBankPicker swatch on the add-card is partly cosmetic-only as-described, because feed event colour is currently assigned at fetch time from FEED_COLORS[idx] in refreshFeeds (Dashboard.tsx:717), not read from the CalendarFeed object. To make my chosen colour actually show on my lectures, the picked colour has to be stored on the feed and threaded through fetchFeed/parseICal (src/lib/ical.ts:69 and :14, which already take a color arg) — otherwise the picker lies to me. Relevant files: C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\Dashboard.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\sections\\\\calendar\\\\CalendarView.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\onboarding\\\\WelcomeThemePicker.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\onboarding\\\\Onboarding.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\lib\\\\ical.ts."
+          },
+          {
+            "preferred": "Variant A — Inline empty-state card on the Calendar",
+            "why": "As Tom, a freelancer (not a student with a single university timetable), I want the timetable front door to feel like a tool I reach for, not a hoop I jump through at first run. Variant A puts the \"Paste your timetable\" card exactly where my intent already is: the empty Calendar tab. When I open Calendar and see nothing, a prominent paste field + name + colour swatch with clipboard magic is the obvious, low-friction next step. That contextual placement is the whole win for me, and I verified the wiring is real and cheap: calendarFeeds/setCalendarFeeds already live at Dashboard.tsx:80, CalendarView already imports ColorBankPicker (line 12), and the refreshFeeds effect at Dashboard.tsx:730 auto-fires on feed-list change so feedEvents/todayEvents fill on their own. Threading two props (calendarFeeds + onAddFeed) plus feedsSyncing for the status line is a tiny, self-contained diff that keeps TypeScript green and touches no auth/payments/schema. The bundled grid unclip matters to me directly: as a freelancer my day has an 08:00 client call and a 21:00 shift, and the current hardcoded 6-22 window (CalendarView.tsx:33-34) would clip both; the dynamic min/max-hour range clamped to [0,24] with a 7-19 default and auto-scroll to ~08:00 fixes that without making the default view feel sprawling. I deliberately passed on Variant B and C. Variant B forces a timetable step into the first-run welcome flow, which for a freelancer who may not even have an .ics link feels like an interruption before I have any reason to trust the app, and its description itself flags the largest diff and the risk of breaking the welcome flow's \"never shown again\" guarantee (the welcomeComplete gate) plus a new onboarding StepCtx field. Variant C's document-level paste listener is a genuine wow idea but the riskiest piece by its own admission: a global paste handler that must never hijack pastes into inputs/textareas, must respect the walkActive guard, and must dedupe against existing feeds. For dogfood-v2 I want the bold-but-safe move that actually ships and works, and Variant A gets the timetable rendering correctly first; the paste-anywhere magic and first-run placement are better as fast-follows once the core import + grid behaviour is proven. Note: the prompt's stated goal includes a first-run surface, which only Variant B fully delivers; I am choosing A because as this user I value reliability and contextual fit over breadth, and A's empty-Calendar card is the surface I would actually use."
+          },
+          {
+            "preferred": "Variant A — Inline empty-state card on the Calendar",
+            "why": "As Sam (power user), I'd pick Variant A, and I verified why against the actual code, not the pitch.\n\nThe data path all three share is genuinely cheap and safe: calendarFeeds/setCalendarFeeds already exist (Dashboard.tsx:80), and the refresh effect auto-fires on any feed change (Dashboard.tsx:711-748 — refreshFeeds gated on calendarFeeds.length, todayEvents/feedEvents derive at 742-748). So onAddFeed -> setCalendarFeeds genuinely does light up the whole pipeline untouched. That part of the pitch is real.\n\nWhat separates the variants is RISK SURFACE, and that's where A wins for a power user who values a working tool over a flashy one:\n\n1. CalendarView currently has NO calendarFeeds or onAddFeed prop (interface ends at CalendarView.tsx:27). So even Variant A's 'thread two props' is real new wiring — but it's exactly two props plus one render branch and a ColorBankPicker that's ALREADY imported (CalendarView.tsx:12). That is the smallest honest diff that delivers the front door, the clipboard paste-detect, the per-feed error surfacing, and the grid unclip.\n\n2. The grid unclip is the single highest-value fix here and it's identical in all three (GRID_START_HOUR=6/GRID_END_HOUR=22 at CalendarView.tsx:33-34 clip 08:00 lectures? no — but they DO clip a 21:00 shift and anything before 06:00). The dynamic-range + auto-scroll-to-08:00 approach is self-contained in TimeGrid. I get 100% of the actually-useful payoff from A alone.\n\n3. Variant B's real cost is NOT the shared component — it's that it rewrites the welcome flow from a one-shot picker into a two-panel state machine. chooseWelcomeMood (Dashboard.tsx:340-344) currently sets mood, hides welcome, and writes welcomeComplete atomically in one call. Splitting that into 'pick mood -> show timetable panel -> dismiss' means new intermediate state and a new way to break the 'never shown again' guarantee. For a feature whose whole point is reliability ('your morning in 90 seconds'), gating activation behind a freshly-introduced first-run state machine is exactly the kind of trade I'd reject in a dogfood loop. And B's onboarding-step addition needs a new timetableConnected field threaded through StepCtx/WalkStep (Onboarding.tsx:104-152) — more surface, more to keep green.\n\n4. Variant C's document-level paste listener is the genuinely scary one. As a power user I paste URLs into inputs constantly (quick-add, topic links, notes). A global 'paste' handler that has to correctly distinguish 'body/non-editable target' from 'I'm typing in a field' is the highest-bug-density idea in the set, and a false catch — a confirm toast hijacking a paste meant for a text field — is precisely the kind of papercut that makes me distrust an app. The guard (event.target non-editable + walkActive suppression) is doable but it's the trickiest piece by the pitch's own admission, and the wow-factor doesn't justify the regression risk on every paste in the app.\n\nThe one fair knock on A — 'the front door only appears once you're on the Calendar tab' — matters less for ME than for a brand-new user. I'll find the Calendar tab in five seconds. The activation argument for B is real for cold first-run users, but the right sequencing is: ship A first (it's the foundation all three build on — the shared empty-state card), confirm the paste/normalise/error/unclip behaviour is rock-solid in the lowest-risk surface, THEN promote the same component into first-run as a follow-up once it's proven. Doing the risky multi-surface wiring before the core card is even battle-tested is backwards.\n\nRelevant files: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\sections\\calendar\\CalendarView.tsx (props interface line 14-27, GRID_START_HOUR/END_HOUR lines 33-34, TimeGrid range lines 214-218, ColorBankPicker already imported line 12) and C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\Dashboard.tsx (calendarFeeds state line 80, refresh pipeline lines 711-748, CalendarView render line 1431, welcome flow chooseWelcomeMood lines 340-344). Onboarding model lives at C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard\\src\\components\\onboarding\\Onboarding.tsx lines 102-152 (relevant only if B's optional step were taken)."
+          }
+        ]
+      },
+      {
+        "priority": "Guided cold-start that seeds a live dashboard and un-bricks the NLP",
+        "variants": [
+          {
+            "name": "Conversational Intent Picker (drop-in WelcomeThemePicker replacement)",
+            "approach": "The most surgical, lowest-risk variant: replace the body of the existing first-run gate without touching its plumbing. Keep the exact `showWelcome` state, the `brandNewAccount` guard (Dashboard.tsx:306-308), and the `<WelcomeThemePicker .../>` render slot (Dashboard.tsx:1382) so the change stays strictly additive and skippable. Swap the contents of WelcomeThemePicker.tsx (or a sibling `WelcomeSetup.tsx` rendered in the same slot) for a 2-step conversational flow: Step 1 'What are you here for?' -> 3-4 big cards (Uni / Job hunt / Gym / Just exploring), each mapped to a free shipped world id via `findWorld('study'|'job-hunt')` (Gym can reuse `findWorld('calm')` or fall back to a default-stages topic; 'Just exploring' = today's pure-theme path, preserving the current behaviour). Step 2 reuses the existing Dark/Light ThemeCard pair already in the file. On confirm, call a single new `onSetup(worldId, mood)` callback wired in Dashboard that: (a) builds a real topic via `worldToTopic(world, world.name, topics.length)` and `setTopics([topic])` — this alone flips predictTopic from null to useful (taskParser.ts:263) from capture #1; (b) seeds 2-3 example `TopicItem`s with `deadline` set to today/tomorrow/this-week unix-ms (types.ts:28-29) into that topic's first stage so Today/Upcoming/MiniCalendar light up; (c) applies the matching home layout by mapping the world's intent to a `STARTER_TEMPLATES` entry and calling the same fresh-`i` logic as HomeView.applyTemplate (registry.tsx + HomeView.tsx:189) via `setHomeItems`; (d) sets `appearance.mood` exactly as `chooseWelcomeMood` does today and saves `welcomeComplete`. The four opt-in walkthroughs already auto-suppress because `onbDismissed` derives from `topics.length > 0` (Dashboard.tsx:334), so seeding a topic demotes them to optional 'learn more' for free. Strength: minimal blast radius, every API already exists, TypeScript-trivial. This is the safe baseline."
+          },
+          {
+            "name": "Live-Preview Split Builder (see-your-dashboard-fill-in)",
+            "approach": "A bolder, more ambitious variant that makes the cold-start feel like watching your life assemble itself rather than answering a form. Full-screen overlay (same portal/zIndex pattern as WelcomeThemePicker) but split layout: LEFT is the question column, RIGHT is a live, shrunk-to-scale real render of the home grid + a faux sidebar that updates in real time as the user answers. As soon as they tap 'Uni', the right panel animates in the seeded `study` world: the wallpaper (world.background.url) washes in, a 'Study' topic appears in the mini-sidebar, and Today/Upcoming/MiniCalendar widgets populate with the 2-3 seeded deadlines — so the value (a live dashboard + un-bricked prediction) is shown before commit, not promised. Implementation: a local React state machine holds {intent, mood, accent} and derives a preview by calling `worldToTopic` + the seeded-deadline builder into throwaway state; the right panel reuses the actual widget components (today/upcomingDeadlines/miniCalendar) inside a `transform: scale()` non-interactive wrapper, or a lightweight static mirror if rendering live widgets in-overlay is too heavy. A secondary micro-step lets them tweak accent from the world's `colorBank` (worlds.ts) for ownership. 'Use this setup' commits exactly the same writes as Variant 1 (setTopics with seeded items, setHomeItems from the mapped starter, appearance mood/accent, welcomeComplete). Add an optional inline 'Try capturing something' box that runs the now-live `predictTopic` against their typed text and shows it routing to the seeded topic — a literal demonstration that the NLP is no longer inert. Strength: highest emotional payoff and 'first paint feels like her life' impact; demonstrates the un-bricking instead of just enabling it. Cost: more UI work and care to keep the live preview cheap; still fully self-contained React/TS with zero new backend."
+          },
+          {
+            "name": "Zero-Question Smart Seed + First-Capture Teach (NLP-first, ask-nothing)",
+            "approach": "The contrarian variant: question whether ANY questions are the right cold-start. Instead of an intent quiz, seed a sensible default the instant the account is brand-new and move the 'personalisation' into the first real capture, which is where the un-bricked NLP becomes the hero. On brand-new detection (reuse `brandNewAccount`), skip the picker entirely and auto-seed a single neutral but real topic (default stages via `worldToTopic` of the `default`/`study` world) plus a 'Just the essentials' home layout from STARTER_TEMPLATES, with 2-3 example deadlines — so the very first paint is already a live dashboard with Today/Upcoming/MiniCalendar populated and predictTopic non-null. Keep ONE tiny, dismissible top-of-home banner: 'Tell Bozz what your life looks like' -> tap reveals the same 2-3 intent chips (Uni/Job hunt/Gym), and choosing one upgrades the seeded topic in place via `worldTopicPatch` (worlds.ts:316, which re-themes + re-lays-out an existing topic without destroying items) and applies the matching world layout/mood — personalisation as an opt-in upgrade, not a gate. Crucially, the first time the user types into Quicks/quick-add, surface a one-time inline coachmark on the live prediction result ('Bozz guessed this goes to <topic> — accept, or pick another') so the moment that teaches the product is the moment the smartest asset visibly works. This makes the NLP un-bricking the literal centrepiece of onboarding rather than a silent side effect. The four walkthroughs stay demoted (topics.length>0 suppresses them). Strength: fastest possible path to a live screen (0 taps to value), respects 'morning in 90 seconds' most literally, and reframes onboarding around the predictTopic capability that round ranking flagged as the wasted asset. Risk: a wrong default seed feels less 'hers' than an explicit pick, mitigated by the in-place `worldTopicPatch` upgrade path and the fact that nothing seeded is destructive or un-undoable."
+          }
+        ],
+        "winner": "Live-Preview Split Builder (see-your-dashboard-fill-in)",
+        "votes": [
+          {
+            "preferred": "Live-Preview Split Builder (see-your-dashboard-fill-in)",
+            "why": "As Maya, a first-year student, the thing that would actually make me trust a new app in the first 30 seconds is SEEING my dashboard come alive, not being told it will. The split builder does that: I tap \"Uni\" and the right panel immediately washes in a wallpaper, drops a Study topic in the sidebar, and lights up Today/Upcoming/MiniCalendar with real-looking deadlines. That \"oh, this is mine already\" feeling is what gets me past the empty-screen drop-off that kills most productivity apps for me. A form (Variant 1) is fine and safe, but it feels like homework, ask, ask, then maybe something happens, and I have no proof it worked until after I commit. The whole point here is \"your morning in 90 seconds,\" and a preview sells that promise visually before I have to believe it.\n\nThe detail that tips it over the zero-question version (Variant 3) is the inline \"try capturing something\" box that runs the now-live predictTopic against my own typed text and shows it routing to the seeded topic. I confirmed predictTopic literally returns null until topics.length > 0 (taskParser.ts:263), so the smartest part of the app is genuinely dead on a cold account. Variant 3 hides that reveal behind my first real Quicks capture later, which I might not even do on day one, so the un-bricking stays invisible at the exact moment I'm deciding whether to keep the app. Variant 2 makes the NLP working a thing I watch happen with my own words during setup, which is far more convincing than a default seed I didn't choose (Variant 3's risk: it doesn't feel like mine), and far more convincing than Variant 1 which enables prediction silently without ever showing it.\n\nFeasibility-wise I'm satisfied it's real, not a fantasy: it commits the exact same writes as the safe baseline (setTopics with seeded items, setHomeItems via the same fresh-i logic as HomeView.applyTemplate at HomeView.tsx:189-200, appearance mood/accent, welcomeComplete), reuses the existing portal/zIndex pattern from WelcomeThemePicker, and the worldToTopic/findWorld/STARTER_TEMPLATES helpers all already exist in worlds.ts and registry.tsx. The only added cost is a scaled non-interactive preview panel, and the variant already hedges with a \"lightweight static mirror\" fallback if live widgets are too heavy, so the bold version degrades gracefully without risking a TypeScript-green, self-contained change. For dogfood v2's mandate to favour bold, high-payoff changes over timid polish, this is the one that both moves me emotionally and proves the un-bricked prediction is the hero."
+          },
+          {
+            "preferred": "Zero-Question Smart Seed + First-Capture Teach (NLP-first, ask-nothing)",
+            "why": "As Tom the freelancer, my time IS my money and \"your morning in 90 seconds\" is the whole reason I'd try this. The other two variants both make me stop and answer a quiz before I see anything useful. I don't want to fill in a form to find out if an app is worth my time. The first thing I want is to LAND on a working screen and judge it in two seconds.\n\nI checked the code and the contrarian variant's two scariest claims are both true, which removes my objections: predictTopic literally `return null` when topics.length === 0 (taskParser.ts:263), so seeding one default topic on brand-new detection genuinely un-bricks the NLP from paint #1; and worldTopicPatch (worlds.ts:316) only patches color/icon/pageBg/widgetLayout and never touches `items`, so the in-place \"upgrade\" when I later tap Uni/Job hunt/Gym is provably non-destructive. That means the \"wrong default feels less mine\" risk is fully mitigated: nothing I'd lose is at stake, and I can re-theme without re-doing work.\n\nThe deciding factor is the first-capture coachmark. The single most valuable thing here is that Bozz reads \"invoice client Friday\" and routes it to the right place. Variant 2 demonstrates that in a sandbox before commit, which is nice theatre, but the contrarian version teaches it on my REAL first capture, at the exact moment I'm testing whether this tool is smart. That's where a freelancer decides to keep an app. Zero gate to value, plus the smartest feature proving itself on my actual data, beats a prettier quiz I have to sit through.\n\nMy honest reservation: a freelancer is not a student, and a \"study\"-flavoured default seed could feel slightly off on first paint. But the one dismissible banner with Uni/Job-hunt/Gym chips fixes that in one tap (and \"Job hunt\"/\"Gym\" map cleanly to shipped worlds via findWorld), and the upgrade is non-destructive per the code. So I'd happily live with a neutral default for the 0-tap win. I'd reject Variant 1 (safe but it's still a gate that asks before it gives) and Variant 2 (highest polish, but it spends its budget making me watch a preview instead of getting me to work — and the live-render-in-overlay is the riskiest to keep cheap). Variant 3 respects my time most, fixes the real bricked asset, and makes the NLP the hero where it counts."
+          },
+          {
+            "preferred": "Live-Preview Split Builder (see-your-dashboard-fill-in)",
+            "why": "As Sam (power user), this is the one I'd actually choose, and it best serves the stated goal: \"Guided cold-start that seeds a live dashboard AND un-bricks the NLP.\" It is the only variant where both halves of the goal are made visible at the moment of decision, not merely promised or silently enabled.\n\nWhy it beats the other two for me specifically:\n\n1) It shows the un-bricking instead of trusting it. The whole premise is that predictTopic (taskParser.ts:263 returns null until topics.length>0) is a wasted asset. The Split Builder's optional \"Try capturing something\" box runs the now-live predictTopic against my own typed text and shows it routing to the seeded topic. As a power user, that single demo is what converts me: I see the smartest part of the product work before I commit, rather than discovering it by accident later. Variant 3 also features the NLP, but only AFTER first capture via a coachmark, i.e. it teaches reactively; the Split Builder lets me provoke it on demand during setup, which is what a power user does.\n\n2) \"First paint feels like her life\" is the actual north-star moment. The right-panel live render (wallpaper washes in, a Study/Job-hunt topic appears, Today/Upcoming/MiniCalendar populate from the 2-3 seeded deadlines) is the literal embodiment of \"your morning in 90 seconds.\" Watching the dashboard assemble itself is a far stronger first impression than a 2-card quiz (Variant 1) or a silent auto-seed (Variant 3), and it earns the one extra screen of attention.\n\n3) It commits the exact same safe writes as the surgical baseline. Per the spec, \"Use this setup\" performs identical writes to Variant 1 (setTopics with seeded items, setHomeItems from the mapped STARTER_TEMPLATE, appearance mood/accent, welcomeComplete). I verified every API it relies on exists and behaves as claimed: worldToTopic (worlds.ts:296) builds real stages + a fresh widgetLayout; applyTemplate (HomeView.tsx:189) regenerates fresh i keys so React keys never collide; onbDismissed derives from topics.length>0 (Dashboard.tsx:334) so the four walkthroughs auto-demote for free; the showWelcome/brandNewAccount/render-slot plumbing (Dashboard.tsx:306-308, 1382) is untouched and the change stays skippable. So the blast radius on commit is the same as the safe baseline; the added cost is purely additive preview UI, and the spec already provides the escape hatch (a lightweight static mirror) if live widgets in-overlay are too heavy. That keeps it self-contained React/TS with zero backend, satisfying the hard constraints.\n\nWhy not the others. Variant 1 (Conversational Intent Picker) is the correct safe baseline and I'd accept it, but it under-delivers on the goal: it ENABLES the live dashboard and un-bricks the NLP without ever showing either, so the payoff lands offscreen. It also has a small real wart I confirmed: it maps \"Gym\" to findWorld('calm'), but 'calm' is free:false (worlds.ts:210), a Plus-gated world, so that branch must fall back to default stages anyway, undercutting its \"every API already exists, trivially\" pitch. Variant 3 (Zero-Question Smart Seed) is the most intellectually honest about \"morning in 90 seconds\" and 0 taps to value, and its worldTopicPatch upgrade path (worlds.ts:316) is genuinely non-destructive, but for me the cost is ownership: a guessed default feels generic, and dogfood loop v2 is explicitly AGGRESSIVE/bold, not minimal. A power user wants to steer the cold-start, not be handed a neutral seed and a dismissible banner. The Split Builder gives me agency (intent + accent from the world colorBank) AND speed AND a visible proof that the NLP works, which is the most complete answer to this round's goal."
+          }
+        ]
+      },
+      {
+        "priority": "Close the capture-to-Today gap and make brain-dump the hero, so capture finally pays off in the morning view",
+        "variants": [
+          {
+            "name": "Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions (surgical, highest-trust, smallest diff)",
+            "approach": "PREMISE: the only surviving 'capture vanished' path is a dated Quick that hasn't been triaged into a topic yet — deadlineEntries() (util.ts) ignores the inbox entirely, so 'submit essay today' captured via Ctrl+B sits in Quicks and never reaches the morning view. This variant closes that leak at the data layer and makes every row in Today actionable, with almost no new UI surface.\n\nCHANGES:\n1) Widen the Today data source. Add `inbox: InboxItem[]` (and `onInboxChange`/`onTriageInbox`) to WidgetCtx (context.ts) and thread it through Dashboard's two ctx={{...}} blocks (already has `inbox` state, lines ~88/1420). In util.ts, extend deadlineEntries(ctx) to also emit entries for inbox items where `item.deadline != null`, tagged with a synthetic section `'inbox'` and accent = predictTopic(text)?.color ?? t.borderStrong, carrying a flag `source:'inbox'`. Today's priorities() then automatically buckets them overdue/today/week with zero changes to TodayWidget's bucketing.\n2) Distinguish inbox priorities visually: in PrioritiesSection render an inbox-sourced row with a small Inbox icon + 'in Quicks' tag instead of the topic flag, so the user understands it isn't filed yet — and clicking it deep-links to the Quicks triage row (setActiveSection('inbox')) instead of a topic.\n3) One-tap actions on every Today row. For topic-sourced priorities, add a trailing check button that calls onAdvanceStage to the done stage (complete) — reusing the existing onAdvanceStage in ctx. For inbox-sourced priorities, add a one-tap 'File' button that triages the Quick into its predicted topic (reuse Dashboard.addTopicItem + remove from inbox), so the morning view becomes the place you ACT, not just read.\n4) Add one-tap 'Add to today' on Quicks rows (InboxView InboxRow) and on topic task rows (TopicTodosWidget): a small pill that pushes the item id into dailyPlan[todayKey] via ctx.onDailyPlanChange. This honors the manual-plan path for people who want it, but it is now optional sugar, not the only road in.\n\nWHY DIFFERENT: this is the minimal, conservative fix — it changes data plumbing + adds affordances, ships no new screen, and is the safest TypeScript-green change. It treats Today as the single source of truth and makes the planner truly optional. Best first PR. Risk: low. Net new files: 0 (edits to util.ts, context.ts, TodayWidget.tsx, InboxView.tsx, TopicTodosWidget.tsx, Dashboard.tsx)."
+          },
+          {
+            "name": "Variant B — The 'Add a deadline' quick object + auto Uni topic (kills the cold-start wall for the student's primary object)",
+            "approach": "PREMISE: the student's atomic unit is 'assignment with a due date', but today you cannot create one without first building a topic with stages in Settings. That wall is why capture never pays off for a first-run user: they have nothing dated to show in Today. This variant introduces a friction-free dated-task creator reachable from every empty/idle surface and auto-scaffolds a destination so the loop completes on the very first try.\n\nCHANGES:\n1) New component src/components/AddDeadlineModal.tsx (a small, focused dialog, NOT the ramble modal): three fields — title (autofocus), due date (reuse shared/DatePicker, which already exists and is used in InboxView/QuickAddModal), and an optional course/topic ChoicePicker (reuse shared/ChoicePicker) whose options are existing topics PLUS a default '+ New course' that, on submit, lazily creates a topic. It also accepts an optional time-of-day that maps to ListItem.dueMin (already supported by dueTimestamp in util.ts).\n2) Auto-create destination: if no topic is chosen, create/find an auto 'Uni' topic with a sensible default 3-stage pipeline (To do / Doing / Done) via a new Dashboard helper ensureUniTopic() that appends to topics with nextId()/default stages (mirror the existing topic shape; do NOT touch schema — this is just local Topic state already persisted to the 'topics' storage key). Then call existing addTopicItem(topicId, title, deadline). Because addTopicItem files into a real topic with a real deadline, the item appears in Today's Priorities INSTANTLY (closing the loop) and in the calendar/mini-calendar via topicDeadlineEvents.\n3) Reachability (the 'scaffolding' the prompt asks for): wire a '+ Add a deadline' affordance into (a) the Today widget header (a small + button next to the date, opening the modal via a ctx callback onAddDeadline), (b) the empty Calendar/mini-calendar empty state, and (c) the QuickAdd flow as a secondary 'just a dated task' shortcut. All three call the same Dashboard-level openAddDeadline state.\n4) Empty-state copy: when a user has zero dated items, Today's PrioritiesSection empty state changes from 'Capture a task ->' to 'Add your first deadline ->' opening this modal, so the very first action a new user can take produces a visible Today item.\n\nWHY DIFFERENT: Variant A fixes plumbing; Variant B attacks the COLD START — it makes the primary object creatable in ~10 seconds with no topic ceremony, and guarantees the new-user demo (the 90-second morning) has something in it. It is the highest-leverage move for activation/retention. Risk: medium (introduces topic auto-creation; must reuse exact existing Topic/stage shape to stay schema-safe and TS-green). Net new files: 1 (AddDeadlineModal.tsx) + edits to Dashboard.tsx, TodayWidget.tsx, calendar/mini-calendar empty states."
+          },
+          {
+            "name": "Variant C — 'Brain Dump' full-screen hero: promote the ramble flow into the landing-GIF differentiator (boldest, demo-defining)",
+            "approach": "PREMISE: the offline-NLP parser (parseVoiceTasks) is the one thing Notion/Things/Sunsama cannot ship without a backend, and it is currently buried in a small centered QuickAddModal plus a redundant legacy VoiceTaskReview panel. This variant makes brain-dump the literal hero: a full-screen capture canvas that live-previews a messy paragraph as editable, dated, topic-coloured chips with one 'File all' — the 15-second landing demo.\n\nCHANGES:\n1) New full-screen section src/components/sections/BrainDumpView.tsx (its own SectionId 'brainDump', added to Dashboard's builtInSectionIds + a prominent entry point). Left/top: one big always-focused textarea + the existing VoiceButton (mic). As the user types or speaks, debounce-call parseVoiceTasks(text, topics) (the SAME parser QuickAddModal already uses) and render the result as a responsive grid of chips. Reuse QuickAddModal's TaskCard (extract it to a shared src/components/shared/TaskCard.tsx so both surfaces share one component — this also lets us DELETE the now-redundant VoiceTaskReview.tsx, removing duplicate logic). Each chip shows text (inline-editable), a topic ChoicePicker (topic-coloured), and a DatePicker; parser-predicted topic/deadline are pre-filled and visibly highlighted as 'AI-detected'.\n2) Live, paragraph-to-chips theatre: show the raw paragraph at top with the matched date phrases + verb splits subtly underlined in the chip accent colour, so the user SEES the offline NLP working (this is the GIF moment). Counts update live: 'Found 4 tasks · 2 dated · 3 routed to topics'.\n3) One 'File all' (primary) composes the existing paths exactly like QuickAddModal.addAll(): chips with a topic -> addTopicItem(topicId, text, deadline) (so dated ones land in Today's Priorities immediately); chips left on 'Quicks' -> addToInbox. Secondary 'Send all to Quicks' = triage later. On success, route the user straight to Home so they watch the items they just dumped appear in the Today widget — capture visibly paying off in the morning view, in one screen transition.\n4) Make it the hero entry point: replace/augment the small QuickAdd trigger so the primary capture CTA (and the onboarding 'try it' step) opens Brain Dump full-screen; keep the lightweight Ctrl+B QuickCapture for one-liners. Auto-create a 'Uni' fallback topic (shared helper, same as Variant B) so 'File all' never has nowhere to put a dated chip on a fresh account.\n\nWHY DIFFERENT: Variants A/B are about correctness and cold-start; Variant C is the bold PRODUCT-NARRATIVE move — it turns an existing modal into the signature, demoable surface, consolidates two parser UIs into one shared component (net code REDUCTION via deleting VoiceTaskReview), and choreographs the capture->Today payoff as a visible transition. Highest ambition + best for the landing GIF and growth story. Risk: medium-high (new full section + onboarding wiring + component extraction), but it leans entirely on already-shipped parser/handlers. Net new files: 2 (BrainDumpView.tsx, shared/TaskCard.tsx) − 1 deleted (VoiceTaskReview.tsx); edits to Dashboard.tsx, registry/onboarding entry points."
+          }
+        ],
+        "winner": "Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions (surgical, highest-trust, smallest diff)",
+        "votes": [
+          {
+            "preferred": "Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions (surgical, highest-trust, smallest diff)",
+            "why": "As Maya (first-year, terrified of missing a deadline) I picked A because it fixes the exact thing that makes me distrust this app. I verified the bug is real: InboxItem already carries a deadline (types.ts line 160) and the parser even stamps one on when I Ctrl+B \"submit essay today,\" but deadlineEntries() in util.ts (lines 11-29) only loops ctx.topics and never touches the inbox. So my dated Quick lands in Quicks and is invisible in the Today widget forever unless I do a separate triage chore I don't know I have to do. That is the \"capture vanished\" moment, and it happens on the very first thing I capture. A closes it at the data layer so the morning view finally tells the truth, which is the entire promise (\"your morning in 90 seconds\"). It also adds one-tap File/complete so Today becomes where I act, not just read, and the \"Add to today\" pill makes the manual planner optional sugar instead of the only road in.\\n\\nI rejected B and C even though they're flashier. B (Add-a-deadline modal + auto-Uni topic) attacks cold start, but cold start is not my pain: I CAN already capture in ten seconds via Ctrl+B, the problem is it doesn't show up. B leaves the deadlineEntries leak completely unfixed, so a dated Quick I capture by voice/typing still vanishes; it only helps if I happen to use the new modal, and it silently auto-creates topics I didn't ask for, which feels like the app making a mess in my space. C (full-screen Brain Dump) is the boldest demo, but for ME it's largely re-skinning what QuickAddModal already does: live paragraph-to-chips, parseVoiceTasks, topic ChoicePicker, DatePicker, and \"Add all\" all exist there today (QuickAddModal.tsx lines 318-334, 186-217). C is a growth/landing-GIF move, not a fix for my trust, and its addAll still files chips into topics, so an untriaged dated chip left on \"Quicks\" STILL won't reach Today: the underlying leak survives. A is the only variant that makes capture actually pay off in the morning view, it's the lowest-risk and most TypeScript-safe (edits to util.ts/context.ts/TodayWidget/InboxView/Dashboard, zero new files), and it's the foundation B and C would both need anyway. Fix the leak first; make it pretty later. Relevant files: C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\util.ts, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\context.ts, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\TodayWidget.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\sections\\\\InboxView.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\QuickAddModal.tsx."
+          },
+          {
+            "preferred": "Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions (surgical, highest-trust, smallest diff)",
+            "why": "As Tom, a freelancer who already lives in this app daily, Variant A fixes the exact thing that actually burns me — and I verified the bug is real in the code, not hypothetical. deadlineEntries() in src/components/widgets/util.ts (lines 11-29) only walks ctx.topics and never touches the inbox, yet InboxItem (src/lib/types.ts:153) carries a deadline. So when I Ctrl+B \"send Acme invoice today\" mid-call and it lands in Quicks untriaged, my Today widget silently omits it. That is a trust-breaking leak: capture looks like it worked, then the morning view lies to me. Variant A closes it at the data layer (thread inbox into WidgetCtx, extend deadlineEntries to emit inbox-sourced entries) so priorities() buckets them with zero changes to the bucketing logic, and it makes Today the single source of truth. The one-tap File button is cheap to build because the machinery already exists — predictTopic and addTopicItem are both live (src/components/Dashboard.tsx:688/680, src/lib/taskParser.ts:262) and InboxView already re-predicts per row. So the morning view becomes where I ACT (file or complete in one tap), not just read. Crucially, the manual dailyPlan path becomes optional sugar instead of the only road in — that is the real win for someone who captures fast and never wants to babysit a planner.\\n\\nWhy not B or C: both are aimed at the student cold-start and the new-user demo / landing GIF, which is not my problem — I am an existing user with topics already. B's auto-create 'Uni' topic is literally wrong for a freelancer (I would get a junk topic), and it carries medium risk because it mutates topic state with auto-scaffolding. C is the boldest but it is a growth/narrative play (new full-screen section + component extraction + onboarding rewiring, medium-high risk) that does not, by itself, fix the silent drop of my dated Quick. A is the smallest diff, the safest TypeScript-green change (0 new files), and the highest-trust fix — it makes capture finally pay off in the morning for people who are already relying on it. It is the right first PR; B or C can follow once the leak is sealed.\\n\\nRelevant files: C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\util.ts, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\context.ts, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\TodayWidget.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\sections\\\\InboxView.tsx, C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\Dashboard.tsx."
+          },
+          {
+            "preferred": "Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions",
+            "why": "As Sam (power user), the daily pain isn't cold-start or a missing demo screen — it's silent data loss. I verified the leak is exactly as A states: priorities() in TodayWidget calls deadlineEntries() in util.ts, which iterates ONLY ctx.topics and never touches the inbox. So a Ctrl+B \"submit essay today\" sits in Quicks and never reaches the morning view. That's the one bug that destroys trust in a capture tool, and it's the gap I feel every morning. A fixes it at the data layer with almost no new surface to learn.\\n\\nA is also the lowest-risk, highest-trust diff and it reuses what's already there: InboxItem already carries `deadline` and `suggestedTopicId`, the inbox deep-link target already exists (PrioritiesSection's empty state already calls setActiveSection('inbox') at TodayWidget.tsx:124), and onAdvanceStage/addTopicItem/addToInbox/onDailyPlanChange/dailyPlan are all already on WidgetCtx (context.ts:17-25). So the only genuinely new plumbing is `inbox` + a triage callback threaded through Dashboard's existing ctx blocks. The one-tap complete/File actions turn Today from a read-only list into the place I act — which is what I want as someone who hates ceremony. Crucially, A makes the manual daily-planner OPTIONAL rather than the only road into Today, which matches how a power user actually captures (fast, trust it, move on).\\n\\nWhy not B: it attacks cold-start (auto-creating a 'Uni' topic with default stages), which helps a brand-new user but does nothing for me — I already have topics, and auto-scaffolding a course feels presumptuous and clutters my real topic list. Medium risk for a problem I don't have.\\n\\nWhy not C: it's the boldest and best for the landing GIF, but it's a growth/marketing bet, not a fix for the capture-to-Today gap I live with. It builds a whole new full-screen section + onboarding rewiring I'd have to adopt, and its headline selling point ('net code reduction by deleting VoiceTaskReview, consolidating two parser UIs') is overstated: I grepped and VoiceTaskReview.tsx has ZERO import sites — it's already dead code, so deleting it isn't real consolidation. C's actual cost (new section, live-parse theatre, onboarding wiring) stays, while its payoff is demo narrative rather than closing the leak.\\n\\nKey files I inspected: C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\util.ts (deadlineEntries only loops ctx.topics, lines 11-29), C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\context.ts (WidgetCtx already has the handlers A reuses), C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\widgets\\\\TodayWidget.tsx (priorities()/PrioritiesSection, inbox deep-link already at line 124), C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\lib\\\\types.ts (InboxItem already has deadline + suggestedTopicId, lines 153-162), C:\\\\Users\\\\augbo\\\\1.Personal\\\\ClaudesPlayground\\\\Aug-dashboard\\\\src\\\\components\\\\Dashboard.tsx (inbox state at line 88; note the Ctrl+B/voice inbox route at line 569 drops the predicted deadline — a related secondary leak worth fixing alongside A so inbox items reliably carry a deadline). One caveat for whoever implements A: the synthetic `'inbox'` section value must satisfy the SectionId type, so type it deliberately (e.g. a literal cast) to keep TypeScript green."
+          }
+        ]
+      }
+    ],
+    "plan": {
+      "changes": [
+        {
+          "title": "Ship the timetable front-door: inline 'Paste your timetable' card on the empty Calendar (Variant A)",
+          "files": [
+            "src/components/sections/calendar/CalendarView.tsx",
+            "src/components/Dashboard.tsx",
+            "src/lib/ical.ts"
+          ],
+          "approach": "Wire the existing-but-unreachable .ics pipeline to a UI. Add an `onAddFeed?: (feed: CalendarFeed) => void` prop to CalendarView (Dashboard passes `feed => setCalendarFeeds(prev => [...prev, feed])`, which already triggers refreshFeeds via the effect at Dashboard.tsx:731 and flows into feedEvents/todayEvents). In CalendarView, render an inline empty-state card ABOVE the grid whenever `feedEvents.length === 0 && calendarConnections.length === 0` (also reachable any time via a small 'Add timetable' ghost button in the SectionHeader `right` slot, next to 'today'). The card holds: one text input for a webcal/https .ics URL, an auto-name field (defaulted from the URL host), a ColorBankPicker (reuse the existing `colorBank` prop + ColorBankPicker already imported), and a Save button. On save, normalise `webcal://` -> `https://` and build `{ id: <random36>, label, url }` (CalendarFeed shape at types.ts:261) and call onAddFeed. Add a one-line clipboard paste-detect: on the input's `onPaste` (and an onFocus navigator.clipboard.readText guarded in try/catch), if the pasted text matches `/^(webcal:|https?:).*\\.ics($|\\?)/i` or starts with `webcal://`, auto-fill the URL and pre-fill the name from the host so it feels magic. No backend, no parser change needed — parseICal/fetchFeed already handle fetch+expand. Optionally export a tiny `normalizeFeedUrl(url)` helper from ical.ts for the webcal->https swap so both Dashboard and the card share it.",
+          "effort": "M",
+          "risk": "Low — purely additive React wiring onto an existing, tested pipeline (setCalendarFeeds already persists via Dashboard.tsx:382 and refreshes via :731). No auth/secrets. Main edge: clipboard read can throw on web without permission, so it must be try/catch'd and never block manual entry. CORS is already handled by platformFetch (Tauri)."
+        },
+        {
+          "title": "Unclip the calendar time grid so early lectures and late shifts render",
+          "files": [
+            "src/components/sections/calendar/CalendarView.tsx"
+          ],
+          "approach": "CalendarView hardcodes GRID_START_HOUR=6 / GRID_END_HOUR=22 (lines 33-34), clipping a 08:00 imported timetable's earlier slots and any event after 22:00 (it computes topPx off GRID_START_HOUR at 333 and the now-line at 229). Make the grid auto-fit the rendered week/day: compute dynamic start/end hours inside TimeGrid from the min start and max end across all timed events in `columns` (fall back to the current 6-22 window when empty, and always clamp to a sensible 0-24 with at least the 6-22 span so a sparse day still looks normal). Pass the computed bounds down to the hour-label loop, hour-lines, now-line %, and event topPx/height math (replace every literal GRID_START_HOUR/GRID_END_HOUR reference, ~lines 213-334). Keep HOUR_PX constant. This guarantees a freshly-pasted timetable shows its 9am lecture and 6pm seminar in full.",
+          "effort": "S",
+          "risk": "Low — self-contained to one component's render math. Risk is an off-by-one in the new min/max hour rounding; mitigated by flooring start-hour and ceiling end-hour and keeping the 6-22 minimum window."
+        },
+        {
+          "title": "Replace the theme-only first-run with a Live-Preview Split Builder that seeds a real topic + deadlines and un-bricks predictTopic",
+          "files": [
+            "src/components/onboarding/WelcomeThemePicker.tsx",
+            "src/components/Dashboard.tsx",
+            "src/lib/worlds.ts"
+          ],
+          "approach": "Rebuild the brand-new-account first-run (gated by the existing `brandNewAccount` + showWelcome path at Dashboard.tsx:306-308 / render at :1382) as a split-screen: left = a 1-2 question intent picker ('What are you here for?' -> Uni / Job hunt / Both, plus the existing Dark/Light choice retained as a compact toggle so chooseWelcomeMood at :340 still fires); right = a LIVE mini-preview of the home filling in. On confirm: (a) build a real seeded topic with the EXISTING machinery — `worldToTopic(findWorld('study'|'job-hunt'), name, order)` (worlds.ts:296; both templates are free and ship full pages+stages) and push it into setTopics; (b) seed 2-3 example deadline items onto that topic via addTopicItem (Dashboard.tsx:673) with deadlines spread across today/this-week so Today, Upcoming and MiniCalendar light up immediately; (c) apply the matching world appearance via applyWorld (worlds.ts:254) for mood/colorBank/font. Keep it fully skippable ('Skip, I'll set up later' -> falls back to today's blank+theme path). Because a topic now exists from capture #1, predictTopic (taskParser.ts:262, which hard-returns null when topics.length===0) becomes useful instantly. Demote the four Onboarding walkthroughs to optional 'Learn more' (they already render conditionally at Dashboard.tsx:1384 and are re-runnable from Settings via replayWalkthroughs).",
+          "effort": "L",
+          "risk": "Medium — touches first-run state orchestration. Must preserve the existing welcomeComplete save (:343) and the brandNewAccount guard so returning users never see it, and seeded items must be clearly example data (prefix/label) so they're easy to delete. No schema/auth touched: topics+deadlines persist through the existing setTopics/save path. Keep the seed idempotent (only when topics.length===0)."
+        },
+        {
+          "title": "Make Today auto-include tasks due today/overdue instead of only the manual daily plan (Variant A core)",
+          "files": [
+            "src/components/widgets/TodayWidget.tsx"
+          ],
+          "approach": "Close the capture-to-Today data leak. TasksSection (TodayWidget.tsx:271) reads STRICTLY from `dailyPlan[todayKey]`, so a task triaged with a deadline of today never appears, even though the widget already computes `priorities()` from deadlineEntries (lines 68-84) independently. Fix: the widget already shows priorities as the top block, so make the 'My plan' block additive rather than the source of truth — relabel/merge so that any item in `priorities()` with bucket 'today' or 'overdue' is guaranteed visible in Today, and have TasksSection UNION the dailyPlan items with the due-today/overdue items from priorities() (dedupe by `${topic.id}-${item.id}`), rather than dailyPlan alone. Items pulled from priorities keep the same stage-pill/advance UI (onAdvanceStage is already in ctx). Demote the manual planner to a clearly-optional 'plan your day' affordance (the empty-state link to dailyPlanner already exists at :296). Net effect: capture -> triage with today's deadline -> appears in Today with zero manual drag.",
+          "effort": "M",
+          "risk": "Low-Medium — contained to one widget. Risk is double-rendering an item in both Priorities and My-plan blocks; mitigated by deduping and/or having Priorities own due-today while My-plan shows only extra planned-but-not-due items. No data writes, read-only aggregation."
+        },
+        {
+          "title": "One-tap 'Add to Today' on Quicks triage and topic tasks",
+          "files": [
+            "src/components/sections/InboxView.tsx",
+            "src/components/Dashboard.tsx",
+            "src/components/widgets/context.ts"
+          ],
+          "approach": "Add a friction-free path from capture to the morning view. In InboxView's row (InboxRow, where onAssign(dest, deadline) is wired at InboxView.tsx:63/120), add a small 'Add to today' action that, on assign, ALSO appends the new item's id to `dailyPlan[todayKey]`. Thread a new optional callback through InboxView props -> Dashboard. In Dashboard, the assign handler already creates the topic item (addTopicItem / the inline onAddTopicItem); extend the onAssign passed to InboxView so when 'add to today' is chosen it also calls setDailyPlan to push that item id under the local-midnight key (mirrors how DailyPlannerView mutates dailyPlan). Since the previous change already makes due-today items appear automatically, this button primarily covers items WITHOUT a today deadline that the user still wants surfaced now. Keep the existing 'Accept all predicted' bulk flow (InboxView.tsx:169) untouched.",
+          "effort": "M",
+          "risk": "Low — additive callback plumbing; dailyPlan already exists in state (Dashboard.tsx:124) and is persisted. Must generate/track the new item id consistently (addTopicItem uses nextId()); to keep it simple, surface the 'add to today' as a post-assign toast/secondary action keyed off the just-created id, or have addTopicItem return the id."
+        },
+        {
+          "title": "Full-screen 'Brain Dump' hero that live-previews messy text as dated, topic-coloured chips with 'File all' (the offline-NLP differentiator)",
+          "files": [
+            "src/components/BrainDump.tsx",
+            "src/components/Dashboard.tsx",
+            "src/lib/taskParser.ts"
+          ],
+          "approach": "Promote the existing parser into a landing-GIF-worthy surface by composing parts that already exist. New BrainDump.tsx: a large textarea where the user pastes/rambles a paragraph; on each change, run the existing parser (the same parseVoiceTasks/predictTopic + extractDeadline machinery in taskParser.ts that VoiceTaskReview already consumes) to live-render each detected task as an editable chip showing predicted topic colour + extracted deadline (reuse the chip/topic-picker UX from VoiceTaskReview.tsx, which already does text edit + TopicChip + deadline display). A single 'File all' button routes each chip through the existing addToInbox (Dashboard.tsx:687) or addTopicItem path — when a chip has a confident predicted topic it files straight in, otherwise it lands in Quicks. Trigger it from a header/quick-add entry point and from the Today/Calendar empty states so it's the hero action for a new user. This is the visible payoff of the offline NLP and pairs the capture loop with the new Today auto-include.",
+          "effort": "L",
+          "risk": "Medium — new component, but built entirely from existing parser + review UI primitives (no new parsing logic, no backend). Risk is re-parsing on every keystroke feeling janky on long input; mitigate by debouncing the parse. Keep it skippable and non-blocking; reuse ParsedTask types so it stays TypeScript-green."
+        }
+      ],
+      "summary": "Seven grounded, bold-but-safe changes for this round, all verified against real files and respecting the no-auth/payments/secrets/CI constraint.\\n\\nPriority 1 (timetable front-door, Variant A): The full .ics pipeline already exists (parseICal/fetchFeed in lib/ical.ts, feedEvents at Dashboard.tsx:741, todayEvents at :753) but setCalendarFeeds is only ever called from storage hydration (:199) — never from UI. The fix is an inline empty-state card in CalendarView with a webcal/.ics URL field + clipboard paste-detect that calls a new onAddFeed -> setCalendarFeeds; the existing refresh effect (:731) fills Calendar and Today automatically. Paired with unclipping the hardcoded GRID_START_HOUR=6/GRID_END_HOUR=22 (CalendarView.tsx:33-34) so imported early/late events render.\\n\\nPriority 2 (guided cold-start, Live-Preview Split Builder): Replace the cosmetic WelcomeThemePicker (gated by brandNewAccount at Dashboard.tsx:306) with a split-screen intent picker that seeds a REAL topic via the existing worldToTopic()/findWorld('study'|'job-hunt') machinery (worlds.ts:296, both free) plus 2-3 example deadlines, lighting up Today/Upcoming/MiniCalendar and flipping predictTopic (taskParser.ts:262, returns null at topics.length===0) to useful from capture #1. Walkthroughs demote to optional.\\n\\nPriority 3 (capture-to-Today gap, Variant A): TodayWidget's TasksSection reads strictly from dailyPlan[todayKey] (:275) while priorities() already computes due-today/overdue from deadlineEntries (:68) — so make Today union them and dedupe, demoting the manual planner. Add one-tap 'Add to today' on Quicks triage (InboxView onAssign). Plus a full-screen Brain Dump hero composing the existing parser + VoiceTaskReview chip UI + addToInbox/addTopicItem for the offline-NLP demo moment.\\n\\nKey files: src/components/sections/calendar/CalendarView.tsx, src/lib/ical.ts, src/components/Dashboard.tsx, src/components/onboarding/WelcomeThemePicker.tsx, src/lib/worlds.ts, src/components/widgets/TodayWidget.tsx, src/components/sections/InboxView.tsx, src/components/VoiceTaskReview.tsx, src/lib/taskParser.ts."
+    }
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Discover"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Board"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Agenda"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Experiments"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 5,
+      "title": "Plan"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "persona:1",
+      "phaseIndex": 1,
+      "phaseTitle": "Discover",
+      "agentId": "aa3164e0586d3b1ef",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779112718,
+      "queuedAt": 1782779112692,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779271569,
+      "tokens": 161907,
+      "toolCalls": 33,
+      "durationMs": 158851,
+      "resultPreview": "{\"opportunities\":[{\"title\":\"Paste-your-timetable: a one-step .ics / timetable import (the missing front door)\",\"area\":\"Calendar / onboarding / integrations\",\"rationale\":\"The single biggest gap for a uni student. The whole feed pipeline already exists and works (calendarFeeds state in Dashboard.tsx:80, fetchFeed/parseICal in src/lib/ical.ts, feedEvents merged into the calendar at Dashboard.tsx:741)…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "persona:2",
+      "phaseIndex": 1,
+      "phaseTitle": "Discover",
+      "agentId": "a3190a90d3d138308",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779112719,
+      "queuedAt": 1782779112692,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779229146,
+      "tokens": 145989,
+      "toolCalls": 20,
+      "durationMs": 116427,
+      "resultPreview": "{\"opportunities\":[{\"title\":\"Client Pulse: a cross-topic command board that shows where every client stands in one glance\",\"area\":\"New section / flagship view (sits alongside Home; reads topics, deadlineEntries, dailyPlan, todayEvents)\",\"rationale\":\"As Tom with 4 clients, the single biggest friction is that the app has NO surface that answers 'where does each client stand right now?' Topics (src/co…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "persona:3",
+      "phaseIndex": 1,
+      "phaseTitle": "Discover",
+      "agentId": "aa3f3d6486958aa2c",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779112720,
+      "queuedAt": 1782779112692,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779213416,
+      "tokens": 158510,
+      "toolCalls": 17,
+      "durationMs": 100696,
+      "resultPreview": "{\"opportunities\":[{\"title\":\"Skip the setup climb: a 60-second guided first-run that builds Priya's whole dashboard in one flow\",\"area\":\"Onboarding / first-run\",\"rationale\":\"Today a brand-new account (Dashboard.tsx brandNewAccount path, DEFAULT_HOME = []) sees a cosmetic Dark/Light picker (WelcomeThemePicker.tsx), then an empty home with a 'Getting started' card offering FOUR separate walkthroughs …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "persona:4",
+      "phaseIndex": 1,
+      "phaseTitle": "Discover",
+      "agentId": "a0309589a346bbee1",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779112721,
+      "queuedAt": 1782779112692,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779272140,
+      "tokens": 106748,
+      "toolCalls": 26,
+      "durationMs": 159419,
+      "resultPreview": "{\"opportunities\":[{\"title\":\"Turn Cmd+K into a real command palette that runs actions, not just a section jumper\",\"area\":\"Global navigation / keyboard speed\",\"rationale\":\"Today Cmd+K (SearchModal.tsx + search.ts) only fuzzy-matches a static index and calls onJump(section) — it cannot DO anything. For a keyboard-first power user this is the single biggest miss. Rebuild it as an action-first palette:…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "ambition",
+      "phaseIndex": 1,
+      "phaseTitle": "Discover",
+      "agentId": "a8c5b0d0d98a85227",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779112722,
+      "queuedAt": 1782779112692,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779246488,
+      "tokens": 95489,
+      "toolCalls": 26,
+      "durationMs": 133766,
+      "resultPreview": "{\"opportunities\":[{\"title\":\"\\\"Brain dump → sorted day\\\" — turn the offline NLP parser into Bozz's signature party trick\",\"area\":\"Capture & triage (taskParser.ts, voiceRouter.ts, QuickCapture.tsx, InboxView.tsx)\",\"rationale\":\"Bozz already has something no competitor ships: a fully OFFLINE, zero-API natural-language engine (src/lib/taskParser.ts + voiceRouter.ts) that splits a rambling sentence into…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "board:CEO",
+      "phaseIndex": 2,
+      "phaseTitle": "Board",
+      "agentId": "abf5799fb3434b32b",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779272168,
+      "queuedAt": 1782779272144,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "CEO",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779322550,
+      "tokens": 44637,
+      "toolCalls": 8,
+      "durationMs": 50382,
+      "resultPreview": "{\"role\":\"CEO\",\"satisfaction\":5,\"verdict\":\"We have built a beautiful, deeply-plumbed engine with no front door. I verified the most damning claim myself: the entire calendar-feed pipeline exists and works (calendarFeeds state, fetchFeed/parseICal, feed events merged into the grid and Today), yet setCalendarFeeds has exactly ONE caller in the whole codebase, Dashboard.tsx itself. No UI anywhere lets…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "board:CPO (Product)",
+      "phaseIndex": 2,
+      "phaseTitle": "Board",
+      "agentId": "a5f438bb08c969573",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779272170,
+      "queuedAt": 1782779272144,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "CPO (Product) — activation, retention, the core daily loop",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779328016,
+      "tokens": 44350,
+      "toolCalls": 9,
+      "durationMs": 55846,
+      "resultPreview": "{\"role\":\"CPO (Product) — activation, retention, the core daily loop\",\"satisfaction\":4,\"verdict\":\"The engine is impressive; the car has no ignition. I verified the three claims that matter most and they all hold. (1) The entire calendar-feed pipeline exists end to end — calendarFeeds state, fetchFeed/parseICal, recurring expansion, merge into the grid and Today — yet setCalendarFeeds is called ONLY…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "board:CTO (Engineering)",
+      "phaseIndex": 2,
+      "phaseTitle": "Board",
+      "agentId": "af87a791fd4254e43",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779272171,
+      "queuedAt": 1782779272144,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "CTO (Engineering)",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779370778,
+      "tokens": 42193,
+      "toolCalls": 10,
+      "durationMs": 98607,
+      "resultPreview": "{\"role\":\"CTO (Engineering)\",\"satisfaction\":5,\"verdict\":\"The engine is real; the ignition is missing. I verified the standout claim directly: the entire calendar-feed pipeline (calendarFeeds state at Dashboard.tsx:80, fetchFeed/parseICal in src/lib/ical.ts, merge into events at Dashboard.tsx:712-748) is fully built and WORKING, yet setCalendarFeeds is never called from any UI surface (only the load…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "board:CMO (Growth)",
+      "phaseIndex": 2,
+      "phaseTitle": "Board",
+      "agentId": "a532a40da36d9a332",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779272172,
+      "queuedAt": 1782779272144,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "CMO (Growth)",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779336979,
+      "tokens": 43359,
+      "toolCalls": 8,
+      "durationMs": 64807,
+      "resultPreview": "{\"role\":\"CMO (Growth)\",\"satisfaction\":4,\"verdict\":\"Bozz has a beautiful engine and no front door. From a growth lens this is the most frustrating possible state: the hard, defensible work is already done, and it is invisible to the person we are trying to win. Three facts decided my read this round. (1) The single most-stated need of our primary user, \\\"one place for my timetable,\\\" is unreachable…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 10,
+      "label": "board:Head of Design",
+      "phaseIndex": 2,
+      "phaseTitle": "Board",
+      "agentId": "a498541e013153e54",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779272173,
+      "queuedAt": 1782779272144,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Head of Design",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779341111,
+      "tokens": 72448,
+      "toolCalls": 17,
+      "durationMs": 68938,
+      "resultPreview": "{\"role\":\"Head of Design\",\"satisfaction\":6,\"verdict\":\"The craft on individual surfaces is real and ahead of the competition. The TodayWidget is a genuinely beautiful auto-generated morning brief (narrated summary line, urgency-coloured priority cards, deadline dots), the spotlight onboarding overlay is polished, the Worlds system is a true aesthetic moat, and the favicon link tiles show care. But t…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 11,
+      "label": "board:COO / Ops",
+      "phaseIndex": 2,
+      "phaseTitle": "Board",
+      "agentId": "a939626414988dcb3",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779272173,
+      "queuedAt": 1782779272145,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "COO / Ops",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779332910,
+      "tokens": 43970,
+      "toolCalls": 11,
+      "durationMs": 60736,
+      "resultPreview": "{\"role\":\"COO / Ops\",\"satisfaction\":5,\"verdict\":\"The engine is real but the front door is bricked up. Three things I verified in code change my whole read of where we are. (1) The entire .ics/timetable pipeline already works end-to-end (calendarFeeds state, fetchFeed/parseICal, feedEvents merged into the calendar at Dashboard.tsx:741) and yet only Dashboard.tsx calls setCalendarFeeds — there is NO …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 12,
+      "label": "agenda",
+      "phaseIndex": 3,
+      "phaseTitle": "Agenda",
+      "agentId": "a43782f5ad85c88a8",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779370805,
+      "queuedAt": 1782779370784,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779438992,
+      "tokens": 40447,
+      "toolCalls": 15,
+      "durationMs": 68186,
+      "resultPreview": "{\"priorities\":[{\"title\":\"Ship the timetable front door: a 'Paste your timetable' card on the empty Calendar AND in first-run\",\"why\":\"Unanimous #1 from all six board members, independently verified in code. The entire .ics pipeline is built and working end-to-end (calendarFeeds state at Dashboard.tsx:80, fetchFeed/parseICal in lib/ical.ts, merged into feedEvents at Dashboard.tsx:741 and todayEvents…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 13,
+      "label": "variants:1",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a520be58083300b37",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779439018,
+      "queuedAt": 1782779438996,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Ship the timetable front door: a \"Paste your timetable\" car…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779541071,
+      "tokens": 67304,
+      "toolCalls": 17,
+      "durationMs": 102053,
+      "resultPreview": "{\"priority\":\"Ship the timetable front door: a \\\"Paste your timetable\\\" card on the empty Calendar AND in first-run, wired to setCalendarFeeds, plus unclip the calendar grid (GRID_START_HOUR/END_HOUR).\",\"variants\":[{\"name\":\"Variant A — Inline empty-state card on the Calendar\",\"approach\":\"Lowest-risk, highest-fit realisation. Thread two new props into CalendarView (rendered at Dashboard.tsx:1431): c…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 14,
+      "label": "variants:2",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a9797919c22b4d0dc",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779439019,
+      "queuedAt": 1782779438996,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Guided cold-start that seeds a live dashboard and un-bricks…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779548650,
+      "tokens": 49428,
+      "toolCalls": 24,
+      "durationMs": 109631,
+      "resultPreview": "{\"priority\":\"Guided cold-start that seeds a live dashboard and un-bricks the NLP\",\"variants\":[{\"name\":\"Conversational Intent Picker (drop-in WelcomeThemePicker replacement)\",\"approach\":\"The most surgical, lowest-risk variant: replace the body of the existing first-run gate without touching its plumbing. Keep the exact `showWelcome` state, the `brandNewAccount` guard (Dashboard.tsx:306-308), and th…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 15,
+      "label": "variants:3",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "aa841aa8ffb0daea4",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779439020,
+      "queuedAt": 1782779438996,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Close the capture-to-Today gap and make brain-dump the hero…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779606626,
+      "tokens": 99998,
+      "toolCalls": 27,
+      "durationMs": 167606,
+      "resultPreview": "{\"priority\":\"Close the capture-to-Today gap and make brain-dump the hero, so capture finally pays off in the morning view. GROUND-TRUTH CORRECTION (verified by reading the code): the prompt's cited bug (TodayWidget.tsx:275 reads STRICTLY from dailyPlan, so a triaged due-today task never appears) is now PARTLY STALE. A prior round already shipped src/components/widgets/TodayWidget.tsx (registered a…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 16,
+      "label": "judge:1.1",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a83a585e0d6a590c2",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779541092,
+      "queuedAt": 1782779541074,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Variant B — First-run 'Add your timetable' step woven into …",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779615085,
+      "tokens": 37148,
+      "toolCalls": 15,
+      "durationMs": 73993,
+      "resultPreview": "{\"preferred\":\"Variant B — First-run 'Add your timetable' step woven into onboarding/welcome\",\"why\":\"As Maya, a first-year who just installed this, Variant B is the one that actually changes my life on day one. The whole pitch is \\\"your morning in 90 seconds,\\\" but that promise is empty if my week is empty. Variant A is genuinely clean and I'd be happy it exists, but it only fires once I've already…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 17,
+      "label": "judge:1.2",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a4929b06e6d59b4a5",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779541093,
+      "queuedAt": 1782779541075,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Variant A — Inline empty-state card on the Calendar",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779585615,
+      "tokens": 32660,
+      "toolCalls": 11,
+      "durationMs": 44521,
+      "resultPreview": "{\"preferred\":\"Variant A — Inline empty-state card on the Calendar\",\"why\":\"As Tom, a freelancer (not a student with a single university timetable), I want the timetable front door to feel like a tool I reach for, not a hoop I jump through at first run. Variant A puts the \\\"Paste your timetable\\\" card exactly where my intent already is: the empty Calendar tab. When I open Calendar and see nothing, a…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 18,
+      "label": "judge:1.3",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a77f4f085feda772b",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779541094,
+      "queuedAt": 1782779541075,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Variant A — Inline empty-state card on the Calendar",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779612614,
+      "tokens": 34708,
+      "toolCalls": 12,
+      "durationMs": 71520,
+      "resultPreview": "{\"preferred\":\"Variant A — Inline empty-state card on the Calendar\",\"why\":\"As Sam (power user), I'd pick Variant A, and I verified why against the actual code, not the pitch.\\n\\nThe data path all three share is genuinely cheap and safe: calendarFeeds/setCalendarFeeds already exist (Dashboard.tsx:80), and the refresh effect auto-fires on any feed change (Dashboard.tsx:711-748 — refreshFeeds gated on…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 19,
+      "label": "judge:2.1",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a554a62dab35f3e8f",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779548654,
+      "queuedAt": 1782779548653,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Live-Preview Split Builder (see-your-dashboard-fill-in)",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779598848,
+      "tokens": 34574,
+      "toolCalls": 13,
+      "durationMs": 50193,
+      "resultPreview": "{\"preferred\":\"Live-Preview Split Builder (see-your-dashboard-fill-in)\",\"why\":\"As Maya, a first-year student, the thing that would actually make me trust a new app in the first 30 seconds is SEEING my dashboard come alive, not being told it will. The split builder does that: I tap \\\"Uni\\\" and the right panel immediately washes in a wallpaper, drops a Study topic in the sidebar, and lights up Today/…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 20,
+      "label": "judge:2.2",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "aa83c2b5fde2a61dc",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779548656,
+      "queuedAt": 1782779548653,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Zero-Question Smart Seed + First-Capture Teach (NLP-first, …",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779595644,
+      "tokens": 34804,
+      "toolCalls": 12,
+      "durationMs": 46988,
+      "resultPreview": "{\"preferred\":\"Zero-Question Smart Seed + First-Capture Teach (NLP-first, ask-nothing)\",\"why\":\"As Tom the freelancer, my time IS my money and \\\"your morning in 90 seconds\\\" is the whole reason I'd try this. The other two variants both make me stop and answer a quiz before I see anything useful. I don't want to fill in a form to find out if an app is worth my time. The first thing I want is to LAND …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 21,
+      "label": "judge:2.3",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "acbd89667f83d2738",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779548656,
+      "queuedAt": 1782779548653,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Live-Preview Split Builder (see-your-dashboard-fill-in)",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779619483,
+      "tokens": 43095,
+      "toolCalls": 16,
+      "durationMs": 70827,
+      "resultPreview": "{\"preferred\":\"Live-Preview Split Builder (see-your-dashboard-fill-in)\",\"why\":\"As Sam (power user), this is the one I'd actually choose, and it best serves the stated goal: \\\"Guided cold-start that seeds a live dashboard AND un-bricks the NLP.\\\" It is the only variant where both halves of the goal are made visible at the moment of decision, not merely promised or silently enabled.\\n\\nWhy it beats t…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 22,
+      "label": "judge:3.1",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a6c419a19a597f5cb",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779606632,
+      "queuedAt": 1782779606630,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Variant A — Close the last leak: make Today consume untriag…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779657670,
+      "tokens": 55436,
+      "toolCalls": 9,
+      "durationMs": 51037,
+      "resultPreview": "{\"preferred\":\"Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions (surgical, highest-trust, smallest diff)\",\"why\":\"As Maya (first-year, terrified of missing a deadline) I picked A because it fixes the exact thing that makes me distrust this app. I verified the bug is real: InboxItem already carries a deadline (types.ts line 160) and the parser even stamps one on …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 23,
+      "label": "judge:3.2",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a8d819d03aa4b8c88",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779606634,
+      "queuedAt": 1782779606631,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Variant A — Close the last leak: make Today consume untriag…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779656078,
+      "tokens": 48419,
+      "toolCalls": 10,
+      "durationMs": 49444,
+      "resultPreview": "{\"preferred\":\"Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions (surgical, highest-trust, smallest diff)\",\"why\":\"As Tom, a freelancer who already lives in this app daily, Variant A fixes the exact thing that actually burns me — and I verified the bug is real in the code, not hypothetical. deadlineEntries() in src/components/widgets/util.ts (lines 11-29) only wa…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 24,
+      "label": "judge:3.3",
+      "phaseIndex": 4,
+      "phaseTitle": "Experiments",
+      "agentId": "a3ce198481f28961a",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779606635,
+      "queuedAt": 1782779606631,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Variant A — Close the last leak: make Today consume untriag…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779691726,
+      "tokens": 39710,
+      "toolCalls": 15,
+      "durationMs": 85091,
+      "resultPreview": "{\"preferred\":\"Variant A — Close the last leak: make Today consume untriaged Quicks + one-tap actions\",\"why\":\"As Sam (power user), the daily pain isn't cold-start or a missing demo screen — it's silent data loss. I verified the leak is exactly as A states: priorities() in TodayWidget calls deadlineEntries() in util.ts, which iterates ONLY ctx.topics and never touches the inbox. So a Ctrl+B \\\"submit…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 25,
+      "label": "plan",
+      "phaseIndex": 5,
+      "phaseTitle": "Plan",
+      "agentId": "ac5d36957078fb672",
+      "model": "claude-opus-4-8",
+      "state": "done",
+      "startedAt": 1782779691749,
+      "queuedAt": 1782779691728,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Seven grounded, bold-but-safe changes for this round, all v…",
+      "promptPreview": "Project: Bozz, a personal life dashboard (React 19 + TypeScript + Vite; Tauri desktop + web PWA). Repo root: C:\\Users\\augbo\\1.Personal\\ClaudesPlayground\\Aug-dashboard. Primary user: students and young people organising their life. North star: \"your morning in 90 seconds\". The app has: a home grid of widgets (today, upcoming deadlines, pomodoro, quick-add, weather, clock, budget, habits, mini-calen…",
+      "lastProgressAt": 1782779827093,
+      "tokens": 85481,
+      "toolCalls": 32,
+      "durationMs": 135344,
+      "resultPreview": "{\"changes\":[{\"title\":\"Ship the timetable front-door: inline 'Paste your timetable' card on the empty Calendar (Variant A)\",\"files\":[\"src/components/sections/calendar/CalendarView.tsx\",\"src/components/Dashboard.tsx\",\"src/lib/ical.ts\"],\"approach\":\"Wire the existing-but-unreachable .ics pipeline to a UI. Add an `onAddFeed?: (feed: CalendarFeed) => void` prop to CalendarView (Dashboard passes `feed =>…"
+    }
+  ],
+  "totalTokens": 1662812,
+  "totalToolCalls": 413
+}

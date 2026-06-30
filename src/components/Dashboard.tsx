@@ -49,6 +49,7 @@ import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
 import Onboarding from './onboarding/Onboarding';
 import WelcomeThemePicker from './onboarding/WelcomeThemePicker';
+import WelcomeColdStart from './onboarding/WelcomeColdStart';
 import FirstHoverHints from './shared/FirstHoverHint';
 import CalendarView from './sections/calendar/CalendarView';
 import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../lib/calendar';
@@ -111,8 +112,10 @@ export default function Dashboard() {
   // is complete, so "Replay walkthroughs" in Settings can always bring it back.
   const [onbForced, setOnbForced] = useState(false);
   const onbInit = useRef(false);
-  // First-run theme picker — shown once to brand-new accounts before anything else.
-  const [showWelcome, setShowWelcome] = useState(false);
+  // First-run flow — shown once to brand-new accounts before anything else.
+  // 'theme' = pick dark/light, then 'coldstart' = guided "what are you here for?"
+  // seeding, then null = done. Both steps are skippable.
+  const [welcomePhase, setWelcomePhase] = useState<'theme' | 'coldstart' | null>(null);
   // Topic/folder rename modal (opened from sidebar edit mode); declared early so
   // the onboarding ctx signals below can read the topic being edited.
   const [editTopicId, setEditTopicId] = useState<string | null>(null);
@@ -305,7 +308,7 @@ export default function Dashboard() {
       const welcomeChosen = await getItem('welcomeComplete');
       const brandNewAccount = !appearanceLoaded && !loadedHomeItems
         && (!loadedTopics || loadedTopics.length === 0);
-      if (welcomeChosen?.value == null && brandNewAccount) setShowWelcome(true);
+      if (welcomeChosen?.value == null && brandNewAccount) setWelcomePhase('theme');
 
       setLoading(false);
       initBackup();
@@ -339,7 +342,29 @@ export default function Dashboard() {
 
   const chooseWelcomeMood = (mood: 'dark' | 'light') => {
     setAppearance(a => ({ ...a, mood }));
-    setShowWelcome(false);
+    // Advance to the guided cold-start step rather than finishing here, so a
+    // brand-new account lands on a populated dashboard, not an empty home.
+    setWelcomePhase('coldstart');
+  };
+
+  // Guided cold-start: seed a real topic (with sample timed deadlines) + the
+  // matching home layout from the user's "what are you here for?" answer. Only
+  // ever runs for brand-new accounts (gated by welcomePhase), so existing users
+  // are unaffected.
+  const chooseColdStart = (option: import('../lib/coldStart').ColdStartOption) => {
+    void (async () => {
+      const { seedColdStart } = await import('../lib/coldStart');
+      const { topic, homeItems: seededHome } = seedColdStart(option);
+      setTopics(prev => [...prev, topic]);
+      setHomeItems(seededHome);
+      setActiveSection('home');
+      setWelcomePhase(null);
+      void save('welcomeComplete', true);
+    })();
+  };
+
+  const skipColdStart = () => {
+    setWelcomePhase(null);
     void save('welcomeComplete', true);
   };
 
@@ -1379,7 +1404,10 @@ export default function Dashboard() {
 
 
         <main>
-          {showWelcome && <WelcomeThemePicker onChoose={chooseWelcomeMood} />}
+          {welcomePhase === 'theme' && <WelcomeThemePicker onChoose={chooseWelcomeMood} />}
+          {welcomePhase === 'coldstart' && (
+            <WelcomeColdStart onChoose={chooseColdStart} onSkip={skipColdStart} />
+          )}
           <FirstHoverHints />
           {(activeSection === 'home' || onbKeepMounted) && showOnboarding && (
             <ErrorBoundary label="the getting-started guide">
@@ -1431,6 +1459,8 @@ export default function Dashboard() {
             <CalendarView
               t={t}
               feedEvents={feedEvents}
+              calendarFeeds={calendarFeeds}
+              onAddFeed={(feed) => setCalendarFeeds(prev => [...prev, feed])}
               topics={topics}
               onAddTopicItem={(topicId, text, deadline) => {
                 setTopics(prev => prev.map(tp =>

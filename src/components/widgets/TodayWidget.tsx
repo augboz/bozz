@@ -268,12 +268,22 @@ function EventsSection({ events, t, setActiveSection }: {
   );
 }
 
-function TasksSection({ ctx, todayKey }: { ctx: WidgetCtx; todayKey: string }) {
+function TasksSection({ ctx, todayKey, prios = [] }: { ctx: WidgetCtx; todayKey: string; prios?: Priority[] }) {
   const { t, topics, dailyPlan, onAdvanceStage } = ctx;
   if (!topics || !dailyPlan) return null;
 
+  type Row = {
+    item: { id: number; text: string };
+    topic: NonNullable<typeof topics>[number];
+    stage: NonNullable<typeof topics>[number]['stages'][number] | undefined;
+    isDone: boolean;
+    /** From a today/overdue deadline rather than the manual plan. */
+    fromDeadline?: boolean;
+  };
+
+  // 1. The manually-curated daily plan (kept — the planner ritual still works).
   const ids = (dailyPlan[todayKey] ?? []).map(Number);
-  const items = ids.flatMap(id => {
+  const planned: Row[] = ids.flatMap(id => {
     for (const topic of topics) {
       const item = topic.items.find(it => it.id === id);
       if (item) {
@@ -283,6 +293,24 @@ function TasksSection({ ctx, todayKey }: { ctx: WidgetCtx; todayKey: string }) {
     }
     return [];
   });
+  const plannedIds = new Set(ids);
+
+  // 2. Surface tasks whose deadline is today or overdue (from the already-computed
+  //    priorities) so a captured + dated + triaged task lands in the morning view
+  //    without the manual planner step. Dedupe against the plan so nothing doubles.
+  const dueRows: Row[] = [];
+  for (const p of prios) {
+    if (p.bucket !== 'overdue' && p.bucket !== 'today') continue;
+    if (plannedIds.has(p.item.id as number)) continue;
+    const topic = topics.find(tp => tp.id === p.section);
+    if (!topic) continue;
+    const full = topic.items.find(it => it.id === p.item.id);
+    if (!full) continue;
+    const stage = topic.stages.find(s => s.id === full.stageId);
+    dueRows.push({ item: full, topic, stage, isDone: stage?.done ?? false, fromDeadline: true });
+  }
+
+  const items = [...planned, ...dueRows];
 
   // Non-done first
   const sorted = [...items].sort((a, b) => Number(a.isDone) - Number(b.isDone));
@@ -303,8 +331,8 @@ function TasksSection({ ctx, todayKey }: { ctx: WidgetCtx; todayKey: string }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-      {visible.map(({ item, topic, stage, isDone }) => {
-        const idx = topic.stages.findIndex(s => s.id === item.stageId);
+      {visible.map(({ item, topic, stage, isDone, fromDeadline }) => {
+        const idx = topic.stages.findIndex(s => s.id === stage?.id);
         const isLastStage = idx === topic.stages.length - 1;
         const stageColor = stage?.color ?? topic.color;
         return (
@@ -345,6 +373,16 @@ function TasksSection({ ctx, todayKey }: { ctx: WidgetCtx; todayKey: string }) {
             }}>
               {item.text}
             </span>
+
+            {/* "due" marker for tasks pulled in by their deadline (not the manual plan) */}
+            {fromDeadline && !isDone && (
+              <span style={{
+                fontSize: '0.55rem', fontWeight: 600, letterSpacing: '0.04em',
+                color: WARNING, flexShrink: 0, whiteSpace: 'nowrap',
+              }}>
+                due
+              </span>
+            )}
 
             {/* Topic colour dot */}
             <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: topic.color, flexShrink: 0 }} />
@@ -399,7 +437,13 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const timedCount = todayEvents.filter(e => !e.allDay).length;
   const allDayCount = todayEvents.filter(e => e.allDay && e.source !== 'deadline').length;
-  const taskCount = (ctx.dailyPlan?.[todayKey] ?? []).length;
+  // "My plan" now also surfaces today/overdue deadlines, deduped against the plan,
+  // so the count reflects everything actually shown — not just the manual plan.
+  const plannedIds = new Set((ctx.dailyPlan?.[todayKey] ?? []).map(Number));
+  const dueExtra = prios.filter(
+    p => (p.bucket === 'overdue' || p.bucket === 'today') && !plannedIds.has(p.item.id as number),
+  ).length;
+  const taskCount = plannedIds.size + dueExtra;
 
   // Section labels are only shown when more than one block is visible (keeps the
   // single-block layout clean). Priorities always counts as a block.
@@ -444,7 +488,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
               {labelled && <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />}
               <div>
                 {labelled && <SectionLabel icon={Check} label="My plan" count={taskCount} t={t} />}
-                <TasksSection ctx={ctx} todayKey={todayKey} />
+                <TasksSection ctx={ctx} todayKey={todayKey} prios={prios} />
               </div>
             </>
           )}
