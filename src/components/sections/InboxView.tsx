@@ -246,8 +246,8 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign, onCrea
           fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.55,
         }}>
           {onCreateTopicFromQuick
-            ? <>No topics yet — hit <strong style={{ color: t.text }}>new topic</strong> on any quick below to spin one up from it, or create topics in <strong style={{ color: t.text }}>Settings → Topics</strong>.</>
-            : <>You have items but no topics yet — create a topic in <strong style={{ color: t.text }}>Settings → Topics</strong> to send these somewhere.</>}
+            ? <>No topics yet. Hit <strong style={{ color: t.text }}>new topic</strong> on any quick below to spin one up from it, or create topics in <strong style={{ color: t.text }}>Settings → Topics</strong>.</>
+            : <>You have items but no topics yet. Create a topic in <strong style={{ color: t.text }}>Settings → Topics</strong> to send these somewhere.</>}
         </div>
       )}
       <div style={{ display: 'grid', gap: '0.4rem' }}>

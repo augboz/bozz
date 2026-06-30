@@ -108,7 +108,7 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
       <div style={{ display: 'grid', gap: '0.4rem' }}>
         {settings.rules.length === 0 && (
           <p style={{ fontSize: '0.75rem', color: t.textDim, fontStyle: 'italic', margin: '0.2rem 0' }}>
-            No rules yet — add a sender or keyword to watch for.
+            No rules yet. Add a sender or keyword to watch for.
           </p>
         )}
         {settings.rules.map(r => (
@@ -155,7 +155,7 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
             </select>
             <input
               value={value} onChange={e => setValue(e.target.value)}
-              placeholder={type === 'sender' ? 'email or domain — lloyds.com' : 'word or phrase — interview'}
+              placeholder={type === 'sender' ? 'email or domain, e.g. lloyds.com' : 'word or phrase, e.g. interview'}
               onKeyDown={e => e.key === 'Enter' && addRule()}
               style={{ ...inp, flex: 1 }}
             />

@@ -224,7 +224,7 @@ function AppleHealthModal({ t, userRef, onSync, onClose }: {
         {stage === 'idle' && (
           <>
             <div style={{ fontSize: '0.84rem', color: t.textMuted, lineHeight: 1.65, marginBottom: '1.25rem' }}>
-              Connect Apple Health using <strong style={{ color: t.text }}>Terra</strong> — a health data bridge that
+              Connect Apple Health using <strong style={{ color: t.text }}>Terra</strong>, a health data bridge that
               links your iPhone's Health app to this dashboard. Your data syncs automatically and is stored securely in your account.
             </div>
             <button
@@ -300,7 +300,7 @@ function AppleHealthModal({ t, userRef, onSync, onClose }: {
                   fontSize: '0.86rem', fontWeight: 500, cursor: 'pointer',
                 }}
               >
-                I've connected — sync data
+                I've connected, sync data
               </button>
             </div>
           </>

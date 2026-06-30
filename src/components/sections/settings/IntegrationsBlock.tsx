@@ -416,7 +416,7 @@ function GmailCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
           <AccountRow
             key={a.email} t={t} label={a.email}
             subLabel={a.lastSync ? `synced ${formatDistanceToNowStrict(a.lastSync, { addSuffix: true })}` : 'not synced yet'}
-            error={needsReauth ? 'Session expired — click Re-authorize' : err}
+            error={needsReauth ? 'Session expired. Click Re-authorize' : err}
             onDisconnect={() => onDisconnect(a.email)}
             onReauth={needsReauth && configured ? async () => {
               setBusy(true);
@@ -629,7 +629,7 @@ async function connectNotionOAuth(
   const portPromise = new Promise<void>((resolve, reject) => {
     portReject = reject;
     const timer = setTimeout(
-      () => reject(new Error('OAuth timed out — click Try again')),
+      () => reject(new Error('OAuth timed out. Click Try again')),
       8000,
     );
     let unlisten: (() => void) | null = null;
@@ -644,7 +644,7 @@ async function connectNotionOAuth(
   runPromise.catch((e: unknown) => {
     const msg = String(e);
     if (msg.includes('10048') || msg.includes('in use') || msg.includes('already')) {
-      portReject(new Error('Port still held from previous attempt — click Try again'));
+      portReject(new Error('Port still held from previous attempt. Click Try again'));
     } else {
       portReject(new Error(msg));
     }
@@ -677,7 +677,7 @@ async function connectNotionOAuth(
   const params = await runPromise;
   if (params.error) throw new Error(`Notion: ${params.error}`);
   if (!params.code) throw new Error('Notion returned no code');
-  if (params.state !== state) throw new Error('State mismatch — possible CSRF');
+  if (params.state !== state) throw new Error('State mismatch. Possible CSRF');
 
   // Token exchange via server proxy — Notion client secret stays server-side
   const tokenRes = await apiFetch(`${API_BASE}/api/notion-token`, {
@@ -1008,7 +1008,7 @@ async function connectOAuthWindow(opts: {
   let portReject: (e: Error) => void = () => {};
   const portPromise = new Promise<void>((resolve, reject) => {
     portReject = reject;
-    const timer = setTimeout(() => reject(new Error('OAuth timed out — click Try again')), 8000);
+    const timer = setTimeout(() => reject(new Error('OAuth timed out. Click Try again')), 8000);
     let unlisten: (() => void) | null = null;
     tauriListen<number>('oauth:port', () => { clearTimeout(timer); if (unlisten) unlisten(); resolve(); }).then(fn => { unlisten = fn; });
   });
@@ -1027,7 +1027,7 @@ async function connectOAuthWindow(opts: {
 
   const params = await runPromise;
   if (params.error) throw new Error(`${opts.provider}: ${params.error}`);
-  if (!params.code || params.state !== state) throw new Error('OAuth failed — please try again');
+  if (!params.code || params.state !== state) throw new Error('OAuth failed. Please try again');
 
   const res = await apiFetch(`${API_BASE}/api/${opts.provider}-token`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1051,7 +1051,7 @@ function StravaCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v
   }, []);
 
   const connect = async () => {
-    if (!ENV.stravaClientId) { setError('Strava needs setup — add VITE_STRAVA_CLIENT_ID and an /api/strava-token endpoint.'); return; }
+    if (!ENV.stravaClientId) { setError('Strava needs setup. Add VITE_STRAVA_CLIENT_ID and an /api/strava-token endpoint.'); return; }
     if (isWeb()) { setError('Connect requires the desktop app.'); return; }
     setBusy(true); setError(null);
     try {
@@ -1096,7 +1096,7 @@ function ZoomCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: 
   }, []);
 
   const connect = async () => {
-    if (!ENV.zoomClientId) { setError('Zoom needs setup — add VITE_ZOOM_CLIENT_ID and an /api/zoom-token endpoint.'); return; }
+    if (!ENV.zoomClientId) { setError('Zoom needs setup. Add VITE_ZOOM_CLIENT_ID and an /api/zoom-token endpoint.'); return; }
     if (isWeb()) { setError('Connect requires the desktop app.'); return; }
     setBusy(true); setError(null);
     try {
@@ -1456,7 +1456,7 @@ function GoogleCalendarCard({ t, connections, onChange, bank }: {
       details={connected.map(c => (
         <AccountRow
           key={c.email} t={t} label={c.email}
-          subLabel={c.lastSync ? `synced ${formatDistanceToNowStrict(c.lastSync, { addSuffix: true })}` : 'connected — events coming soon'}
+          subLabel={c.lastSync ? `synced ${formatDistanceToNowStrict(c.lastSync, { addSuffix: true })}` : 'connected, events coming soon'}
           onDisconnect={() => disconnect(c.email)}
           color={c.color}
           onColorChange={(col) => onChange(connections.map(x =>
@@ -1511,7 +1511,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
   if (isWeb()) {
     return (
       <Card t={t} brand="acal" color="#555" letter="" name="Apple Calendar"
-        status="Desktop app only — CalDAV requires direct server access"
+        status="Desktop app only. CalDAV requires direct server access"
         action={null}>
         <div style={{ fontSize: '0.75rem', color: t.textMuted, marginTop: '0.35rem' }}>
           Apple Calendar requires the desktop app. Open BOZZ on your Mac or PC to connect.
@@ -1530,7 +1530,7 @@ function AppleCalendarCard({ t, connections, onChange, bank }: {
       details={connected.map(c => (
         <AccountRow
           key={c.email} t={t} label={c.email}
-          subLabel={c.lastSync ? `synced ${formatDistanceToNowStrict(c.lastSync, { addSuffix: true })}` : 'connected — events coming soon'}
+          subLabel={c.lastSync ? `synced ${formatDistanceToNowStrict(c.lastSync, { addSuffix: true })}` : 'connected, events coming soon'}
           onDisconnect={() => void disconnect(c.email)}
           color={c.color}
           onColorChange={(col) => onChange(connections.map(x =>
@@ -1592,7 +1592,7 @@ function GoogleFitCard({ t, connections, onChange }: {
   return (
     <Card
       t={t} brand="gfit" color="#4285F4" letter="G" name="Google Fit" connected={connected.length > 0}
-      status={connected.length ? '● Connected — steps & sleep synced' : 'Sync steps, sleep & activity'}
+      status={connected.length ? '● Connected, steps & sleep synced' : 'Sync steps, sleep & activity'}
       action={connected.length
         ? <DisconnectBtn t={t} onClick={disconnect} />
         : configured

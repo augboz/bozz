@@ -36,7 +36,7 @@ export default function ColorBankPicker({
       <div style={{
         fontSize: '0.68rem', color: '#888', fontStyle: 'italic', padding: '0.2rem 0',
       }}>
-        No colours in bank — add some in Settings → Appearance.
+        No colours in bank. Add some in Settings → Appearance.
       </div>
     );
   }

@@ -117,7 +117,7 @@ export default function WorldsView({
       />
 
       <p style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.55, margin: '0 0 0.9rem', fontWeight: 300 }}>
-        <strong style={{ color: t.text, fontWeight: 500 }}>Themes</strong> restyle Bozz — colour,
+        <strong style={{ color: t.text, fontWeight: 500 }}>Themes</strong> restyle Bozz: colour,
         wallpaper and font. <strong style={{ color: t.text, fontWeight: 500 }}>Templates</strong> are
         ready-made pages with widgets for a specific job. Tap any to preview, then choose where it lands.
       </p>
@@ -308,8 +308,8 @@ function PreviewModal({
           <MiniLayout t={t} world={world} blurred={!world.free} home={showHome} />
           <div style={{ fontSize: '0.7rem', color: t.textDim, marginTop: '0.45rem', textAlign: 'center' }}>
             {showHome
-              ? 'How your home looks with this World applied — the look only.'
-              : (world.free ? 'The page this drops in — tap Apply to add it.' : 'The page this drops in. Plus is free while in beta.')}
+              ? 'How your home looks with this World applied. The look only.'
+              : (world.free ? 'The page this drops in. Tap Apply to add it.' : 'The page this drops in. Plus is free while in beta.')}
           </div>
         </div>
 
@@ -373,7 +373,7 @@ function PreviewModal({
               <div style={{ marginBottom: '0.9rem' }}>
                 <label style={{ fontSize: '0.74rem', color: t.textMuted, display: 'block', marginBottom: '0.3rem' }}>Apply its look to</label>
                 {topics.length === 0 ? (
-                  <p style={{ fontSize: '0.74rem', color: t.textDim, fontStyle: 'italic', margin: 0 }}>No topics yet — create one first.</p>
+                  <p style={{ fontSize: '0.74rem', color: t.textMuted, lineHeight: 1.5, margin: 0 }}>No topics yet. Create one first.</p>
                 ) : (
                   <select value={targetTopic} onChange={e => setTargetTopic(e.target.value)} style={inp}>
                     {topics.map(tp => <option key={tp.id} value={tp.id}>{tp.name || 'New topic'}</option>)}
@@ -403,7 +403,7 @@ function PreviewModal({
         ) : (
           <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '0.9rem' }}>
             <p style={{ fontSize: '0.78rem', color: t.textMuted, margin: '0 0 0.7rem', lineHeight: 1.5 }}>
-              This is a Plus World — it comes with a ready-made section and look. Plus is free while
+              This is a Plus World. It comes with a ready-made section and look. Plus is free while
               in beta.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>

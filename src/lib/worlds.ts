@@ -67,7 +67,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   // ── Themes — aesthetic only (mood, font, wallpaper) ──────────────────────────
   world({
     id: 'default', name: 'Default', free: true, kind: 'theme',
-    description: 'Bozz as it comes — clean and calm.',
+    description: 'Bozz as it comes. Clean and calm.',
     mood: 'dark', font: 'inter', accent: '#6ba8d4',
     colorBank: ['#6ba8d4', '#7dbf9a', '#d4c860', '#d4a86a', '#d47a7a', '#6abfbf'],
     widgetShape: 'rounded', widgetBorder: 'subtle',
@@ -83,7 +83,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'tokyo-night', name: 'Tokyo Night', free: true, kind: 'theme',
-    description: 'Neon dusk — deep indigo with electric magenta.',
+    description: 'Neon dusk: deep indigo with electric magenta.',
     mood: 'dark', font: 'geist', accent: '#7aa2f7',
     colorBank: ['#7aa2f7', '#bb9af7', '#f7768e', '#7dcfff', '#9ece6a', '#e0af68'],
     widgetShape: 'rounded', widgetBorder: 'subtle',
@@ -99,7 +99,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'forest-calm', name: 'Forest Calm', free: true, kind: 'theme',
-    description: 'Deep pine greens and moss — grounded and still.',
+    description: 'Deep pine greens and moss. Grounded and still.',
     mood: 'dark', font: 'inter', accent: '#7dbf9a',
     colorBank: ['#7dbf9a', '#a3c98a', '#5e9d7a', '#c8d6a0', '#4a7d63', '#9bbf7d'],
     widgetShape: 'rounded', widgetBorder: 'subtle',
@@ -107,7 +107,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'nordic-frost', name: 'Nordic Frost', free: true, kind: 'theme',
-    description: 'Cool slate and glacier blue — crisp and bright.',
+    description: 'Cool slate and glacier blue. Crisp and bright.',
     mood: 'light', font: 'geist', accent: '#5b8fb0',
     colorBank: ['#5b8fb0', '#7fb0c9', '#a7c7d9', '#4a7a96', '#88a8bd', '#c2dae6'],
     widgetShape: 'sharp', widgetBorder: 'normal',
@@ -120,7 +120,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   // Two are free (activation); the rest are Plus (preview teased, names shown).
   world({
     id: 'study', name: 'Study', free: true, kind: 'template',
-    description: 'Assignments, revision and deadlines — with a timetable and a focus timer.',
+    description: 'Assignments, revision and deadlines, with a timetable and a focus timer.',
     mood: 'light', font: 'manrope', accent: '#5b8fb0', icon: 'study',
     colorBank: ['#5b8fb0', '#7da7d9', '#9b8cc4', '#7fc8a9', '#e0b06a', '#c98a8a'],
     widgetShape: 'rounded', widgetBorder: 'normal',
@@ -161,7 +161,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'shopping', name: 'Shopping', free: false, kind: 'template',
-    description: 'Lists, wishlists and a budget — one calm place to shop.',
+    description: 'Lists, wishlists and a budget, one calm place to shop.',
     mood: 'warm', font: 'quicksand', accent: '#d4756a', icon: 'shopping',
     colorBank: ['#d4756a', '#e0936b', '#d9b06a', '#c98a7a', '#b8625a', '#e8c4a0'],
     widgetShape: 'pill', widgetBorder: 'normal',
@@ -176,7 +176,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'family', name: 'Family', free: false, kind: 'template',
-    description: "Your child's week — schedule, to-dos, routines and the things you can't forget.",
+    description: "Your child's week: schedule, to-dos, routines and the things you can't forget.",
     mood: 'warm', font: 'quicksand', accent: '#7bb274', icon: 'social',
     colorBank: ['#7bb274', '#e0b358', '#7da7d9', '#e08a8a', '#bb9af7', '#9cc7a0'],
     widgetShape: 'rounded', widgetBorder: 'normal',
@@ -192,7 +192,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'holiday', name: 'Holiday', free: false, kind: 'template',
-    description: 'Plan a trip — packing, budget, itinerary and the destination forecast.',
+    description: 'Plan a trip: packing, budget, itinerary and the destination forecast.',
     mood: 'light', font: 'manrope', accent: '#4fb0a6', icon: 'travel',
     colorBank: ['#4fb0a6', '#6fc8c0', '#e0b878', '#e89a6a', '#7fb0d0', '#a7d9d2'],
     widgetShape: 'pill', widgetBorder: 'normal',
@@ -208,7 +208,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'calm', name: 'Calm', free: false, kind: 'template',
-    description: 'A quiet corner — journal, gentle habits and a slow to-do.',
+    description: 'A quiet corner: journal, gentle habits and a slow to-do.',
     mood: 'dark', font: 'fraunces', accent: '#8aa892', icon: 'nature',
     colorBank: ['#8aa892', '#a3bca8', '#b6a890', '#9a8f7a', '#7d9488', '#c4b8a0'],
     widgetShape: 'rounded', widgetBorder: 'subtle',
@@ -223,7 +223,7 @@ export const BUNDLED_WORLDS: BozzWorld[] = [
   }),
   world({
     id: 'deep-work', name: 'Deep Work', free: false, kind: 'template',
-    description: 'Heads-down focus — a timer, your tasks and nothing else.',
+    description: 'Heads-down focus: a timer, your tasks and nothing else.',
     mood: 'dark', font: 'mono', accent: '#8ab4f8', icon: 'energy',
     colorBank: ['#8ab4f8', '#9aa5b5', '#c0c8d4', '#6a8fd0', '#7d8694', '#b0c4de'],
     widgetShape: 'sharp', widgetBorder: 'subtle',

@@ -445,7 +445,7 @@ function TimeGrid({
                 return (
                   <div
                     key={event.id}
-                    title={`${minToLabel(sm)}–${minToLabel(em)} · ${event.title}`}
+                    title={`${minToLabel(sm)}-${minToLabel(em)} · ${event.title}`}
                     onClick={e => e.stopPropagation()}
                     style={{
                       position: 'absolute',
@@ -702,7 +702,7 @@ function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 
               return (
                 <div key={e.id} style={eventRow(t, e.color)}>
                   <span style={{ fontSize: '0.68rem', color: e.color, fontWeight: 500, flexShrink: 0, width: '88px' }}>
-                    {minToLabel(sm)}–{minToLabel(em)}
+                    {minToLabel(sm)}-{minToLabel(em)}
                   </span>
                   <span style={{ flex: 1, fontSize: '0.82rem', color: t.text }}>{e.title}</span>
                   <EventSourceBadge source={e.source} />
@@ -890,7 +890,7 @@ export default function CalendarView({
   const heading =
     mode === 'month' ? format(cursor, 'MMMM yyyy')
       : mode === 'week'
-        ? `${format(startOfWeek(cursor, WEEK_OPTS), 'd MMM')} – ${format(endOfWeek(cursor, WEEK_OPTS), 'd MMM yyyy')}`
+        ? `${format(startOfWeek(cursor, WEEK_OPTS), 'd MMM')} - ${format(endOfWeek(cursor, WEEK_OPTS), 'd MMM yyyy')}`
         : format(cursor, 'EEEE d MMMM yyyy');
 
   const handleClickSlot = (day: Date, startMin?: number) => {

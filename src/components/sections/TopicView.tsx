@@ -136,7 +136,7 @@ export function TopicDashboard({ topic, onChange, t }: { topic: Topic; onChange:
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: '0.82rem', color: topic.description ? t.text : t.textDim, fontStyle: topic.description ? 'normal' : 'italic', lineHeight: 1.5 }}>
-                {topic.description ?? 'No description — click ✎ to add one'}
+                {topic.description ?? 'No description. Click ✎ to add one'}
               </p>
             )}
           </div>
@@ -247,7 +247,7 @@ export function TopicDashboard({ topic, onChange, t }: { topic: Topic; onChange:
                 {topic.pinnedNote}
               </p>
             ) : (
-              <span style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>No pinned note — click ✎ to add one</span>
+              <span style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>No pinned note. Click ✎ to add one</span>
             )}
           </div>
 

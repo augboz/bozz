@@ -291,7 +291,7 @@ export function parseStatementCSV(text: string): ParseResult {
     errors.push(String(e));
   }
   if (transactions.length === 0 && errors.length === 0) {
-    errors.push('Could not extract any transactions — check the file format.');
+    errors.push('Could not extract any transactions. Check the file format.');
   }
   return { format, formatLabel: FORMAT_LABEL[format], transactions, errors };
 }

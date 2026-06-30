@@ -400,7 +400,7 @@ export default function PlannerView({ t, items, setItems, topics, feedEvents = [
                   </div>
                   {height > 36 && (
                     <div style={{ fontSize: '0.64rem', color: t.textDim, marginTop: '1px' }}>
-                      {fmtMin(it.startMin)} – {fmtMin(it.startMin + it.duration)}
+                      {fmtMin(it.startMin)} - {fmtMin(it.startMin + it.duration)}
                     </div>
                   )}
                 </div>

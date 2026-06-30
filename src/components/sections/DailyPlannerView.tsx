@@ -533,9 +533,9 @@ export default function DailyPlannerView({ t, topics, plan, onPlanChange, onAdva
       {activeTopics.length === 0 ? (
         <div style={{
           padding: '2rem', textAlign: 'center',
-          fontSize: '0.84rem', color: t.textDim, fontStyle: 'italic',
+          fontSize: '0.84rem', color: t.textMuted, lineHeight: 1.5,
         }}>
-          All tasks are complete — nothing to plan.
+          All tasks are complete. Nothing to plan.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

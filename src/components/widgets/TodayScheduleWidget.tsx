@@ -99,7 +99,7 @@ export default function TodayScheduleWidget({ ctx }: { ctx: WidgetCtx }) {
                     fontSize: '0.68rem', color: e.color, fontWeight: 500,
                     flexShrink: 0, letterSpacing: '0.02em',
                   }}>
-                    {minToLabel(sm)}–{minToLabel(em)}
+                    {minToLabel(sm)}-{minToLabel(em)}
                   </span>
                   <span style={{
                     flex: 1, fontSize: '0.8rem', color: t.text,

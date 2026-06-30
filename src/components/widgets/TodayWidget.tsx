@@ -99,7 +99,7 @@ function SummaryLine({ overdue, dueToday, nextEvent, t }: {
     const sm = getStartMin(nextEvent);
     parts.push({ text: `next event ${minToLabel(sm)}`, color: t.textMuted });
   }
-  if (parts.length === 0) parts.push({ text: 'nothing pressing — a clear morning', color: t.textMuted });
+  if (parts.length === 0) parts.push({ text: 'nothing pressing, a clear morning', color: t.textMuted });
 
   return (
     <div style={{
@@ -140,7 +140,7 @@ function BigTaskWarning({ items, t, setActiveSection }: {
     >
       <AlertTriangle size={12} strokeWidth={2} color={t.alert} style={{ flexShrink: 0 }} />
       <span style={{ fontSize: '0.7rem', color: t.alert, lineHeight: 1.35, minWidth: 0 }}>
-        <span style={{ fontWeight: 600 }}>Start now</span> — big task, little time:{' '}
+        <span style={{ fontWeight: 600 }}>Start now</span>, big task, little time:{' '}
         <span style={{ fontWeight: 500 }}>{first.item.text}</span>
         {extra > 0 && <span style={{ color: t.textMuted }}> +{extra} more</span>}
       </span>
@@ -347,8 +347,8 @@ function CloseOutCard({ ctx, prios, todayMs, t, setActiveSection }: {
 
   const streakCount = clearStreak?.count ?? 0;
   const headline = clearedToday > 0
-    ? `Today's done — ${clearedToday} cleared`
-    : "Today's done — nothing pressing";
+    ? `Today's done, ${clearedToday} cleared`
+    : "Today's done, nothing pressing";
 
   return (
     <div style={{

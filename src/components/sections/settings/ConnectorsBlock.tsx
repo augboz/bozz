@@ -283,7 +283,7 @@ function NotionSection({ t }: { t: Theme }) {
           <div style={{ fontSize: '0.7rem', color: t.textMuted, lineHeight: 1.55, marginBottom: '0.4rem' }}>
             Open each page in Notion → <strong style={{ color: t.text }}>···</strong> (top-right)
             {' '}→ <strong style={{ color: t.text }}>Connections</strong> → connect your integration.
-            Then paste the URL or ID below — name it whatever you like, or leave the name blank to use the page's Notion title.
+            Then paste the URL or ID below. Name it whatever you like, or leave the name blank to use the page's Notion title.
           </div>
           <div style={{ display: 'grid', gap: '0.4rem' }}>
             <input
@@ -418,7 +418,7 @@ function SpotifySection({ t }: { t: Theme }) {
               fontSize: '0.72rem', color: t.text, background: t.bgAlt,
               padding: '0.1rem 0.4rem', borderRadius: '4px', userSelect: 'all',
             }}>http://127.0.0.1:{SPOTIFY_PORT}</code>
-            {' '}— not localhost, no trailing slash. Click <strong>Add</strong>, then <strong>Save</strong> at the bottom.
+            {' '}(not localhost, no trailing slash). Click <strong>Add</strong>, then <strong>Save</strong> at the bottom.
             <br />
             <strong style={{ color: t.text }}>3.</strong> Copy the <strong style={{ color: t.text }}>Client ID</strong> and paste below.
           </div>

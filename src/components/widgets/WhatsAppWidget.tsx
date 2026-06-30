@@ -63,7 +63,7 @@ export default function WhatsAppWidget({ ctx }: { ctx: WidgetCtx }) {
           <div style={{ fontSize: '0.76rem', color: t.textMuted, textAlign: 'center', lineHeight: 1.6 }}>
             {!isWAConfigured()
               ? <>Connect WhatsApp in<br />Settings → Integrations</>
-              : 'Bridge not reachable — is it running?'}
+              : 'Bridge not reachable. Is it running?'}
           </div>
         </div>
       </Shell>

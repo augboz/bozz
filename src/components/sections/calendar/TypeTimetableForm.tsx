@@ -138,13 +138,13 @@ export default function TypeTimetableForm({
 
       {text.trim() && parsed.length === 0 && (
         <div style={{ fontSize: '0.72rem', color: t.textDim, lineHeight: 1.5 }}>
-          Couldn’t read a class yet — start each line with a day, e.g.{' '}
+          Couldn’t read a class yet. Start each line with a day, e.g.{' '}
           <code style={{ fontSize: '0.7rem' }}>Mon 9-11 Biology</code>.
         </div>
       )}
       {parsed.length > 0 && unparsedCount > 0 && (
         <div style={{ fontSize: '0.7rem', color: t.textDim }}>
-          {unparsedCount} line{unparsedCount === 1 ? '' : 's'} skipped — each class needs a day + a time.
+          {unparsedCount} line{unparsedCount === 1 ? '' : 's'} skipped. Each class needs a day + a time.
         </div>
       )}
 

@@ -64,7 +64,7 @@ const BANKS: BankOption[] = [
       'Tap on your account',
       'Scroll down and tap "Export transactions"',
       'Choose your date range',
-      'Tap "Email CSV" — open the email on this Mac and download the attachment',
+      'Tap "Email CSV", then open the email on this Mac and download the attachment',
     ],
     exportNote: 'The file will be named transactions.csv',
   },
@@ -386,7 +386,7 @@ export default function BankImportModal({ t, budget, onClose, onMerge }: Props) 
                 Drop your CSV here or <span style={{ color: selectedBank?.color ?? t.doingAccent, textDecoration: 'underline' }}>browse</span>
               </div>
               <div style={{ fontSize: '0.72rem', color: t.textDim }}>
-                .csv only — exported from {selectedBank?.name ?? 'your bank'}
+                .csv only, exported from {selectedBank?.name ?? 'your bank'}
               </div>
               <input
                 ref={fileRef}
@@ -451,8 +451,8 @@ export default function BankImportModal({ t, budget, onClose, onMerge }: Props) 
             )}
 
             {newOnes.length === 0 && (
-              <div style={{ fontSize: '0.82rem', color: t.textMuted, fontStyle: 'italic', padding: '1rem', textAlign: 'center' }}>
-                Nothing new — every transaction in this file is already in your budget.
+              <div style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.5, padding: '1rem', textAlign: 'center' }}>
+                Nothing new. Every transaction in this file is already in your budget.
               </div>
             )}
 

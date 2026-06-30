@@ -104,7 +104,7 @@ export default function UpdatePrompt({ update, onClose }: { update: Update; onCl
         </div>
         <div style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.55, marginBottom: '1.25rem' }}>
           {phase === 'prompt' && <>Bozz <strong style={{ color: t.text }}>v{update.version}</strong> is ready to install. The app will restart to finish.</>}
-          {phase === 'downloading' && <>Downloading v{update.version}{pct != null ? ` — ${pct}%` : '…'}</>}
+          {phase === 'downloading' && <>Downloading v{update.version}{pct != null ? ` (${pct}%)` : '…'}</>}
           {phase === 'installing' && <>Installing and restarting…</>}
           {phase === 'error' && <>Something went wrong installing the update:<br /><span style={{ color: t.alert, fontSize: '0.76rem' }}>{err}</span></>}
         </div>

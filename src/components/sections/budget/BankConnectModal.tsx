@@ -311,7 +311,7 @@ export default function BankConnectModal({ t, budget, onClose, onMerge }: Props)
             </h2>
             {stage === 'list' && (
               <p style={{ margin: '0.15rem 0 0', fontSize: '0.74rem', color: t.textMuted }}>
-                Powered by Open Banking — you log in directly to your bank, we never see your credentials
+                Powered by Open Banking. You log in directly to your bank, we never see your credentials
               </p>
             )}
           </div>

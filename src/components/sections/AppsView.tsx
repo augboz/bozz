@@ -49,7 +49,7 @@ export default function AppsView({
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Search apps — Gmail, Notion, Spotify…"
+          placeholder="Search apps: Gmail, Notion, Spotify…"
           aria-label="Search apps"
           autoFocus
           style={{

@@ -46,7 +46,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           Something went wrong in {label}.
         </div>
         <div style={{ fontSize: '0.85rem', color: 'var(--app-text-muted, #888)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-          The rest of the app still works — switch to another section, or reload.
+          The rest of the app still works. Switch to another section, or reload.
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={this.reset} style={btn(true)}>Try again</button>

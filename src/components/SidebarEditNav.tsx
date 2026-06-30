@@ -361,7 +361,7 @@ export default function SidebarEditNav({
 
           {topItems.length === 0 && (
             <div style={{ fontSize: '0.74rem', color: t.textDim, padding: '0.5rem 0.65rem' }}>
-              Nothing here yet — use + to add a topic or folder.
+              Nothing here yet. Use + to add a topic or folder.
             </div>
           )}
 

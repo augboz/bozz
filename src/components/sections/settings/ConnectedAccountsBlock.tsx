@@ -24,7 +24,7 @@ const GOOGLE_STEPS = [
 ];
 
 const MICROSOFT_STEPS = [
-  '⚠️ Personal Microsoft accounts only (Outlook.com / Hotmail / Live.com). Work or university accounts (e.g. @ic.ac.uk) are managed by IT — they cannot register apps on Azure without admin approval. If you only have a uni account, skip this.',
+  '⚠️ Personal Microsoft accounts only (Outlook.com / Hotmail / Live.com). Work or university accounts (e.g. @ic.ac.uk) are managed by IT. They cannot register apps on Azure without admin approval. If you only have a uni account, skip this.',
   'Open an incognito / private window → go to portal.azure.com → sign in with your PERSONAL Microsoft email. Using incognito prevents your browser from silently picking a cached work account.',
   'If you land on "You do not have access": click your avatar (top-right) → Switch directory → choose the "Default Directory" tied to your personal account.',
   'Top search bar → type "App registrations" → click it → + New registration.',

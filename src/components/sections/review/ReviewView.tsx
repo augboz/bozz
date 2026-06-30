@@ -149,7 +149,7 @@ export default function ReviewView({ t, reviews, setReviews, budget, topics }: R
     setReviews(prev => prev.map(r => r.id === pending.id ? { ...r, reviewedAt: Date.now() } : r));
   };
 
-  const range = `${format(new Date(window.start), 'd MMM')} – ${format(new Date(window.end), 'd MMM yyyy')}`;
+  const range = `${format(new Date(window.start), 'd MMM')} - ${format(new Date(window.end), 'd MMM yyyy')}`;
 
   return (
     <div>
@@ -280,7 +280,7 @@ function PastReviews({ t, reviews }: { t: Theme; reviews: WeeklyReview[] }) {
               padding: '0.6rem 0.9rem',
             }}>
               <div style={{ fontSize: '0.8rem', color: t.text }}>
-                {format(new Date(r.weekStart), 'd MMM')} – {format(new Date(r.weekEnd), 'd MMM yyyy')}
+                {format(new Date(r.weekStart), 'd MMM')} - {format(new Date(r.weekEnd), 'd MMM yyyy')}
               </div>
               {r.note && (
                 <div style={{ fontSize: '0.78rem', color: t.textMuted, marginTop: '0.25rem', lineHeight: 1.4 }}>
