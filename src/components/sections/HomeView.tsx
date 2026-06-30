@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
-import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen, CalendarDays } from 'lucide-react';
+import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen, CalendarDays, CalendarRange } from 'lucide-react';
 import type { HomeWidgetItem, Theme, ImapAccount, WidgetShape, WidgetBorder } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
 import { WIDGET_REGISTRY, WIDGET_LIST, STARTER_TEMPLATES, type StarterTemplate } from '../widgets/registry';
@@ -33,6 +33,8 @@ interface HomeViewProps {
   onReplayWalkthroughs?: () => void;
   /** Switch the Home landing back to the zero-config Briefing (persists). */
   onSwitchToBriefing?: () => void;
+  /** Switch the Home landing to the This-Week surface (persists). */
+  onSwitchToWeek?: () => void;
 }
 
 /** Time-of-day greeting shown above the grid, reinforcing the "your morning"
@@ -53,7 +55,7 @@ function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
 }
 
 
-export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true, onReplayWalkthroughs, onSwitchToBriefing }: HomeViewProps) {
+export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true, onReplayWalkthroughs, onSwitchToBriefing, onSwitchToWeek }: HomeViewProps) {
   const { t } = ctx;
   const [editMode, setEditMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -230,7 +232,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
           gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap',
         }}>
           {onSwitchToBriefing && !editMode
-            ? <LandingToggle t={t} onSwitchToBriefing={onSwitchToBriefing} />
+            ? <LandingToggle t={t} onSwitchToBriefing={onSwitchToBriefing} onSwitchToWeek={onSwitchToWeek} />
             : <span />}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
@@ -326,9 +328,9 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         gap: '0.5rem', marginBottom: editMode ? '0.5rem' : '0.75rem',
         flexWrap: 'wrap',
       }}>
-        {/* Left: Briefing/Board switch (hidden in edit mode to keep the bar clean) */}
+        {/* Left: Briefing/Week/Board switch (hidden in edit mode to keep the bar clean) */}
         {onSwitchToBriefing && !editMode
-          ? <LandingToggle t={t} onSwitchToBriefing={onSwitchToBriefing} />
+          ? <LandingToggle t={t} onSwitchToBriefing={onSwitchToBriefing} onSwitchToWeek={onSwitchToWeek} />
           : <span />}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           {editMode && (
@@ -676,9 +678,17 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
   );
 }
 
-// Briefing/Board landing toggle — mirrors the toggle in BriefingView so the two
+// Briefing/Week/Board landing toggle — mirrors the toggle in BriefingView so the
 // surfaces feel like one switch. Shown only when a switch handler is wired.
-function LandingToggle({ t, onSwitchToBriefing }: { t: Theme; onSwitchToBriefing: () => void }) {
+function LandingToggle({ t, onSwitchToBriefing, onSwitchToWeek }: {
+  t: Theme; onSwitchToBriefing: () => void; onSwitchToWeek?: () => void;
+}) {
+  const navBtn: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+    background: 'transparent', border: 'none', borderLeft: `1px solid ${t.border}`,
+    color: t.text, padding: '0.35rem 0.7rem', fontSize: '0.72rem',
+    cursor: 'pointer', fontFamily: 'inherit',
+  };
   return (
     <div style={{
       display: 'inline-flex', borderRadius: '9px', overflow: 'hidden',
@@ -690,15 +700,15 @@ function LandingToggle({ t, onSwitchToBriefing }: { t: Theme; onSwitchToBriefing
       <button
         onClick={onSwitchToBriefing}
         title="Switch to the zero-config Briefing"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-          background: 'transparent', border: 'none',
-          color: t.text, padding: '0.35rem 0.7rem', fontSize: '0.72rem',
-          cursor: 'pointer', fontFamily: 'inherit',
-        }}
+        style={{ ...navBtn, borderLeft: 'none' }}
       >
         <CalendarDays size={13} strokeWidth={1.8} /> Briefing
       </button>
+      {onSwitchToWeek && (
+        <button onClick={onSwitchToWeek} title="Switch to your week ahead" style={navBtn}>
+          <CalendarRange size={13} strokeWidth={1.8} /> Week
+        </button>
+      )}
       <span style={{
         display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
         background: t.doingAccent, color: '#fff', borderLeft: `1px solid ${t.border}`,

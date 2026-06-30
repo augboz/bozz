@@ -76,6 +76,24 @@ export default function PomodoroWidget({ ctx }: { ctx: WidgetCtx }) {
     }
   };
 
+  // Command-palette "start pomodoro" — start a fresh focus block on the in-app
+  // event. Resets to Focus mode and (re)starts the timer; ignored if already
+  // running so a stray double-fire never doubles the interval.
+  const runningRef = useRef(running);
+  runningRef.current = running;
+  useEffect(() => {
+    const onStart = () => {
+      if (runningRef.current) return;
+      clearTick();
+      setMode('work');
+      setRemaining(DURATIONS.work);
+      startTick();
+      setRunning(true);
+    };
+    window.addEventListener('bozz:start-pomodoro', onStart);
+    return () => window.removeEventListener('bozz:start-pomodoro', onStart);
+  }, [clearTick, startTick]);
+
   const switchMode = (m: Mode) => {
     clearTick();
     setMode(m);

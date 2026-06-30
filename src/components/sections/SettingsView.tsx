@@ -487,11 +487,11 @@ export default function SettingsView({
             )}
           </select>
         </Field>
-        <Field label="Home shows" hint="Briefing = your auto-built morning; Board = your widget grid" t={t}>
-          <Segmented<'briefing' | 'board'>
+        <Field label="Home shows" hint="Briefing = your morning; Week = the days ahead; Board = your widget grid" t={t}>
+          <Segmented<'briefing' | 'week' | 'board'>
             value={appearance.homeLanding ?? 'board'} t={t}
             onChange={(v) => patchAppearance({ homeLanding: v })}
-            options={[{ id: 'briefing', label: 'Briefing' }, { id: 'board', label: 'Board' }]}
+            options={[{ id: 'briefing', label: 'Briefing' }, { id: 'week', label: 'Week' }, { id: 'board', label: 'Board' }]}
           />
         </Field>
 

@@ -6,6 +6,9 @@ import {
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
 import { predictTopic } from '../lib/taskParser';
+import { matchCommands } from '../lib/commands';
+import { deadlineEntries, dueTimestamp } from './widgets/util';
+import { runNudgeCheck } from '../lib/deadlineNudges';
 import { nextId } from '../lib/ids';
 import VoiceButton from './shared/VoiceButton';
 import { isMobileViewport, isTauri } from '../lib/platform';
@@ -45,6 +48,7 @@ import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
 import BriefingView from './sections/BriefingView';
+import WeekView from './sections/WeekView';
 import TopicView from './sections/TopicView';
 import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
@@ -703,9 +707,10 @@ export default function Dashboard() {
   const resetHomeLayout = () => setHomeItems(DEFAULT_HOME);
 
   // Home landing surface (P1): 'briefing' = the zero-config Today brief,
-  // 'board' = the customisable widget grid. Undefined → 'board' (existing users).
-  const homeLanding: 'briefing' | 'board' = appearance.homeLanding ?? 'board';
-  const setHomeLanding = (mode: 'briefing' | 'board') => patchAppearance({ homeLanding: mode });
+  // 'week' = the days-ahead week surface, 'board' = the customisable widget grid.
+  // Undefined → 'board' (existing users).
+  const homeLanding: 'briefing' | 'week' | 'board' = appearance.homeLanding ?? 'board';
+  const setHomeLanding = (mode: 'briefing' | 'week' | 'board') => patchAppearance({ homeLanding: mode });
 
   // ── Topic / folder editing from the sidebar edit mode ──────────────────────
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -814,6 +819,38 @@ export default function Dashboard() {
     });
   };
 
+  // File every Quicks (inbox) item that maps to a predicted topic into that
+  // topic, removing it from Quicks. Reuses predictTopic + the same append shape
+  // as addTopicItem. A no-op for items with no confident prediction (they stay
+  // in Quicks). Powers the "file all predicted" command-palette action.
+  const fileAllPredicted = () => {
+    setTopics(prevTopics => {
+      const filed = new Set<number>();
+      const next = prevTopics.map(top => {
+        const incoming = (inbox ?? [])
+          .filter(it => {
+            if (filed.has(it.id)) return false;
+            const predicted = predictTopic(it.text, prevTopics);
+            return predicted?.id === top.id;
+          })
+          .map(it => {
+            filed.add(it.id);
+            const firstStage = top.stages.find(s => !s.done) ?? top.stages[0];
+            return {
+              id: nextId(),
+              text: it.text,
+              stageId: firstStage?.id ?? '',
+              completedAt: null,
+              deadline: it.deadline ?? null,
+            };
+          });
+        return incoming.length ? { ...top, items: [...top.items, ...incoming] } : top;
+      });
+      if (filed.size > 0) setInbox(prev => prev.filter(it => !filed.has(it.id)));
+      return next;
+    });
+  };
+
   const onAdvanceStage = (topicId: string, itemId: number) => {
     setTopics(prev => prev.map(top => {
       if (top.id !== topicId) return top;
@@ -891,6 +928,20 @@ export default function Dashboard() {
       .filter(e => e.start >= from && e.start <= to);
   }, [feedEvents, calendarNotes]);
 
+  // Calendar events across the CURRENT week (Mon→Sun), fed to the Week landing
+  // surface so it can lay out classes per day — including days earlier in the
+  // week than today (which upcomingEvents, anchored at today, omits). Feed +
+  // note events only; topic deadlines are surfaced separately via deadlineEntries.
+  const weekEvents = useMemo<CalendarEvent[]>(() => {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    const offset = (d.getDay() + 6) % 7; // days since Monday
+    d.setDate(d.getDate() - offset);
+    const from = d.getTime();
+    const to = from + 7 * 24 * 60 * 60 * 1000;
+    return [...feedEvents, ...noteEvents(calendarNotes)]
+      .filter(e => e.start >= from && e.start < to);
+  }, [feedEvents, calendarNotes]);
+
   // Calendar events over a LONG window (term-length, ~120 days) AND any overdue.
   // Fed ONLY to the Deadlines hub so its "Later" bucket is meaningful — the
   // 14-day upcomingEvents above (used by widgets) is intentionally left untouched.
@@ -901,6 +952,44 @@ export default function Dashboard() {
     return [...feedEvents, ...noteEvents(calendarNotes)]
       .filter(e => e.start <= to);
   }, [feedEvents, calendarNotes]);
+
+  // ── Proactive LOCAL deadline nudges (P2) ───────────────────────────────────
+  // Free, on-device, no Plus gate, no server. Drives off the SAME deadline
+  // stream the Today brief uses (deadlineEntries → dueTimestamp) plus the next
+  // upcoming class. Fires a once-per-morning digest + day-before / morning-of
+  // per-deadline nudges, deduped + permission-aware (see lib/deadlineNudges).
+  useEffect(() => {
+    if (loading) return;
+    const check = () => {
+      // Project the deadline stream into the minimal shape the nudger needs.
+      const ctxLike = {
+        topics,
+        upcomingEvents: deadlineWindowEvents,
+      } as unknown as import('./widgets/context').WidgetCtx;
+      const deadlines = deadlineEntries(ctxLike)
+        .map(e => {
+          const due = dueTimestamp(e.item);
+          return due == null ? null : { id: `${e.section}:${e.item.id}`, text: e.item.text, due };
+        })
+        .filter((d): d is { id: string; text: string; due: number } => d != null);
+
+      // Next still-upcoming timed event today → "14:00" label.
+      const now = Date.now();
+      const nextTimed = (todayEvents ?? [])
+        .filter(e => !e.allDay && e.start >= now)
+        .sort((a, b) => a.start - b.start)[0];
+      const nextEventLabel = nextTimed
+        ? new Date(nextTimed.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        : null;
+
+      void runNudgeCheck({ deadlines, nextEventLabel });
+    };
+    // Run shortly after load (let initial state settle) then every 30 min.
+    const initial = window.setTimeout(check, 4000);
+    const id = setInterval(check, 30 * 60_000);
+    return () => { clearTimeout(initial); clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, topics, deadlineWindowEvents, todayEvents]);
 
   // Fetch Google Calendar events whenever there's an enabled connection.
   const gcalConn = useMemo(
@@ -1575,9 +1664,25 @@ export default function Dashboard() {
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
-                todayEvents, upcomingEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
+                todayEvents, upcomingEvents, weekEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
               }}
+              onSwitchToWeek={() => setHomeLanding('week')}
+              onSwitchToBoard={() => setHomeLanding('board')}
+            />
+          )}
+          {activeSection === 'home' && homeLanding === 'week' && (
+            <WeekView
+              ctx={{
+                t, budget, emails,
+                setActiveSection,
+                topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
+                onAdvanceStage, colorBank: appearance.colorBank ?? [],
+                habits, onHabitsChange: setHabits,
+                todayEvents, upcomingEvents, weekEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
+                widgetConfig: {}, onWidgetConfig: () => {},
+              }}
+              onSwitchToBriefing={() => setHomeLanding('briefing')}
               onSwitchToBoard={() => setHomeLanding('board')}
             />
           )}
@@ -1600,6 +1705,7 @@ export default function Dashboard() {
               setItems={setHomeItems}
               onReplayWalkthroughs={replayWalkthroughs}
               onSwitchToBriefing={() => setHomeLanding('briefing')}
+              onSwitchToWeek={() => setHomeLanding('week')}
               widgetShape={appearance.widgetShape ?? 'rounded'}
               widgetBorder={appearance.widgetBorder ?? 'normal'}
               onWidgetShape={(s) => patchAppearance({ widgetShape: s })}
@@ -1887,13 +1993,33 @@ export default function Dashboard() {
         <SearchModal
           t={t}
           entries={buildSearchIndex({
-            budget, inbox, feedEvents,
+            budget, inbox, feedEvents, topics,
           })}
           recent={recentSearches}
           onClose={() => setSearchOpen(false)}
           onJump={(section) => setActiveSection(section)}
           onRecent={(query) =>
             setRecentSearches(prev => [query, ...prev.filter(x => x !== query)].slice(0, 5))}
+          buildActions={(query) => matchCommands(query, {
+            topics,
+            navTargets: [
+              ...allSections.filter(s => !appearance.hiddenSections.includes(s.id)).map(s => ({ id: s.id, label: s.label })),
+              ...topics.map(tp => ({ id: tp.id, label: tp.name || 'New topic' })),
+            ],
+            addTopicItem: (topicId, text, deadline) => addTopicItem(topicId, text, deadline),
+            addDeadline,
+            addToInbox,
+            addTransaction: (tx) => setBudget(b => ({ ...b, transactions: [...b.transactions, tx] })),
+            setActiveSection,
+            onStartPomodoro: () => {
+              setActiveSection('home');
+              // Bring the Board into view (where the pomodoro widget lives), then
+              // signal it to start. The widget listens for this in-app event.
+              setHomeLanding('board');
+              window.setTimeout(() => window.dispatchEvent(new CustomEvent('bozz:start-pomodoro')), 60);
+            },
+            onFileAllPredicted: fileAllPredicted,
+          })}
           isMobile={isMobile}
           tbOffset={tbOffset}
         />

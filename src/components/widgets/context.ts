@@ -36,6 +36,10 @@ export interface WidgetCtx {
   /** Calendar events over the next ~14 days (feed + notes), so deadline-aware
    *  widgets can surface imported exams/coursework alongside topic deadlines. */
   upcomingEvents?: CalendarEvent[];
+  /** Calendar events across the CURRENT week (Mon→Sun, feed + notes), so the
+   *  Week landing surface can lay out classes per day — including days earlier
+   *  in the week than today. Optional so older ctx call sites stay valid. */
+  weekEvents?: CalendarEvent[];
   /** User-created calendar notes. */
   calendarNotes?: CalendarNote[];
   /** Update calendar notes. */

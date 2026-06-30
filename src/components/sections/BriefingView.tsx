@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { CalendarDays, LayoutGrid, Plus, CornerDownLeft, X } from 'lucide-react';
+import { CalendarDays, LayoutGrid, CalendarRange, Plus, CornerDownLeft, X } from 'lucide-react';
 import type { Theme } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
 import TodayWidget from '../widgets/TodayWidget';
@@ -118,8 +118,10 @@ function greeting(): string {
   return 'good evening. here is what is left.';
 }
 
-export default function BriefingView({ ctx, onSwitchToBoard }: {
+export default function BriefingView({ ctx, onSwitchToWeek, onSwitchToBoard }: {
   ctx: WidgetCtx;
+  /** Switch the Home landing to the This-Week surface (persists the choice). */
+  onSwitchToWeek: () => void;
   /** Switch the Home landing to the customisable Board (persists the choice). */
   onSwitchToBoard: () => void;
 }) {
@@ -153,6 +155,18 @@ export default function BriefingView({ ctx, onSwitchToBoard }: {
           }}>
             <CalendarDays size={13} strokeWidth={1.8} /> Briefing
           </span>
+          <button
+            onClick={onSwitchToWeek}
+            title="Switch to your week ahead"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: 'transparent', border: 'none', borderLeft: `1px solid ${t.border}`,
+              color: t.text, padding: '0.35rem 0.7rem', fontSize: '0.74rem',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <CalendarRange size={13} strokeWidth={1.8} /> Week
+          </button>
           <button
             onClick={onSwitchToBoard}
             title="Switch to your customisable Board"
