@@ -3,7 +3,7 @@ import {
   format, addMonths, addWeeks, addDays, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar, CalendarPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar, CalendarPlus, Keyboard } from 'lucide-react';
 import type {
   CalendarEvent, CalendarFeed, CalendarNote, CalendarViewMode, Theme, Topic,
 } from '../../../lib/types';
@@ -11,6 +11,7 @@ import { topicDeadlineEvents, noteEvents, eventsOnDay } from '../../../lib/calen
 import { SectionHeader } from '../../shared/ui';
 import ColorBankPicker from '../../shared/ColorBankPicker';
 import AddFeedForm from './AddFeedForm';
+import TypeTimetableForm from './TypeTimetableForm';
 
 interface CalendarViewProps {
   t: Theme;
@@ -811,6 +812,7 @@ export default function CalendarView({
   const [createFor, setCreateFor] = useState<{ day: Date; startMin?: number } | null>(null);
   const [colorPickingFor, setColorPickingFor] = useState<string | null>(null);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
+  const [typeTimetableOpen, setTypeTimetableOpen] = useState(false);
 
   // The "Add your timetable" front door is only useful when the parent wired the
   // callback. Show the empty-state card prominently until the user has any feed.
@@ -867,13 +869,20 @@ export default function CalendarView({
         t={t}
         right={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={() => { setTypeTimetableOpen(true); setAddFeedOpen(false); setSelected(null); setCreateFor(null); }}
+              style={{ ...ghostBtn(t), color: t.text, borderColor: t.borderStrong }}
+              title="Type your classes in plain English"
+            >
+              <Keyboard size={13} strokeWidth={1.6} /> Type classes
+            </button>
             {canAddFeed && (
               <button
-                onClick={() => { setAddFeedOpen(true); setSelected(null); setCreateFor(null); }}
+                onClick={() => { setAddFeedOpen(true); setTypeTimetableOpen(false); setSelected(null); setCreateFor(null); }}
                 style={{ ...ghostBtn(t), color: t.text, borderColor: t.borderStrong }}
                 title="Add a timetable / calendar subscription"
               >
-                <CalendarPlus size={13} strokeWidth={1.6} /> Add timetable
+                <CalendarPlus size={13} strokeWidth={1.6} /> Add link
               </button>
             )}
             <Segmented mode={mode} setMode={setMode} t={t} />
@@ -1000,9 +1009,9 @@ export default function CalendarView({
       )}
 
       {/* "Add your timetable" front door — shown prominently until the user has a
-          feed. The calendar-feed pipeline already merges into the grid + Today;
-          this card is the missing way to actually add one. */}
-      {canAddFeed && noFeeds && !addFeedOpen && (
+          feed AND no typed classes. Type is the primary action (no .ics needed);
+          pasting a link is the secondary. Both fill the grid + Today in seconds. */}
+      {noFeeds && calendarNotes.length === 0 && !addFeedOpen && !typeTimetableOpen && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
           background: t.bgAlt, border: `1px dashed ${t.borderStrong}`, borderRadius: '12px',
@@ -1020,20 +1029,30 @@ export default function CalendarView({
               Add your timetable
             </div>
             <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
-              Paste your university or work calendar link and your classes fill the grid and Today in seconds.
+              Type your classes in plain English (no link needed), or paste your university calendar link. Either way they fill the grid and Today in seconds.
             </div>
           </div>
-          <button
-            onClick={() => setAddFeedOpen(true)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              background: t.doingAccent, border: 'none', borderRadius: '8px', color: '#fff',
-              padding: '0.55rem 1.1rem', fontFamily: 'inherit', fontSize: '0.82rem',
-              fontWeight: 500, cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            <Plus size={14} strokeWidth={2} /> Add timetable
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setTypeTimetableOpen(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                background: t.doingAccent, border: 'none', borderRadius: '8px', color: '#fff',
+                padding: '0.55rem 1.1rem', fontFamily: 'inherit', fontSize: '0.82rem',
+                fontWeight: 500, cursor: 'pointer',
+              }}
+            >
+              <Keyboard size={14} strokeWidth={2} /> Type classes
+            </button>
+            {canAddFeed && (
+              <button
+                onClick={() => setAddFeedOpen(true)}
+                style={{ ...ghostBtn(t), color: t.text, borderColor: t.borderStrong, padding: '0.55rem 1rem', fontSize: '0.82rem' }}
+              >
+                <Plus size={14} strokeWidth={2} /> Paste link
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1074,6 +1093,30 @@ export default function CalendarView({
             t={t}
             columns={[{ day: cursor, events: eventsOnDay(events, cursor) }]}
             onClickSlot={handleClickSlot}
+          />
+        </div>
+      )}
+
+      {/* Type-your-classes panel — the no-.ics activation path. Builds recurring
+          CalendarNotes that noteEvents() expands onto the grid + Today. */}
+      {typeTimetableOpen && (
+        <div style={{
+          position: 'fixed', top: tbOffset, right: 0, bottom: 0, width: '380px', zIndex: 50,
+          background: t.panel, borderLeft: `1px solid ${t.border}`,
+          padding: '1.5rem', overflowY: 'auto', boxShadow: '-8px 0 24px rgba(0,0,0,0.18)',
+          animation: 'bozz-slide-in 0.18s cubic-bezier(0.25,0.46,0.45,0.94)',
+        }}>
+          <TypeTimetableForm
+            t={t}
+            colorBank={colorBank}
+            onAddNotes={(notes) => {
+              const stamp = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+              onCalendarNotesChange?.([
+                ...calendarNotes,
+                ...notes.map(n => ({ id: stamp(), ...n })),
+              ]);
+            }}
+            onClose={() => setTypeTimetableOpen(false)}
           />
         </div>
       )}

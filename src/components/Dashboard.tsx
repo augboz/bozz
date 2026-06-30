@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type ElementType, type CSSProperties } from 'react';
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus, Flame,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -62,6 +62,7 @@ import HealthView from './sections/HealthView';
 import QuickAddModal from './QuickAddModal';
 import BudgetView from './sections/budget/BudgetView';
 import InboxView from './sections/InboxView';
+import DeadlinesView from './sections/DeadlinesView';
 import ReviewView from './sections/review/ReviewView';
 import EmailView from './sections/email/EmailView';
 import SearchModal from './SearchModal';
@@ -362,16 +363,22 @@ export default function Dashboard() {
     setWelcomePhase('coldstart');
   };
 
-  // Guided cold-start: seed a real (empty) colour-coded topic + the matching home
-  // layout from the user's "what are you here for?" answer, then advance to the
-  // timetable step so their REAL classes fill Today + the calendar. Only ever runs
-  // for brand-new accounts (gated by welcomePhase), so existing users are unaffected.
-  const chooseColdStart = (option: import('../lib/coldStart').ColdStartOption) => {
+  // Guided cold-start: seed a real (empty) colour-coded topic per chosen "what are
+  // you here for?" answer (MULTI-select, P4) — each carries its keyword set so
+  // predictTopic can route the first capture — then advance to the timetable step
+  // so their REAL classes fill Today + the calendar. The home layout uses the
+  // first choice's starter. Only ever runs for brand-new accounts (gated by
+  // welcomePhase), so existing users are unaffected.
+  const chooseColdStart = (options: import('../lib/coldStart').ColdStartOption[]) => {
+    const chosen = options ?? [];
+    if (chosen.length === 0) { setWelcomePhase('timetable'); return; }
     void (async () => {
       const { seedColdStart } = await import('../lib/coldStart');
-      const { topic, homeItems: seededHome } = seedColdStart(option);
-      setTopics(prev => [...prev, topic]);
-      setHomeItems(seededHome);
+      const seeds = chosen.map(seedColdStart);
+      // Re-number topic order so each seeded topic gets a distinct nav slot.
+      const seededTopics = seeds.map((s, i) => ({ ...s.topic, order: i }));
+      setTopics(prev => [...prev, ...seededTopics]);
+      setHomeItems(seeds[0].homeItems);
       setWelcomePhase('timetable');
     })();
   };
@@ -397,6 +404,18 @@ export default function Dashboard() {
   // refreshFeeds effect then fetches + caches it, filling Today + the calendar).
   const addWelcomeFeed = (feed: import('../lib/types').CalendarFeed) => {
     setCalendarFeeds(prev => [...prev, feed]);
+    finishWelcome();
+  };
+
+  // Timetable step (type path): typed recurring classes land directly as
+  // CalendarNotes — noteEvents() expands them onto Today + the calendar with no
+  // fetch needed. The shared id minting mirrors saveNote() in CalendarView.
+  const addWelcomeNotes = (notes: Array<Omit<import('../lib/types').CalendarNote, 'id'>>) => {
+    if ((notes ?? []).length === 0) { finishWelcome(); return; }
+    setCalendarNotes(prev => [
+      ...prev,
+      ...notes.map(n => ({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...n })),
+    ]);
     finishWelcome();
   };
 
@@ -872,6 +891,17 @@ export default function Dashboard() {
       .filter(e => e.start >= from && e.start <= to);
   }, [feedEvents, calendarNotes]);
 
+  // Calendar events over a LONG window (term-length, ~120 days) AND any overdue.
+  // Fed ONLY to the Deadlines hub so its "Later" bucket is meaningful — the
+  // 14-day upcomingEvents above (used by widgets) is intentionally left untouched.
+  // Includes events from before today so overdue imported deadlines still show.
+  const deadlineWindowEvents = useMemo<CalendarEvent[]>(() => {
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const to = startOfToday.getTime() + 120 * 24 * 60 * 60 * 1000;
+    return [...feedEvents, ...noteEvents(calendarNotes)]
+      .filter(e => e.start <= to);
+  }, [feedEvents, calendarNotes]);
+
   // Fetch Google Calendar events whenever there's an enabled connection.
   const gcalConn = useMemo(
     () => calendarConnections.find(c => c.provider === 'googleCalendar' && c.enabled),
@@ -896,6 +926,7 @@ export default function Dashboard() {
   const allSections: Array<{ id: SectionId; label: string; icon: ElementType }> = [
     { id: 'home', label: 'Home', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+    { id: 'deadlines', label: 'Deadlines', icon: Flame },
     { id: 'budget', label: 'Budget', icon: Wallet },
     { id: 'inbox', label: 'Inbox', icon: Inbox },
     { id: 'review', label: 'Review', icon: NotebookPen },
@@ -946,7 +977,7 @@ export default function Dashboard() {
   // Built-in sections (email, calendar, budget, etc.) remain valid even when hidden from
   // the sidebar — only bounce if it's a topic ID that no longer exists.
   const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps',
-    'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
+    'calendar', 'deadlines', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
     'worlds']);
   useEffect(() => {
     if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
@@ -1504,6 +1535,7 @@ export default function Dashboard() {
               t={t}
               colorBank={appearance.colorBank ?? []}
               onAdd={addWelcomeFeed}
+              onAddNotes={addWelcomeNotes}
               onSkip={finishWelcome}
             />
           )}
@@ -1607,6 +1639,19 @@ export default function Dashboard() {
               gcalError={gcalError ?? undefined}
               colorBank={appearance.colorBank ?? []}
               tbOffset={tbOffset}
+            />
+          )}
+          {activeSection === 'deadlines' && (
+            <DeadlinesView
+              ctx={{
+                t, budget, emails,
+                setActiveSection,
+                topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
+                onAdvanceStage, colorBank: appearance.colorBank ?? [],
+                habits, onHabitsChange: setHabits,
+                todayEvents, upcomingEvents: deadlineWindowEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
+                widgetConfig: {}, onWidgetConfig: () => {},
+              }}
             />
           )}
           {activeSection === 'dailyPlanner' && (
