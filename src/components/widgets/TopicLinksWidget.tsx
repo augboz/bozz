@@ -191,7 +191,7 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
   if (!topic) {
     return (
       <Widget t={t} accent={ACCENT}>
-        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
+        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
           No topic selected.
         </div>
       </Widget>
@@ -362,8 +362,8 @@ export default function TopicLinksWidget({ ctx }: { ctx: WidgetCtx }) {
       )}
 
       {links.length === 0 && !addingLink ? (
-        <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
-          {editing ? 'No links yet — click + add to pin one.' : 'No links pinned.'}
+        <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
+          {editing ? 'No links yet. Click + add to pin one.' : 'No links pinned.'}
         </div>
       ) : fill && links.length > 0 ? ((() => {
         // Fill mode: the chosen logo fills the whole widget, nothing else. In edit

@@ -58,7 +58,7 @@ export default function AddFeedForm({
     const cleanUrl = normalizeFeedUrl(url);
     if (!cleanUrl) { setError('Paste your timetable link first.'); return; }
     if (!/^https?:\/\//i.test(cleanUrl)) {
-      setError('That doesn’t look like a calendar link — it should start with webcal:// or https://');
+      setError("That doesn't look like a calendar link. It should start with webcal:// or https://");
       return;
     }
     setBusy(true);

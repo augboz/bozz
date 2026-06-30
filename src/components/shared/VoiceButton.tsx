@@ -63,8 +63,8 @@ export default function VoiceButton({
       aria-pressed={recording}
       style={{
         background: recording ? '#dc5050' : 'transparent',
-        border: `1px solid ${recording ? '#dc5050' : t.border}`,
-        color: recording ? '#fff' : t.textMuted,
+        border: `1px solid ${recording ? '#dc5050' : err ? '#dc5050' : t.border}`,
+        color: recording ? '#fff' : err ? '#dc5050' : t.textMuted,
         borderRadius: iconOnly ? '999px' : '7px',
         padding: iconOnly ? '0.42rem' : '0.4rem 0.6rem',
         cursor: 'pointer',

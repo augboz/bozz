@@ -101,7 +101,7 @@ export default function WhatsAppWidget({ ctx }: { ctx: WidgetCtx }) {
       {error && <div style={{ fontSize: '0.68rem', color: t.alert, marginBottom: '0.3rem', flexShrink: 0 }}>{error}</div>}
       <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {chats.length === 0 && (
-          <div style={{ fontSize: '0.76rem', color: t.textMuted, textAlign: 'center', padding: '1rem 0', fontStyle: 'italic' }}>
+          <div style={{ fontSize: '0.76rem', color: t.textMuted, textAlign: 'center', padding: '1rem 0', lineHeight: 1.5 }}>
             Messages will appear here
           </div>
         )}

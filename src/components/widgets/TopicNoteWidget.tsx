@@ -19,7 +19,7 @@ export default function TopicNoteWidget({ ctx }: { ctx: WidgetCtx }) {
   if (!topic || !onTopicChange) {
     return (
       <Widget t={t} accent={ACCENT}>
-        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
+        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
           No topic selected.
         </div>
       </Widget>
@@ -91,8 +91,8 @@ export default function TopicNoteWidget({ ctx }: { ctx: WidgetCtx }) {
           onClick={startEdit}
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
         >
-          <span style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
-            No note yet — click to add one.
+          <span style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
+            No note yet. Click to add one.
           </span>
         </button>
       )}

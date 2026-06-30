@@ -18,9 +18,9 @@ const GOOGLE_STEPS = [
   'Top bar → "Select a project" → New project → any name → Create.',
   'Left menu: APIs & Services → Library → search "Gmail API" → Enable.',
   'Left menu: APIs & Services → OAuth consent screen → External → Create. Fill in App name + support email + developer email. Save and Continue through every screen until finished.',
-  '⚠️ CRITICAL — still on the OAuth consent screen: go to the "Test users" step → + Add users → type in your own Gmail address → Save. If you skip this you will see "Access blocked: App not verified" when you try to sign in.',
+  '⚠️ CRITICAL: still on the OAuth consent screen, go to the "Test users" step → + Add users → type in your own Gmail address → Save. If you skip this you will see "Access blocked: App not verified" when you try to sign in.',
   'Left menu: APIs & Services → Credentials → + Create credentials → OAuth client ID → Application type: Desktop app → Create.',
-  'A dialog appears with your Client ID and Client secret — copy both and paste them in the fields below, then click Connect.',
+  'A dialog appears with your Client ID and Client secret. Copy both and paste them in the fields below, then click Connect.',
 ];
 
 const MICROSOFT_STEPS = [

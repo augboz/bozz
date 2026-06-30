@@ -182,9 +182,18 @@ nav[aria-label="Main navigation"]::-webkit-scrollbar {
   50%      { transform: scaleY(1); }
 }
 
-/* Remove default focus outline — components handle focus styling inline */
-button:focus-visible {
-  outline: none;
+/* Visible keyboard focus ring. Controls set inline outline:none for mouse focus;
+   this restores a clear ring for keyboard users only (:focus-visible), in the
+   theme text colour so it stays high-contrast in both light and dark. !important
+   is needed to win over the inline outline:none many controls set. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--app-text, #888) !important;
+  outline-offset: 2px;
 }
 
 /* react-grid-layout: keep the drop placeholder & resize handle subtle and

@@ -219,7 +219,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
         <div style={{ position: 'relative', zIndex: 1 }}>
         {items.length > 0 && !editMode && (
-          <div style={{ fontSize: '0.82rem', color: t.textMuted, marginBottom: '0.6rem' }}>
+          <div style={{ fontSize: '0.82rem', color: t.text, fontWeight: 500, marginBottom: '0.6rem' }}>
             {greeting()}
           </div>
         )}
@@ -313,7 +313,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
       {visible && pageBg && <BgLayer bg={pageBg} t={t} />}
       <div style={{ position: 'relative', zIndex: 1 }}>
       {items.length > 0 && !editMode && (
-        <div style={{ fontSize: '0.82rem', color: t.textMuted, marginBottom: '0.6rem' }}>
+        <div style={{ fontSize: '0.82rem', color: t.text, fontWeight: 500, marginBottom: '0.6rem' }}>
           {greeting()}
         </div>
       )}

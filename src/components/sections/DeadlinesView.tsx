@@ -159,7 +159,7 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
             value={addText}
             onChange={e => setAddText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitAdd(); } }}
-            placeholder="Add a deadline — e.g. stats essay friday 5pm"
+            placeholder="Add a deadline, e.g. stats essay friday 5pm"
             style={{
               flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
               color: t.text, fontSize: '0.85rem', fontFamily: 'inherit', padding: '0.3rem 0.2rem',
@@ -171,7 +171,7 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
             title="Add deadline"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: t.doingAccent, border: 'none', borderRadius: '6px', cursor: addText.trim() ? 'pointer' : 'default',
+              background: t.doingAccent, border: 'none', borderRadius: '6px', cursor: addText.trim() ? 'pointer' : 'not-allowed',
               color: '#fff', padding: '0.3rem 0.45rem', flexShrink: 0, opacity: addText.trim() ? 1 : 0.5,
             }}
           >

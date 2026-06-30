@@ -235,7 +235,7 @@ export default function Dashboard() {
                     id: i.id, date: i.date, amount: i.amount,
                     category: 'IOU',
                     type: (i.direction === 'owedToMe' ? 'owed-to-me' : 'i-owe') as BudgetData['transactions'][number]['type'],
-                    note: i.person + (i.note ? ` — ${i.note}` : ''),
+                    note: i.person + (i.note ? `: ${i.note}` : ''),
                   }));
                 b.transactions = [...b.transactions, ...migrated];
               }
@@ -1523,6 +1523,7 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveSection('settings')}
             title="Settings"
+            aria-label="Settings"
             data-onb="nav-settings"
             style={{
               background: 'transparent', border: 'none',
@@ -1569,7 +1570,7 @@ export default function Dashboard() {
               position: 'relative',
               transition: 'background 0.12s, color 0.12s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = sT.panel; e.currentTarget.style.color = sT.textMuted; }}
+            onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
             onMouseLeave={e => { e.currentTarget.style.background = activeSection === 'inbox' ? sT.panel : 'transparent'; e.currentTarget.style.color = activeSection === 'inbox' ? sT.text : sT.textDim; }}
           >
             <Inbox size={17} strokeWidth={1.5} />

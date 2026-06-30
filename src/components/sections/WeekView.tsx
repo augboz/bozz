@@ -132,7 +132,7 @@ function DayColumn({ day, t, setActiveSection, onOpenEvent }: {
             cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.58rem', color: e.color, fontWeight: 500 }}>
-              <Clock size={8} strokeWidth={2} /> {minToLabel(sm)}–{minToLabel(em)}
+              <Clock size={8} strokeWidth={2} /> {minToLabel(sm)}-{minToLabel(em)}
             </span>
             <span style={{ fontSize: '0.7rem', color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {e.title}
@@ -261,7 +261,7 @@ export default function WeekView({ ctx }: {
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
       {/* Greeting */}
-      <div style={{ fontSize: '0.82rem', color: t.textMuted, marginBottom: '0.85rem' }}>{greeting()}</div>
+      <div style={{ fontSize: '0.82rem', color: t.text, fontWeight: 500, marginBottom: '0.85rem' }}>{greeting()}</div>
 
       {/* Weekend toggle */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.6rem' }}>

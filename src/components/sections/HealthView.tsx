@@ -468,7 +468,7 @@ function BarChart({ days, getValue, label, unit, color, t, goal }: {
         return (
           <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
             <span style={{ fontSize: '1.6rem', fontWeight: 200, color: t.text, lineHeight: 1 }}>
-              {v !== null ? v.toLocaleString() : '—'}
+              {v !== null ? v.toLocaleString() : '-'}
             </span>
             <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{unit} today</span>
           </div>
@@ -494,7 +494,7 @@ function StatPill({ icon, label, value, unit, color, t }: {
         <span style={{ fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</span>
       </div>
       <span style={{ fontSize: '1.4rem', fontWeight: 200, color: t.text, lineHeight: 1 }}>
-        {value !== null ? value.toLocaleString() : '—'}
+        {value !== null ? value.toLocaleString() : '-'}
       </span>
       <span style={{ fontSize: '0.68rem', color: t.textDim }}>{unit}</span>
     </div>
@@ -738,10 +738,10 @@ export default function HealthView({ t, healthDays, onChange, userRef = 'aug-use
                   fontSize: '0.8rem', color: t.text, alignItems: 'center',
                 }}>
                   <span style={{ color: t.textMuted }}>{format(new Date(d.date), 'd MMM yyyy')}</span>
-                  <span>{d.steps?.toLocaleString() ?? '—'}</span>
-                  <span>{d.sleepHours != null ? `${d.sleepHours}h` : '—'}</span>
-                  <span>{d.activeCalories?.toLocaleString() ?? '—'}</span>
-                  <span>{d.heartRateAvg ?? '—'}</span>
+                  <span>{d.steps?.toLocaleString() ?? '-'}</span>
+                  <span>{d.sleepHours != null ? `${d.sleepHours}h` : '-'}</span>
+                  <span>{d.activeCalories?.toLocaleString() ?? '-'}</span>
+                  <span>{d.heartRateAvg ?? '-'}</span>
                   <button
                     onClick={() => onChange(healthDays.filter(hd => hd.date !== d.date))}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textDim, padding: '0.1rem', display: 'flex', alignItems: 'center' }}

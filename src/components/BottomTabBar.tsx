@@ -106,7 +106,7 @@ export default function BottomTabBar({ tabs, active, onSelect, quicksCount = 0, 
               } as React.CSSProperties}
             >
               <Settings size={18} strokeWidth={isSettingsActive ? 2 : 1.5} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.55rem', fontWeight: isSettingsActive ? 500 : 400, lineHeight: 1, letterSpacing: '0.02em' }}>
+              <span style={{ fontSize: '0.6rem', fontWeight: isSettingsActive ? 500 : 400, lineHeight: 1, letterSpacing: '0.02em' }}>
                 Settings
               </span>
             </button>

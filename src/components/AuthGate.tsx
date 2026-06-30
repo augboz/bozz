@@ -44,7 +44,7 @@ function friendlyError(err: unknown): string {
     msg.includes('NetworkError') ||
     msg.includes('network')
   ) {
-    return 'Cannot reach the server — it may be paused or your connection is down. Try again in a moment.';
+    return 'Cannot reach the server. It may be paused or your connection is down. Try again in a moment.';
   }
   return msg;
 }
@@ -166,7 +166,7 @@ export default function AuthGate({ children }: Props) {
         });
 
         await openUrl(data.url);
-        setStatus({ text: 'Browser opened — sign in with Google, then return here.', ok: true });
+        setStatus({ text: 'Browser opened. Sign in with Google, then return here.', ok: true });
       } else {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -242,7 +242,7 @@ export default function AuthGate({ children }: Props) {
               {mode === 'signin' ? 'Welcome back' : 'Create account'}
             </div>
             <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>
-              {mode === 'signin' ? 'Sign in to continue.' : 'Just your email to get started.'}
+              {mode === 'signin' ? 'Sign in to continue.' : 'Email and password to get started.'}
             </div>
           </div>
 

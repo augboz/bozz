@@ -551,7 +551,7 @@ export default function SettingsView({
           <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '1rem' }}>
             <div style={{ fontSize: '0.84rem', color: t.text, fontWeight: 500, marginBottom: '0.2rem' }}>Weekly review</div>
             <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5, marginBottom: '0.55rem' }}>
-              A calm week-ending summary. Pick when it becomes available — that's all there is to set.
+              A calm week-ending summary. Pick when it becomes available. That's all there is to set.
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <select

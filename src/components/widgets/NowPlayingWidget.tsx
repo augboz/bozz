@@ -135,7 +135,7 @@ export default function NowPlayingWidget({ ctx }: { ctx: WidgetCtx }) {
 
       {status === 'ready' && !track && (
         <div style={{ marginTop: '0.85rem' }}>
-          <div style={{ fontSize: '0.78rem', color: t.textMuted, fontStyle: 'italic' }}>
+          <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
             Nothing playing right now
           </div>
           {account && (

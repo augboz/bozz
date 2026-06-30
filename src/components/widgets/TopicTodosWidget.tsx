@@ -168,7 +168,7 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
     return (
       <Widget t={t} accent="#9ab8d4">
         <WidgetHeader label="Tasks" accent="#9ab8d4" t={t} icon={ListTree} />
-        <div style={{ marginTop: '1rem', fontSize: '0.82rem', color: t.textDim, fontStyle: 'italic' }}>
+        <div style={{ marginTop: '1rem', fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.5 }}>
           No topic selected.
         </div>
       </Widget>
@@ -309,7 +309,7 @@ export default function TopicTodosWidget({ ctx }: { ctx: WidgetCtx }) {
         </DndContext>
 
         {displayed.length === 0 && (
-          <div style={{ fontSize: '0.82rem', color: t.textDim, fontStyle: 'italic', padding: '0.25rem 0' }}>
+          <div style={{ fontSize: '0.82rem', color: t.textMuted, lineHeight: 1.5, padding: '0.25rem 0' }}>
             No tasks yet. Add your first one below.
           </div>
         )}

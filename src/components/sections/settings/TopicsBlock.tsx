@@ -334,7 +334,7 @@ export default function TopicsBlock({ t, topics, setTopics, topicFolders, setTop
           fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.55,
           marginBottom: '0.6rem',
         }}>
-          No topics yet. Add one to create a task list — give it a name, choose an icon,
+          No topics yet. Add one to create a task list: give it a name, choose an icon,
           and define your stages (e.g. <em>To do → Doing → Done</em>).
         </div>
       )}
@@ -630,7 +630,7 @@ function TopicCard({ t, topic, expanded, isNew, onToggle, onChange, onDelete, on
             <label style={lbl(t)}>
               Description
               <span style={{ color: t.textDim, fontWeight: 400, marginLeft: '0.4rem' }}>
-                — helps Bozz predict the right topic in Quick Add
+                helps Bozz predict the right topic in Quick Add
               </span>
             </label>
             <textarea
@@ -647,7 +647,7 @@ function TopicCard({ t, topic, expanded, isNew, onToggle, onChange, onDelete, on
             <label style={lbl(t)}>
               Stages
               <span style={{ color: t.textDim, fontWeight: 400, marginLeft: '0.4rem' }}>
-                — drag to reorder · the last stage means done
+                drag to reorder · the last stage means done
               </span>
             </label>
             <DndContext sensors={stageSensors} collisionDetection={closestCenter} onDragEnd={handleStageDragEnd}

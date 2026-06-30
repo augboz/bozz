@@ -51,7 +51,7 @@ export default function WelcomeColdStart({ onChoose, onSkip }: {
           What are you here for?
         </h1>
         <div style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', maxWidth: '440px' }}>
-          Pick everything that applies and we’ll tailor your board to match — change or add more anytime.
+          Pick everything that applies and we’ll tailor your board to match. Change or add more anytime.
         </div>
       </div>
 
@@ -106,12 +106,17 @@ export default function WelcomeColdStart({ onChoose, onSkip }: {
           color: selected.size === 0 ? 'rgba(255,255,255,0.4)' : '#08080a',
           border: 'none', borderRadius: '10px', padding: '0.65rem 1.6rem',
           fontFamily: 'inherit', fontSize: '0.9rem', fontWeight: 600,
-          cursor: selected.size === 0 ? 'default' : 'pointer',
+          cursor: selected.size === 0 ? 'not-allowed' : 'pointer',
           transition: 'background 0.18s, color 0.18s',
         }}
       >
-        {selected.size > 1 ? `Set up ${selected.size} spaces` : 'Continue'}
+        Continue
       </button>
+      {selected.size === 0 && (
+        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>
+          Pick at least one to continue.
+        </div>
+      )}
 
       <button
         onClick={onSkip}

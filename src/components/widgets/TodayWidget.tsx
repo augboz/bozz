@@ -216,7 +216,7 @@ function PrioritiesSection({ items, ctx, t, setActiveSection }: {
 }) {
   if (items.length === 0) {
     return (
-      <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
+      <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
         Nothing due soon.{' '}
         <button onClick={() => setActiveSection('inbox')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>
@@ -424,7 +424,7 @@ function EventsSection({ events, t, setActiveSection, onOpenEvent }: {
 
   if (events.length === 0) {
     return (
-      <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
+      <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
         No events today.{' '}
         <button onClick={() => setActiveSection('calendar')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>
@@ -452,7 +452,7 @@ function EventsSection({ events, t, setActiveSection, onOpenEvent }: {
           }}>
             <Clock size={9} strokeWidth={2} color={e.color} style={{ flexShrink: 0 }} />
             <span style={{ fontSize: '0.66rem', color: e.color, fontWeight: 500, flexShrink: 0 }}>
-              {minToLabel(sm)}–{minToLabel(em)}
+              {minToLabel(sm)}-{minToLabel(em)}
             </span>
             <span style={{ flex: 1, fontSize: '0.78rem', color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {e.title}
@@ -568,7 +568,7 @@ function TasksSection({ ctx, todayKey, prios = [] }: { ctx: WidgetCtx; todayKey:
 
   if (items.length === 0) {
     return (
-      <div style={{ fontSize: '0.78rem', color: t.textDim, fontStyle: 'italic' }}>
+      <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.5 }}>
         Nothing planned today.{' '}
         <button onClick={() => ctx.setActiveSection('dailyPlanner')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: ACCENT, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 500, padding: 0 }}>
@@ -659,7 +659,7 @@ function SectionLabel({ icon: Icon, label, count, t }: {
       <Icon size={9} strokeWidth={1.8} />
       {label}
       {count != null && count > 0 && (
-        <span style={{ marginLeft: '0.2rem', color: t.textMuted }}>{count}</span>
+        <span style={{ marginLeft: '0.2rem', color: t.text, fontWeight: 600 }}>{count}</span>
       )}
     </div>
   );

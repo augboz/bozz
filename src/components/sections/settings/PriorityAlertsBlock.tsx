@@ -98,7 +98,7 @@ export default function PriorityAlertsBlock({ t, settings, onChange, accounts }:
         <div>
           <div style={{ fontSize: '0.88rem', color: t.text }}>Priority alerts</div>
           <div style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '0.15rem' }}>
-            Get pinged when an email that matters lands — your bank, a landlord, "interview".
+            Get pinged when an email that matters lands, like your bank, a landlord, or "interview".
           </div>
         </div>
         <Toggle on={settings.enabled} onClick={() => patch({ enabled: !settings.enabled })} t={t} />

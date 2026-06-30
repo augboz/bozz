@@ -180,11 +180,11 @@ function NotionSection({ t }: { t: Theme }) {
             <button onClick={() => { setEditToken(true); setTokenInput(''); }} style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: t.textMuted, fontFamily: 'inherit', fontSize: '0.72rem',
-            }}>change token</button>
+            }}>Change token</button>
             <button onClick={clearConfig} style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: t.alert, fontFamily: 'inherit', fontSize: '0.72rem',
-            }}>disconnect</button>
+            }}>Disconnect</button>
           </div>
         )}
       </div>
