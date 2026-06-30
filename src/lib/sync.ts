@@ -25,6 +25,7 @@ export const SYNCED_KEYS = [
   'notionWidget', 'spotifyAccount', 'waAccount',
   'dailyPlan',
   'habits',
+  'clearStreak',
   'healthConnections', 'healthDays',
   'sidebarCollapsed',
   'weatherLocation',

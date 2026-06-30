@@ -15,13 +15,16 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { Check, AlertTriangle, Flag, MapPin } from 'lucide-react';
+import { Check, AlertTriangle, Flag, MapPin, Flame, PartyPopper, CalendarArrowUp } from 'lucide-react';
 import type { WidgetCtx } from './context';
 import { Widget, WidgetHeader } from '../shared/Widget';
 import { CalendarDays, Clock } from 'lucide-react';
 import type { CalendarEvent } from '../../lib/types';
 import { deadlineEntries, dueTimestamp, type DeadlineEntry } from './util';
 import DeadlineQuickAdd from './DeadlineQuickAdd';
+import SnoozeControl from '../shared/SnoozeControl';
+import { isSnoozeable, snoozeItem } from '../../lib/snooze';
+import { markTodayCleared, isTodayCleared } from '../../lib/clearStreak';
 
 const ACCENT = '#bfa8c9';
 const WARNING = '#e0a23b';
@@ -114,6 +117,38 @@ function SummaryLine({ overdue, dueToday, nextEvent, t }: {
   );
 }
 
+/**
+ * BigTaskWarning — P-B "start now" red flag. Shown when a high-effort (L) task is
+ * due within ~2 days: a big job with little runway. INFORMATIONAL ONLY — it links
+ * to the task's section, it never schedules or time-blocks anything.
+ */
+function BigTaskWarning({ items, t, setActiveSection }: {
+  items: Priority[]; t: WidgetCtx['t']; setActiveSection: (id: string) => void;
+}) {
+  if (items.length === 0) return null;
+  const first = items[0];
+  const extra = items.length - 1;
+  return (
+    <button
+      onClick={() => setActiveSection(first.section)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%',
+        padding: '0.4rem 0.55rem', marginBottom: '0.6rem',
+        background: t.alertBg, border: `1px solid ${t.alertBorder}`,
+        borderLeft: `3px solid ${t.alert}`, borderRadius: '7px',
+        cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+      }}
+    >
+      <AlertTriangle size={12} strokeWidth={2} color={t.alert} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: '0.7rem', color: t.alert, lineHeight: 1.35, minWidth: 0 }}>
+        <span style={{ fontWeight: 600 }}>Start now</span> — big task, little time:{' '}
+        <span style={{ fontWeight: 500 }}>{first.item.text}</span>
+        {extra > 0 && <span style={{ color: t.textMuted }}> +{extra} more</span>}
+      </span>
+    </button>
+  );
+}
+
 /** "in 18 min" / "in 2h 5m" / "now" — relative label for the next event start. */
 function untilLabel(ms: number): string {
   if (ms <= 0) return 'now';
@@ -170,8 +205,9 @@ function NextClassBanner({ event, t }: { event: CalendarEvent; t: WidgetCtx['t']
   );
 }
 
-function PrioritiesSection({ items, t, setActiveSection }: {
+function PrioritiesSection({ items, ctx, t, setActiveSection }: {
   items: Priority[];
+  ctx: WidgetCtx;
   t: WidgetCtx['t'];
   setActiveSection: (id: string) => void;
 }) {
@@ -196,37 +232,176 @@ function PrioritiesSection({ items, t, setActiveSection }: {
         const isOverdue = p.bucket === 'overdue';
         const labelColor = isOverdue ? t.alert : p.bucket === 'today' ? WARNING : t.textMuted;
         const label = isOverdue ? 'overdue' : p.bucket === 'today' ? 'today' : 'this week';
+        // Snooze only on real, editable topic items (calendar-derived entries carry
+        // a synthetic negative id and have no topic — hide the control for them).
+        const canSnooze = isSnoozeable(p.item.id, p.section, ctx.topics) && !!ctx.onTopicChange;
         return (
-          <button
+          // Row is a flex container (not a button) so the snooze control can be a
+          // sibling — nesting a button inside a button is invalid HTML.
+          <div
             key={`${p.section}-${p.item.id}`}
-            onClick={() => setActiveSection(p.section)}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.3rem 0.45rem',
               background: isOverdue ? t.alertBg : t.bgAlt,
               border: `1px solid ${isOverdue ? t.alertBorder : t.border}`,
               borderLeft: `3px solid ${p.accent}`,
-              borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit',
-              textAlign: 'left', width: '100%',
+              borderRadius: '6px',
             }}
           >
             {isOverdue
               ? <AlertTriangle size={11} strokeWidth={2} color={t.alert} style={{ flexShrink: 0 }} />
               : <Flag size={10} strokeWidth={2} color={labelColor} style={{ flexShrink: 0 }} />}
-            <span style={{
-              flex: 1, fontSize: '0.78rem', color: isOverdue ? t.alert : t.text,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {p.item.text}
-            </span>
+            <button
+              onClick={() => setActiveSection(p.section)}
+              style={{
+                flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                fontFamily: 'inherit', textAlign: 'left',
+              }}
+            >
+              <span style={{
+                flex: 1, fontSize: '0.78rem', color: isOverdue ? t.alert : t.text,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {p.item.text}
+              </span>
+            </button>
             <span style={{ fontSize: '0.6rem', fontWeight: 600, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
               {label}
             </span>
-          </button>
+            {canSnooze && (
+              <SnoozeControl
+                t={t}
+                topics={ctx.topics}
+                topicId={p.section}
+                itemId={p.item.id}
+                onTopicChange={ctx.onTopicChange}
+                size={11}
+              />
+            )}
+          </div>
         );
       })}
       {overflow > 0 && (
         <div style={{ fontSize: '0.68rem', color: t.textDim, paddingLeft: '0.1rem' }}>+{overflow} more due soon</div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * CloseOutCard — the end-of-day reward (P-C). Shown in place of the priorities
+ * list when today's actionable priorities (overdue + due-today) hit zero. It
+ *   - auto-marks today on the persisted clear-streak (idempotent, once/day),
+ *   - celebrates "Today's done", showing how many were cleared + the streak, and
+ *   - offers a one-tap "Roll unfinished to tomorrow" that snoozes the remaining
+ *     (this-week) topic items to tomorrow — reusing P-A's reschedule.
+ *
+ * Pure composition over existing state + the small persisted counter.
+ */
+function CloseOutCard({ ctx, prios, todayMs, t, setActiveSection }: {
+  ctx: WidgetCtx;
+  prios: Priority[];
+  todayMs: number;
+  t: WidgetCtx['t'];
+  setActiveSection: (id: string) => void;
+}) {
+  const { clearStreak, onClearStreakChange } = ctx;
+
+  // How many actionable items the user actually closed today: tasks whose
+  // deadline was today and that now sit in a done stage. Falls back to a warm
+  // generic message when we can't count any (e.g. a genuinely empty day).
+  const clearedToday = (ctx.topics ?? []).reduce((n, topic) => {
+    const doneStageIds = new Set((topic.stages ?? []).filter(s => s.done).map(s => s.id));
+    return n + (topic.items ?? []).filter(it =>
+      it.completedAt != null
+      && dayStart(it.completedAt) === todayMs
+      && doneStageIds.has(it.stageId),
+    ).length;
+  }, 0);
+
+  // Auto-mark today on the streak the first time it goes clear (idempotent).
+  useEffect(() => {
+    if (!onClearStreakChange) return;
+    if (isTodayCleared(clearStreak)) return;
+    onClearStreakChange(markTodayCleared(clearStreak));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Remaining snoozeable items = this-week topic items still pending (not the
+  // calendar-derived ones). These are what "Roll unfinished to tomorrow" moves.
+  const rollable = prios.filter(p =>
+    p.bucket === 'week' && isSnoozeable(p.item.id, p.section, ctx.topics),
+  );
+
+  const rollToTomorrow = () => {
+    if (!ctx.onTopicChange) return;
+    for (const p of rollable) {
+      snoozeItem(ctx.topics, p.section, p.item.id, 'tomorrow', ctx.onTopicChange);
+    }
+  };
+
+  const streakCount = clearStreak?.count ?? 0;
+  const headline = clearedToday > 0
+    ? `Today's done — ${clearedToday} cleared`
+    : "Today's done — nothing pressing";
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: '0.55rem',
+      padding: '0.85rem 0.9rem',
+      background: `${t.doneAccent}14`,
+      border: `1px solid ${t.doneAccent}3a`,
+      borderRadius: '10px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <PartyPopper size={16} strokeWidth={2} color={t.doneAccent} style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: t.text }}>
+          {headline}
+        </span>
+      </div>
+
+      {streakCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: t.textMuted }}>
+          <Flame size={12} strokeWidth={1.8} color="#e08a4a" style={{ flexShrink: 0 }} />
+          <span>
+            <span style={{ fontWeight: 700, color: '#e08a4a' }}>{streakCount}-day</span> clear streak
+            {(clearStreak?.best ?? 0) > streakCount && (
+              <span style={{ color: t.textDim }}> · best {clearStreak?.best}</span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {rollable.length > 0 && (
+        <button
+          onClick={rollToTomorrow}
+          title="Push this week's remaining items to tomorrow"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.35rem', alignSelf: 'flex-start',
+            background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: '7px',
+            padding: '0.32rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit',
+            color: t.textMuted, fontSize: '0.72rem', fontWeight: 500,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = t.text; }}
+          onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; }}
+        >
+          <CalendarArrowUp size={12} strokeWidth={1.8} />
+          Roll {rollable.length} unfinished to tomorrow
+        </button>
+      )}
+
+      {rollable.length === 0 && (
+        <button
+          onClick={() => setActiveSection('inbox')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', alignSelf: 'flex-start',
+            color: ACCENT, fontFamily: 'inherit', fontSize: '0.72rem', fontWeight: 500, padding: 0,
+          }}
+        >
+          Capture something for tomorrow →
+        </button>
       )}
     </div>
   );
@@ -497,6 +672,16 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
   const prios = priorities(ctx, todayMs);
   const overdueCount = prios.filter(p => p.bucket === 'overdue').length;
   const dueTodayCount = prios.filter(p => p.bucket === 'today').length;
+  // Actionable today = overdue + due-today. When this hits zero the day is
+  // "closed" and the celebratory close-out card replaces the priorities list.
+  const actionable = prios.filter(p => p.bucket === 'overdue' || p.bucket === 'today');
+
+  // P-B (informational ONLY): a high-effort (L) task due within ~2 days is a
+  // "start now" signal — a big task with little time before it's due. We never
+  // auto-create planner blocks or schedule anything; this is a red flag, no more.
+  const bigTaskWarnings = prios.filter(p =>
+    p.effort === 'L' && p.due - Date.now() <= 2 * DAY_MS,
+  );
 
   const timedSorted = todayEvents.filter(e => !e.allDay).sort((a, b) => a.start - b.start);
   const nextEvent = timedSorted.find(e => e.start >= Date.now()) ?? timedSorted[0] ?? null;
@@ -536,12 +721,17 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
         <NextClassBanner event={nextEvent} t={t} />
       )}
 
+      {/* P-B informational "start now" red flag for big tasks due very soon. */}
+      <BigTaskWarning items={bigTaskWarnings} t={t} setActiveSection={setActiveSection} />
+
       <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: labelled ? '0.75rem' : '0' }}>
           {/* Priorities — always shown; this is the morning-brief promise */}
           <div>
             {labelled && <SectionLabel icon={Flag} label="Priorities" count={prios.length} t={t} />}
-            <PrioritiesSection items={prios} t={t} setActiveSection={setActiveSection} />
+            {actionable.length === 0
+              ? <CloseOutCard ctx={ctx} prios={prios} todayMs={todayMs} t={t} setActiveSection={setActiveSection} />
+              : <PrioritiesSection items={prios} ctx={ctx} t={t} setActiveSection={setActiveSection} />}
             <DeadlineQuickAdd ctx={ctx} accent={ACCENT} />
           </div>
 

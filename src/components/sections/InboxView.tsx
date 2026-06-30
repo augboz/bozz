@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, ArrowRight, Sparkles, Pencil, Check, Zap, Command, FolderPlus } from 'lucide-react';
-import type { InboxItem, Theme, Topic } from '../../lib/types';
+import type { Effort, InboxItem, Theme, Topic } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import ChoicePicker, { type Choice } from '../shared/ChoicePicker';
 import DatePicker from '../shared/DatePicker';
+import { EffortPicker } from '../shared/EffortChip';
 import { isTauri } from '../../lib/platform';
 import { predictTopic } from '../../lib/taskParser';
 
@@ -13,22 +14,22 @@ interface InboxViewProps {
   setInbox: React.Dispatch<React.SetStateAction<InboxItem[]>>;
   topics: Topic[];
   /** Routes the inbox item into the given topic. */
-  onAssign: (text: string, topicId: string, deadline: number | null) => void;
+  onAssign: (text: string, topicId: string, deadline: number | null, effort?: Effort) => void;
   /** Spin up a brand-new topic seeded with this quick's text + deadline, so a
    *  first capture on a zero-topic account never stalls with nowhere to go. */
-  onCreateTopicFromQuick?: (text: string, deadline: number | null) => void;
+  onCreateTopicFromQuick?: (text: string, deadline: number | null, effort?: Effort) => void;
 }
 
 function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCreateTopic }: {
   item: InboxItem; t: Theme;
   dests: Choice[];
   topics: Topic[];
-  onAssign: (topicId: string, deadline: number | null) => void;
+  onAssign: (topicId: string, deadline: number | null, effort?: Effort) => void;
   onDelete: () => void;
   onRename: (text: string) => void;
   /** Present only when there are no topics to send to — spins up a new topic
    *  from this quick instead of leaving the row with a disabled "send". */
-  onCreateTopic?: (deadline: number | null) => void;
+  onCreateTopic?: (deadline: number | null, effort?: Effort) => void;
 }) {
   // Re-predicted on every render against the CURRENT topic list — never
   // cached — so a topic created after this item was captured still gets
@@ -49,6 +50,7 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCrea
   }, [predictedId]);
 
   const [deadline, setDeadline] = useState<number | null>(item.deadline ?? null);
+  const [effort, setEffort] = useState<Effort | undefined>(item.effort);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const editRef = useRef<HTMLInputElement>(null);
@@ -66,7 +68,7 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCrea
         const tag = (e.target as HTMLElement).tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
         e.preventDefault();
-        onAssign(dest, deadline);
+        onAssign(dest, deadline, effort);
       }}
       style={{
         background: t.todoBg, border: `1px solid ${hasSuggestion ? (suggestedColor ?? t.todoBorder) + '55' : t.todoBorder}`,
@@ -124,9 +126,10 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCrea
           allowClear
           size="sm"
         />
+        <EffortPicker value={effort} onChange={setEffort} t={t} size="sm" />
         {dests.length === 0 && onCreateTopic ? (
           <button
-            onClick={() => onCreateTopic(deadline)}
+            onClick={() => onCreateTopic(deadline, effort)}
             data-onb="inbox-new-topic"
             title="Create a topic from this quick"
             style={{
@@ -140,7 +143,7 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCrea
           </button>
         ) : (
           <button
-            onClick={() => onAssign(dest, deadline)}
+            onClick={() => onAssign(dest, deadline, effort)}
             disabled={!dest}
             data-onb="inbox-send"
             title="Send to topic"
@@ -169,12 +172,12 @@ function InboxRow({ item, t, dests, topics, onAssign, onDelete, onRename, onCrea
 export default function InboxView({ t, inbox, setInbox, topics, onAssign, onCreateTopicFromQuick }: InboxViewProps) {
   const remove = (id: number) => setInbox(prev => prev.filter(i => i.id !== id));
   const rename = (id: number, text: string) => setInbox(prev => prev.map(i => i.id === id ? { ...i, text } : i));
-  const assign = (item: InboxItem, topicId: string, deadline: number | null) => {
-    onAssign(item.text, topicId, deadline);
+  const assign = (item: InboxItem, topicId: string, deadline: number | null, effort?: Effort) => {
+    onAssign(item.text, topicId, deadline, effort);
     remove(item.id);
   };
-  const createTopicFrom = (item: InboxItem, deadline: number | null) => {
-    onCreateTopicFromQuick?.(item.text, deadline);
+  const createTopicFrom = (item: InboxItem, deadline: number | null, effort?: Effort) => {
+    onCreateTopicFromQuick?.(item.text, deadline, effort);
     remove(item.id);
   };
 
@@ -255,10 +258,10 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign, onCrea
             t={t}
             dests={dests}
             topics={topics}
-            onAssign={(topicId, deadline) => assign(item, topicId, deadline)}
+            onAssign={(topicId, deadline, effort) => assign(item, topicId, deadline, effort)}
             onDelete={() => remove(item.id)}
             onRename={(text) => rename(item.id, text)}
-            onCreateTopic={onCreateTopicFromQuick ? (deadline) => createTopicFrom(item, deadline) : undefined}
+            onCreateTopic={onCreateTopicFromQuick ? (deadline, effort) => createTopicFrom(item, deadline, effort) : undefined}
           />
         ))}
         {inbox.length === 0 && (

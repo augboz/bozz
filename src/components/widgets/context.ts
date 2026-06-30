@@ -1,6 +1,6 @@
 import type React from 'react';
 import type {
-  BudgetData, CalendarEvent, CalendarNote, DailyPlan, EmailMessage, Habit,
+  BudgetData, CalendarEvent, CalendarNote, ClearStreak, DailyPlan, EmailMessage, Habit,
   Theme, Topic,
 } from '../../lib/types';
 
@@ -31,6 +31,10 @@ export interface WidgetCtx {
   habits?: Habit[];
   /** Update the habits list. */
   onHabitsChange?: (habits: Habit[]) => void;
+  /** Daily clear-streak — the "close your day" reward loop (P-C). */
+  clearStreak?: ClearStreak;
+  /** Persist an updated clear-streak. */
+  onClearStreakChange?: (next: ClearStreak) => void;
   /** Today's calendar events (feed + deadlines + notes). */
   todayEvents?: CalendarEvent[];
   /** Calendar events over the next ~14 days (feed + notes), so deadline-aware

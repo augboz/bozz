@@ -30,9 +30,16 @@ export interface TopicItem {
   /** Optional time-of-day for the deadline, minutes from local midnight.
    *  null/undefined = all-day (legacy behaviour — due at local midnight). */
   dueMin?: number | null;
+  /** Optional effort estimate — Small / Medium / Large (Round 7, P-B).
+   *  Additive + migration-safe: undefined = unset (legacy). Purely
+   *  informational — never used to auto-schedule or auto-plan. */
+  effort?: Effort;
   /** Free-form notes. */
   notes?: string;
 }
+
+/** Effort estimate for a task — Small / Medium / Large (Round 7, P-B). */
+export type Effort = 'S' | 'M' | 'L';
 
 export interface TopicLink {
   id: string;
@@ -159,6 +166,8 @@ export interface InboxItem {
   /** Predicted deadline from voice parsing (unix ms). */
   deadline?: number | null;
   deadlineLabel?: string | null;
+  /** Optional effort estimate set during triage (Round 7, P-B). */
+  effort?: Effort;
 }
 
 export type TransactionType = 'income' | 'expense' | 'owed-to-me' | 'i-owe';
@@ -232,6 +241,20 @@ export interface PlannerItem {
  *  Persisted per user so the plan survives app restarts.
  */
 export type DailyPlan = Record<string, string[]>;
+
+/**
+ * Daily clear-streak — the "close your day" reward loop (Round 7, P-C).
+ * Counts consecutive days the user reached zero actionable priorities. Persisted
+ * the same local+sync way as Habits streaks; undefined = never closed a day.
+ */
+export interface ClearStreak {
+  /** Consecutive days closed. */
+  count: number;
+  /** localMidnight-ms-string of the most recent day marked clear. */
+  lastClearedKey: string | null;
+  /** Best streak ever reached — a small persistent brag. */
+  best: number;
+}
 
 // ── Habits ──────────────────────────────────────────────────────────────────
 

@@ -135,6 +135,7 @@ export default function Dashboard() {
   const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
   const [dailyPlan, setDailyPlan] = useState<import('../lib/types').DailyPlan>({});
   const [habits, setHabits] = useState<import('../lib/types').Habit[]>([]);
+  const [clearStreak, setClearStreak] = useState<import('../lib/types').ClearStreak>({ count: 0, lastClearedKey: null, best: 0 });
   const [healthDays, setHealthDays] = useState<import('../lib/types').HealthDay[]>([]);
   const [priorityAlerts, setPriorityAlerts] = useState<PriorityAlertSettings>(DEFAULT_ALERT_SETTINGS);
   const alertsSeededRef = useRef(false);
@@ -175,7 +176,7 @@ export default function Dashboard() {
         'calendarFeeds', 'calendarCache', 'calendarConnections', 'budget', 'inbox', 'recentSearches',
         'reviews', 'reviewSettings', 'oauthAccounts', 'emailsCache', 'sidebarCollapsed',
         'topics', 'topicFolders',
-        'calendarNotes', 'dailyPlan', 'habits', 'healthDays',
+        'calendarNotes', 'dailyPlan', 'habits', 'clearStreak', 'healthDays',
         'priorityAlerts',
       ];
       let appr: AppearancePrefs = { ...DEFAULT_APPEARANCE };
@@ -263,6 +264,13 @@ export default function Dashboard() {
               setDailyPlan(val as import('../lib/types').DailyPlan);
             } else if (key === 'habits' && Array.isArray(val)) {
               setHabits(val as import('../lib/types').Habit[]);
+            } else if (key === 'clearStreak' && val && typeof val === 'object') {
+              const cs = val as Partial<import('../lib/types').ClearStreak>;
+              setClearStreak({
+                count: typeof cs.count === 'number' ? cs.count : 0,
+                lastClearedKey: typeof cs.lastClearedKey === 'string' ? cs.lastClearedKey : null,
+                best: typeof cs.best === 'number' ? cs.best : 0,
+              });
             } else if (key === 'healthDays' && Array.isArray(val)) {
               setHealthDays(val as import('../lib/types').HealthDay[]);
             } else if (key === 'priorityAlerts' && val && typeof val === 'object') {
@@ -478,6 +486,7 @@ export default function Dashboard() {
   useEffect(() => { if (!loading) save('calendarNotes', calendarNotes); }, [calendarNotes, loading]);
   useEffect(() => { if (!loading) save('dailyPlan', dailyPlan); }, [dailyPlan, loading]);
   useEffect(() => { if (!loading) save('habits', habits); }, [habits, loading]);
+  useEffect(() => { if (!loading) save('clearStreak', clearStreak); }, [clearStreak, loading]);
   useEffect(() => { if (!loading) save('healthDays', healthDays); }, [healthDays, loading]);
   useEffect(() => { if (!loading) save('priorityAlerts', priorityAlerts); }, [priorityAlerts, loading]);
 
@@ -1664,8 +1673,10 @@ export default function Dashboard() {
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
+                clearStreak, onClearStreakChange: setClearStreak,
                 todayEvents, upcomingEvents, weekEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
+                onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
               }}
               onSwitchToWeek={() => setHomeLanding('week')}
               onSwitchToBoard={() => setHomeLanding('board')}
@@ -1679,8 +1690,10 @@ export default function Dashboard() {
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
+                clearStreak, onClearStreakChange: setClearStreak,
                 todayEvents, upcomingEvents, weekEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
+                onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
               }}
               onSwitchToBriefing={() => setHomeLanding('briefing')}
               onSwitchToBoard={() => setHomeLanding('board')}
@@ -1716,8 +1729,10 @@ export default function Dashboard() {
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
+                clearStreak, onClearStreakChange: setClearStreak,
                 todayEvents, upcomingEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
+                onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
               }}
             />
           </div>
@@ -1757,6 +1772,7 @@ export default function Dashboard() {
                 habits, onHabitsChange: setHabits,
                 todayEvents, upcomingEvents: deadlineWindowEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
                 widgetConfig: {}, onWidgetConfig: () => {},
+                onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
               }}
             />
           )}
@@ -1819,7 +1835,7 @@ export default function Dashboard() {
               inbox={inbox}
               setInbox={setInbox}
               topics={topics}
-              onAssign={(text, topicId, deadline) => {
+              onAssign={(text, topicId, deadline, effort) => {
                 setTopics(prev => prev.map(top => {
                   if (top.id !== topicId) return top;
                   const firstStage = top.stages.find(s => !s.done) ?? top.stages[0];
@@ -1831,11 +1847,12 @@ export default function Dashboard() {
                       stageId: firstStage?.id ?? '',
                       completedAt: null,
                       deadline,
+                      ...(effort ? { effort } : {}),
                     }],
                   };
                 }));
               }}
-              onCreateTopicFromQuick={(text, deadline) => {
+              onCreateTopicFromQuick={(text, deadline, effort) => {
                 // First capture on a zero-topic account: spin up a real topic
                 // seeded with this quick, then open the editor so the user can
                 // name + tweak it — no dead-end, no Settings detour.
@@ -1846,6 +1863,7 @@ export default function Dashboard() {
                   stageId: (fresh.stages.find(s => !s.done) ?? fresh.stages[0])?.id ?? '',
                   completedAt: null,
                   deadline,
+                  ...(effort ? { effort } : {}),
                 }];
                 setTopics(prev => [...prev, fresh]);
                 setEditTopicId(fresh.id);

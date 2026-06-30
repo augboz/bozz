@@ -1,10 +1,13 @@
-import type { CalendarEvent, ListItem, SectionId } from '../../lib/types';
+import type { CalendarEvent, Effort, ListItem, SectionId } from '../../lib/types';
 import type { WidgetCtx } from './context';
 
 export interface DeadlineEntry {
   item: ListItem;
   section: SectionId;
   accent: string;
+  /** Optional effort estimate carried from the topic item (P-B). Calendar-
+   *  derived entries have none. */
+  effort?: Effort;
 }
 
 /** Titles that read as a deadline rather than a regular timed class/meeting. */
@@ -64,6 +67,7 @@ export function deadlineEntries(ctx: WidgetCtx): DeadlineEntry[] {
           item: { id: item.id, text: item.text, status: 'todo', completedAt: item.completedAt, deadline: item.deadline, dueMin: item.dueMin },
           section: topic.id as SectionId,
           accent: topic.color,
+          effort: item.effort,
         });
         seen.add(key(item.text, dayStart(item.deadline)));
       }

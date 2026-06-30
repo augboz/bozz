@@ -14,13 +14,16 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Flame, CornerDownLeft, Plus } from 'lucide-react';
+import { Flame, CornerDownLeft, Plus, ArrowDownWideNarrow } from 'lucide-react';
 import type { SectionId, Theme } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
 import { deadlineEntries, dueTimestamp, type DeadlineEntry } from '../widgets/util';
 import { SectionHeader, EmptyState } from '../shared/ui';
 import { sectionAccents } from '../../lib/themes';
 import { parseVoiceTasks } from '../../lib/taskParser';
+import SnoozeControl from '../shared/SnoozeControl';
+import { isSnoozeable } from '../../lib/snooze';
+import { EffortChip, effortRank } from '../shared/EffortChip';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -73,6 +76,9 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
   // Filter chips are keyed by section id (topic id, or 'calendar' for imports).
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [addText, setAddText] = useState('');
+  // Sort: by time-left (default — soonest due first) or by effort (heaviest
+  // first, tie-broken by time-left). Informational only; never auto-schedules.
+  const [sortBy, setSortBy] = useState<'time' | 'effort'>('time');
 
   const entries = useMemo(() => deadlineEntries(ctx), [ctx]);
 
@@ -91,8 +97,18 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
 
   const filtered = useMemo(() => {
     const list = activeFilters.size === 0 ? entries : entries.filter(e => activeFilters.has(e.section));
-    return [...list].sort((a, b) => (dueTimestamp(a.item) ?? 0) - (dueTimestamp(b.item) ?? 0));
-  }, [entries, activeFilters]);
+    const byTime = (a: DeadlineEntry, b: DeadlineEntry) => (dueTimestamp(a.item) ?? 0) - (dueTimestamp(b.item) ?? 0);
+    if (sortBy === 'effort') {
+      // Heaviest effort first; ties fall back to soonest-due so the list stays
+      // readable. Unset effort sorts last (rank 0).
+      return [...list].sort((a, b) => effortRank(b.effort) - effortRank(a.effort) || byTime(a, b));
+    }
+    return [...list].sort(byTime);
+  }, [entries, activeFilters, sortBy]);
+
+  // Whether any entry carries an effort estimate — only then is the sort toggle
+  // meaningful, so it's hidden on accounts that never set effort.
+  const hasAnyEffort = useMemo(() => entries.some(e => e.effort != null), [entries]);
 
   // Group into the four chronological buckets, preserving the sorted order.
   const grouped = useMemo(() => {
@@ -202,6 +218,38 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
         </div>
       )}
 
+      {/* Sort toggle — by time-left (default) vs by effort. Only shown once any
+          task carries an effort estimate, so it never clutters a fresh account. */}
+      {hasAnyEffort && filtered.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.1rem' }}>
+          <ArrowDownWideNarrow size={13} strokeWidth={1.8} color={t.textDim} />
+          <span style={{ fontSize: '0.72rem', color: t.textDim }}>Sort by</span>
+          <div style={{
+            display: 'inline-flex', borderRadius: '7px', overflow: 'hidden',
+            border: `1px solid ${t.border}`,
+          }}>
+            {(['time', 'effort'] as const).map(mode => {
+              const on = sortBy === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setSortBy(mode)}
+                  style={{
+                    background: on ? t.doingAccent : 'transparent',
+                    color: on ? '#fff' : t.textMuted,
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: '0.72rem', fontWeight: on ? 600 : 400,
+                    padding: '0.3rem 0.65rem',
+                  }}
+                >
+                  {mode === 'time' ? 'time left' : 'effort'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Grouped chronological list */}
       {filtered.length === 0 ? (
         <EmptyState
@@ -232,28 +280,39 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
                     const due = dueTimestamp(e.item);
                     const u = due != null ? urgency(due, now, todayMs, e.accent, t) : null;
                     const dayMs = e.item.deadline != null ? dayStart(e.item.deadline) : todayMs;
+                    const canSnooze = isSnoozeable(e.item.id, e.section, topics) && !!ctx.onTopicChange;
                     return (
-                      <button
+                      // Row is a flex container (not a button) so the snooze control
+                      // can be a sibling — a button-in-button is invalid HTML.
+                      <div
                         key={`${e.section}-${e.item.id}`}
-                        onClick={() => setActiveSection(e.section as SectionId)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '0.6rem',
                           background: t.bgAlt, border: `1px solid ${t.border}`,
                           borderLeft: `3px solid ${e.accent}`, borderRadius: '8px',
-                          padding: '0.55rem 0.75rem', cursor: 'pointer', fontFamily: 'inherit',
-                          textAlign: 'left', width: '100%',
+                          padding: '0.55rem 0.75rem',
                           transition: 'background 0.12s, border-color 0.12s',
                         }}
                         onMouseEnter={ev => { ev.currentTarget.style.background = t.panel; }}
                         onMouseLeave={ev => { ev.currentTarget.style.background = t.bgAlt; }}
                       >
                         <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: e.accent, flexShrink: 0 }} />
-                        <span style={{
-                          flex: 1, fontSize: '0.86rem', color: t.text,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {e.item.text}
-                        </span>
+                        <button
+                          onClick={() => setActiveSection(e.section as SectionId)}
+                          style={{
+                            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                            fontFamily: 'inherit', textAlign: 'left',
+                          }}
+                        >
+                          <span style={{
+                            flex: 1, fontSize: '0.86rem', color: t.text,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {e.item.text}
+                          </span>
+                        </button>
+                        <EffortChip effort={e.effort} />
                         <span style={{ fontSize: '0.7rem', color: t.textDim, flexShrink: 0 }}>{dateLabel(dayMs)}</span>
                         {u && (
                           <span style={{
@@ -263,7 +322,17 @@ export default function DeadlinesView({ ctx }: { ctx: WidgetCtx }) {
                             {u.label}
                           </span>
                         )}
-                      </button>
+                        {canSnooze && (
+                          <SnoozeControl
+                            t={t}
+                            topics={topics}
+                            topicId={e.section}
+                            itemId={e.item.id}
+                            onTopicChange={ctx.onTopicChange}
+                            size={13}
+                          />
+                        )}
+                      </div>
                     );
                   })}
                 </div>
