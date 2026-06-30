@@ -44,6 +44,7 @@ import TopicFolderEditModal from './TopicFolderEditModal';
 import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock';
 import { DEFAULT_HOME, WIDGET_REGISTRY } from './widgets/registry';
 import HomeView from './sections/HomeView';
+import BriefingView from './sections/BriefingView';
 import TopicView from './sections/TopicView';
 import SettingsView from './sections/SettingsView';
 import AppsView from './sections/AppsView';
@@ -298,6 +299,19 @@ export default function Dashboard() {
           : [],
       );
 
+      // A genuinely brand-new account — nothing of theirs in storage. Computed
+      // before setAppearance so the home-landing default below lands in one pass.
+      const brandNewAccount = !appearanceLoaded && !loadedHomeItems
+        && (!loadedTopics || loadedTopics.length === 0);
+
+      // Home landing surface (P1): NEW accounts open to the zero-config Briefing
+      // (the 90-second-morning promise on launch); existing users keep the Board
+      // so their saved widget layout is untouched. Only defaulted when the user
+      // has no explicit stored preference, so a returning user's choice wins.
+      if (appr.homeLanding == null) {
+        appr.homeLanding = brandNewAccount ? 'briefing' : 'board';
+      }
+
       setAppearance(appr);
       if (appr.defaultSection !== 'settings' && (appr.hiddenSections as string[]).includes(appr.defaultSection)) {
         setActiveSection('home');
@@ -309,8 +323,6 @@ export default function Dashboard() {
       // account — nothing of theirs in storage and no prior choice yet. Decided
       // here from the loaded data so it can never race with async state.
       const welcomeChosen = await getItem('welcomeComplete');
-      const brandNewAccount = !appearanceLoaded && !loadedHomeItems
-        && (!loadedTopics || loadedTopics.length === 0);
       if (welcomeChosen?.value == null && brandNewAccount) setWelcomePhase('theme');
 
       setLoading(false);
@@ -369,11 +381,16 @@ export default function Dashboard() {
   };
 
   // Finish the welcome flow: land on the populated home and mark welcome done so
-  // the flow never re-runs.
+  // the flow never re-runs. P4: the outcome-driven welcome (theme → cold-start →
+  // timetable) already hands a new account a populated Briefing, so DON'T also
+  // gate them behind the four spotlight tours — dismiss those by default. They
+  // stay fully re-runnable from Settings ("Replay walkthroughs").
   const finishWelcome = () => {
     setActiveSection('home');
     setWelcomePhase(null);
+    setOnbDismissed(true);
     void save('welcomeComplete', true);
+    void save('onboardingDismissed', true);
   };
 
   // Timetable step: the validated feed lands via setCalendarFeeds (the existing
@@ -392,9 +409,12 @@ export default function Dashboard() {
   const replayWalkthroughs = () => {
     // Force the guide to show even when every step is already complete, and
     // navigate home where it lives — so it's always reachable from Settings.
+    // The tours spotlight Board controls (Add widget, Edit layout…), so switch
+    // the Home landing to the Board first or the spotlight has nothing to anchor.
     setOnbForced(true);
     setOnbDismissed(false);
     void save('onboardingDismissed', false);
+    setHomeLanding('board');
     setActiveSection('home');
   };
 
@@ -662,6 +682,11 @@ export default function Dashboard() {
     setAppearance(prev => ({ ...prev, ...patch }));
   const resetAppearance = () => setAppearance(DEFAULT_APPEARANCE);
   const resetHomeLayout = () => setHomeItems(DEFAULT_HOME);
+
+  // Home landing surface (P1): 'briefing' = the zero-config Today brief,
+  // 'board' = the customisable widget grid. Undefined → 'board' (existing users).
+  const homeLanding: 'briefing' | 'board' = appearance.homeLanding ?? 'board';
+  const setHomeLanding = (mode: 'briefing' | 'board') => patchAppearance({ homeLanding: mode });
 
   // ── Topic / folder editing from the sidebar edit mode ──────────────────────
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -1504,10 +1529,28 @@ export default function Dashboard() {
             </ErrorBoundary>
           )}
           {/* Home stays mounted (display toggle) so returning is instant and the
-              widget grid never re-animates — see gridReady in HomeView. */}
+              widget grid never re-animates — see gridReady in HomeView.
+              Home has two landing surfaces (P1): the zero-config Briefing and the
+              customisable Board. The Board (HomeView) always stays mounted (only
+              its visibility toggles) so its grid never re-animates; the Briefing
+              renders on top of it when selected. */}
           <ErrorBoundary label="the home view">
-          <div style={{ display: activeSection === 'home' ? undefined : 'none' }}>
-            {activeSection === 'home' && welcomePhase == null && (
+          {activeSection === 'home' && homeLanding === 'briefing' && (
+            <BriefingView
+              ctx={{
+                t, budget, emails,
+                setActiveSection,
+                topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
+                onAdvanceStage, colorBank: appearance.colorBank ?? [],
+                habits, onHabitsChange: setHabits,
+                todayEvents, upcomingEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
+                widgetConfig: {}, onWidgetConfig: () => {},
+              }}
+              onSwitchToBoard={() => setHomeLanding('board')}
+            />
+          )}
+          <div style={{ display: activeSection === 'home' && homeLanding === 'board' ? undefined : 'none' }}>
+            {activeSection === 'home' && homeLanding === 'board' && welcomePhase == null && (
               <HomeCoachChip
                 t={t}
                 signals={{
@@ -1520,10 +1563,11 @@ export default function Dashboard() {
               />
             )}
             <HomeView
-              visible={activeSection === 'home'}
+              visible={activeSection === 'home' && homeLanding === 'board'}
               items={homeItems}
               setItems={setHomeItems}
               onReplayWalkthroughs={replayWalkthroughs}
+              onSwitchToBriefing={() => setHomeLanding('briefing')}
               widgetShape={appearance.widgetShape ?? 'rounded'}
               widgetBorder={appearance.widgetBorder ?? 'normal'}
               onWidgetShape={(s) => patchAppearance({ widgetShape: s })}

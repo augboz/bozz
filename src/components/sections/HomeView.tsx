@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
-import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen } from 'lucide-react';
+import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen, CalendarDays } from 'lucide-react';
 import type { HomeWidgetItem, Theme, ImapAccount, WidgetShape, WidgetBorder } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
 import { WIDGET_REGISTRY, WIDGET_LIST, STARTER_TEMPLATES, type StarterTemplate } from '../widgets/registry';
@@ -31,6 +31,8 @@ interface HomeViewProps {
   /** Re-open the "Getting started" walkthroughs. Wired to the same handler
    *  Settings uses, so a new user can find their way back from the empty home. */
   onReplayWalkthroughs?: () => void;
+  /** Switch the Home landing back to the zero-config Briefing (persists). */
+  onSwitchToBriefing?: () => void;
 }
 
 /** Time-of-day greeting shown above the grid, reinforcing the "your morning"
@@ -51,7 +53,7 @@ function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
 }
 
 
-export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true, onReplayWalkthroughs }: HomeViewProps) {
+export default function HomeView({ items, setItems, ctx, widgetShape, widgetBorder, onWidgetShape, onWidgetBorder, visible = true, onReplayWalkthroughs, onSwitchToBriefing }: HomeViewProps) {
   const { t } = ctx;
   const [editMode, setEditMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -224,24 +226,29 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
           </div>
         )}
         <div style={{
-          display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap',
         }}>
-          {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
-          {editMode && (
-            <button data-onb="add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
-              <Plus size={14} strokeWidth={1.5} /> Add widget
+          {onSwitchToBriefing && !editMode
+            ? <LandingToggle t={t} onSwitchToBriefing={onSwitchToBriefing} />
+            : <span />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
+            {editMode && (
+              <button data-onb="add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
+                <Plus size={14} strokeWidth={1.5} /> Add widget
+              </button>
+            )}
+            <button
+              data-onb="home-edit"
+              onClick={() => { setEditMode(e => !e); setShowAdd(false); }}
+              style={ghostBtn(t)}
+            >
+              {editMode
+                ? <><Check size={14} strokeWidth={1.5} /> Done</>
+                : <><Pencil size={14} strokeWidth={1.5} /> Edit</>}
             </button>
-          )}
-          <button
-            data-onb="home-edit"
-            onClick={() => { setEditMode(e => !e); setShowAdd(false); }}
-            style={ghostBtn(t)}
-          >
-            {editMode
-              ? <><Check size={14} strokeWidth={1.5} /> Done</>
-              : <><Pencil size={14} strokeWidth={1.5} /> Edit</>}
-          </button>
+          </div>
         </div>
 
         {items.length === 0 && !editMode && (
@@ -315,10 +322,14 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         </div>
       )}
       <div style={{
-        display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         gap: '0.5rem', marginBottom: editMode ? '0.5rem' : '0.75rem',
         flexWrap: 'wrap',
       }}>
+        {/* Left: Briefing/Board switch (hidden in edit mode to keep the bar clean) */}
+        {onSwitchToBriefing && !editMode
+          ? <LandingToggle t={t} onSwitchToBriefing={onSwitchToBriefing} />
+          : <span />}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           {editMode && (
             <AppearanceControls t={t} widgetShape={widgetShape} widgetBorder={widgetBorder} onShape={onWidgetShape} onBorder={onWidgetBorder} />
@@ -662,6 +673,40 @@ function AddPanel({ t, onAdd, onClose, tbOffset, existingTypes }: {
       </div>
     </div>
     </>
+  );
+}
+
+// Briefing/Board landing toggle — mirrors the toggle in BriefingView so the two
+// surfaces feel like one switch. Shown only when a switch handler is wired.
+function LandingToggle({ t, onSwitchToBriefing }: { t: Theme; onSwitchToBriefing: () => void }) {
+  return (
+    <div style={{
+      display: 'inline-flex', borderRadius: '9px', overflow: 'hidden',
+      border: `1px solid ${t.borderStrong}`,
+      background: `var(--glass-bg, ${t.panel})`,
+      backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+    }}>
+      <button
+        onClick={onSwitchToBriefing}
+        title="Switch to the zero-config Briefing"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+          background: 'transparent', border: 'none',
+          color: t.text, padding: '0.35rem 0.7rem', fontSize: '0.72rem',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        <CalendarDays size={13} strokeWidth={1.8} /> Briefing
+      </button>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+        background: t.doingAccent, color: '#fff', borderLeft: `1px solid ${t.border}`,
+        padding: '0.35rem 0.7rem', fontSize: '0.72rem', fontWeight: 600, fontFamily: 'inherit',
+      }}>
+        <LayoutGrid size={13} strokeWidth={1.8} /> Board
+      </span>
+    </div>
   );
 }
 

@@ -71,17 +71,35 @@ function CreateEventForm({
   const [endMin, setEndMin] = useState((defaultStartMin ?? 9 * 60) + 60);
   const [color, setColor] = useState(bank[0] ?? '#7da7d9');
   const [notes, setNotes] = useState('');
+  const [location, setLocation] = useState('');
+  // Recurring class (timetable) fields — off by default, so a plain event is
+  // saved exactly as before (one-off, no `repeat`).
+  const [repeats, setRepeats] = useState(false);
+  const [weekdays, setWeekdays] = useState<number[]>([defaultDate.getDay()]);
+  // Default term window: today → +16 weeks (a typical semester). User can edit.
+  const [termStart, setTermStart] = useState(localMidnight(defaultDate));
+  const [termEnd, setTermEnd] = useState(localMidnight(defaultDate) + 16 * 7 * 24 * 60 * 60 * 1000);
   const titleRef = useRef<HTMLInputElement>(null);
+
+  const toggleWeekday = (d: number) =>
+    setWeekdays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort());
 
   const save = () => {
     if (!title.trim()) return;
+    // A repeating class is always timed (a weekly all-day class makes no sense),
+    // so force a start/end if the user left it all-day.
+    const useAllDay = repeats ? false : allDay;
     onSave({
       title: title.trim(),
       date: localMidnight(defaultDate),
-      startMin: allDay ? null : startMin,
-      endMin: allDay ? null : endMin,
+      startMin: useAllDay ? null : startMin,
+      endMin: useAllDay ? null : endMin,
       color,
       notes: notes.trim() || undefined,
+      location: location.trim() || undefined,
+      repeat: repeats && weekdays.length > 0
+        ? { weekdays, termStart, termEnd }
+        : undefined,
     });
     onClose();
   };
@@ -110,16 +128,77 @@ function CreateEventForm({
         style={inputStyle(t)}
       />
 
-      {/* All-day toggle */}
+      {/* All-day toggle — hidden when repeating (a weekly class is always timed) */}
+      {!repeats && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={allDay}
+            onChange={e => setAllDay(e.target.checked)}
+            style={{ accentColor: color }}
+          />
+          <span style={{ fontSize: '0.8rem', color: t.textMuted }}>All-day</span>
+        </label>
+      )}
+
+      {/* Repeat weekly (timetable class) toggle */}
       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
         <input
           type="checkbox"
-          checked={allDay}
-          onChange={e => setAllDay(e.target.checked)}
+          checked={repeats}
+          onChange={e => { setRepeats(e.target.checked); if (e.target.checked) setAllDay(false); }}
           style={{ accentColor: color }}
         />
-        <span style={{ fontSize: '0.8rem', color: t.textMuted }}>All-day</span>
+        <span style={{ fontSize: '0.8rem', color: t.textMuted }}>Repeats weekly (a class)</span>
       </label>
+
+      {/* Weekday picker + term range — only for a repeating class */}
+      {repeats && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+            {/* Mon-first labels; value maps to Date.getDay() (0=Sun … 6=Sat). */}
+            {[{ d: 1, l: 'M' }, { d: 2, l: 'T' }, { d: 3, l: 'W' }, { d: 4, l: 'T' }, { d: 5, l: 'F' }, { d: 6, l: 'S' }, { d: 0, l: 'S' }].map(({ d, l }) => {
+              const on = weekdays.includes(d);
+              return (
+                <button
+                  key={d}
+                  onClick={() => toggleWeekday(d)}
+                  aria-pressed={on}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '7px', cursor: 'pointer',
+                    background: on ? color : 'transparent',
+                    border: `1px solid ${on ? color : t.border}`,
+                    color: on ? '#fff' : t.textMuted, fontFamily: 'inherit',
+                    fontSize: '0.72rem', fontWeight: 600,
+                  }}
+                >
+                  {l}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.6rem', color: t.textDim, marginBottom: '0.25rem', letterSpacing: '0.06em' }}>TERM START</div>
+              <input
+                type="date"
+                value={format(new Date(termStart), 'yyyy-MM-dd')}
+                onChange={e => { if (e.target.value) setTermStart(localMidnight(new Date(e.target.value))); }}
+                style={{ ...inputStyle(t), padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.6rem', color: t.textDim, marginBottom: '0.25rem', letterSpacing: '0.06em' }}>TERM END</div>
+              <input
+                type="date"
+                value={format(new Date(termEnd), 'yyyy-MM-dd')}
+                onChange={e => { if (e.target.value) setTermEnd(localMidnight(new Date(e.target.value))); }}
+                style={{ ...inputStyle(t), padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Time pickers */}
       {!allDay && (
@@ -152,6 +231,15 @@ function CreateEventForm({
           </div>
         </div>
       )}
+
+      {/* Location / room */}
+      <input
+        value={location}
+        onChange={e => setLocation(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && save()}
+        placeholder="Room / location (optional)…"
+        style={inputStyle(t)}
+      />
 
       {/* Color */}
       <div>

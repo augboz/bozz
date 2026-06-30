@@ -14,7 +14,8 @@
  */
 
 import type React from 'react';
-import { Check, AlertTriangle, Flag } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, AlertTriangle, Flag, MapPin } from 'lucide-react';
 import type { WidgetCtx } from './context';
 import { Widget, WidgetHeader } from '../shared/Widget';
 import { CalendarDays, Clock } from 'lucide-react';
@@ -109,6 +110,62 @@ function SummaryLine({ overdue, dueToday, nextEvent, t }: {
           <span style={{ color: p.color, fontWeight: 500 }}>{p.text}</span>
         </span>
       ))}
+    </div>
+  );
+}
+
+/** "in 18 min" / "in 2h 5m" / "now" — relative label for the next event start. */
+function untilLabel(ms: number): string {
+  if (ms <= 0) return 'now';
+  const mins = Math.round(ms / 60_000);
+  if (mins < 60) return `in ${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m === 0 ? `in ${h}h` : `in ${h}h ${m}m`;
+}
+
+/**
+ * Persistent "Next: BIO101 · 14:00 · Room 3.21 · in 18 min" banner.
+ *
+ * Driven off the nextEvent the Today widget already computes. Only shown for a
+ * still-upcoming timed event today; re-renders every 30s so the countdown stays
+ * live. Migration-safe — `location` is optional, so it's simply omitted when a
+ * one-off note has none.
+ */
+function NextClassBanner({ event, t }: { event: CalendarEvent; t: WidgetCtx['t'] }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(x => x + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const sm = getStartMin(event);
+  const until = untilLabel(event.start - Date.now());
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap',
+      padding: '0.4rem 0.55rem', marginBottom: '0.6rem',
+      background: event.color + '1a',
+      border: `1px solid ${event.color}40`,
+      borderLeft: `3px solid ${event.color}`,
+      borderRadius: '7px',
+    }}>
+      <span style={{ fontSize: '0.56rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: event.color, flexShrink: 0 }}>
+        Next
+      </span>
+      <span style={{ fontSize: '0.78rem', fontWeight: 500, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+        {event.title}
+      </span>
+      <span style={{ fontSize: '0.68rem', color: t.textMuted, flexShrink: 0 }}>· {minToLabel(sm)}</span>
+      {event.location && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem', fontSize: '0.68rem', color: t.textMuted, flexShrink: 0 }}>
+          · <MapPin size={9} strokeWidth={2} color={t.textDim} />{event.location}
+        </span>
+      )}
+      <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 600, color: event.color, flexShrink: 0 }}>
+        {until}
+      </span>
     </div>
   );
 }
@@ -218,6 +275,14 @@ function EventsSection({ events, t, setActiveSection }: {
             <span style={{ flex: 1, fontSize: '0.78rem', color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {e.title}
             </span>
+            {e.location && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.15rem',
+                fontSize: '0.62rem', color: t.textMuted, flexShrink: 0, whiteSpace: 'nowrap',
+              }}>
+                <MapPin size={9} strokeWidth={2} color={t.textDim} />{e.location}
+              </span>
+            )}
           </div>
         );
       })}
@@ -465,6 +530,11 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
 
       {/* Narrated morning brief summary */}
       <SummaryLine overdue={overdueCount} dueToday={dueTodayCount} nextEvent={nextEvent} t={t} />
+
+      {/* Persistent "next class" banner — only for a still-upcoming timed event. */}
+      {showEvents && nextEvent && nextEvent.start >= Date.now() && (
+        <NextClassBanner event={nextEvent} t={t} />
+      )}
 
       <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: labelled ? '0.75rem' : '0' }}>

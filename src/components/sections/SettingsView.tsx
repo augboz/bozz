@@ -487,6 +487,13 @@ export default function SettingsView({
             )}
           </select>
         </Field>
+        <Field label="Home shows" hint="Briefing = your auto-built morning; Board = your widget grid" t={t}>
+          <Segmented<'briefing' | 'board'>
+            value={appearance.homeLanding ?? 'board'} t={t}
+            onChange={(v) => patchAppearance({ homeLanding: v })}
+            options={[{ id: 'briefing', label: 'Briefing' }, { id: 'board', label: 'Board' }]}
+          />
+        </Field>
 
         {/* ── Colour bank ── */}
         <div style={{ paddingTop: '0.5rem', borderTop: `1px solid ${t.border}` }}>

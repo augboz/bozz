@@ -1,6 +1,17 @@
 import { isSameDay } from 'date-fns';
 import type { CalendarEvent, CalendarNote, SectionId, Topic } from './types';
 
+/** How far ahead recurring classes are expanded from "today", in days. Bounded
+ *  so a term-long pattern never produces an unbounded event list. */
+const RECUR_WINDOW_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function dayStartMs(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
 /** Topic items with deadlines, as all-day calendar events. */
 export function topicDeadlineEvents(topics: Topic[]): CalendarEvent[] {
   const out: CalendarEvent[] = [];
@@ -24,25 +35,58 @@ export function topicDeadlineEvents(topics: Topic[]): CalendarEvent[] {
   return out;
 }
 
-/** Convert user-created CalendarNotes to CalendarEvents for display. */
-export function noteEvents(notes: CalendarNote[]): CalendarEvent[] {
-  return notes.map(n => {
-    const start = n.startMin != null
-      ? n.date + n.startMin * 60_000
-      : n.date;
-    const end = n.endMin != null ? n.date + n.endMin * 60_000 : null;
-    return {
-      id: `note:${n.id}`,
-      title: n.title,
-      start,
-      end,
-      allDay: n.startMin == null,
-      color: n.color,
-      source: 'note' as const,
-      startMin: n.startMin ?? undefined,
-      endMin: n.endMin ?? undefined,
-    };
-  });
+/** A single-day CalendarEvent built from a note anchored to `dayMs` (local
+ *  midnight). Shared by one-off notes and each expanded recurring occurrence. */
+function noteEventForDay(n: CalendarNote, dayMs: number, idSuffix = ''): CalendarEvent {
+  const start = n.startMin != null ? dayMs + n.startMin * 60_000 : dayMs;
+  const end = n.endMin != null ? dayMs + n.endMin * 60_000 : null;
+  return {
+    id: `note:${n.id}${idSuffix}`,
+    title: n.title,
+    start,
+    end,
+    allDay: n.startMin == null,
+    color: n.color,
+    source: 'note' as const,
+    startMin: n.startMin ?? undefined,
+    endMin: n.endMin ?? undefined,
+    location: n.location,
+  };
+}
+
+/**
+ * Convert user-created CalendarNotes to CalendarEvents for display.
+ *
+ * One-off notes (no `repeat`) map 1:1 as before. Recurring notes (a timetable
+ * class) are expanded client-side into one event per matching weekday inside a
+ * bounded window [today, today+RECUR_WINDOW_DAYS], clamped to the term range —
+ * the SAME synthesize-don't-store approach topicDeadlineEvents uses for
+ * deadlines, so existing one-off notes keep working untouched.
+ *
+ * @param now optional reference time (defaults to Date.now()) — injectable for tests.
+ */
+export function noteEvents(notes: CalendarNote[], now: number = Date.now()): CalendarEvent[] {
+  const out: CalendarEvent[] = [];
+  const todayMs = dayStartMs(now);
+  const windowEnd = todayMs + RECUR_WINDOW_DAYS * DAY_MS;
+
+  for (const n of notes ?? []) {
+    if (!n.repeat || (n.repeat.weekdays ?? []).length === 0) {
+      // One-off event (legacy path, fully preserved).
+      out.push(noteEventForDay(n, n.date));
+      continue;
+    }
+    // Recurring class — expand within the bounded window, clamped to the term.
+    const weekdays = new Set(n.repeat.weekdays);
+    const from = Math.max(todayMs, dayStartMs(n.repeat.termStart));
+    const to = Math.min(windowEnd, dayStartMs(n.repeat.termEnd));
+    for (let d = from; d <= to; d += DAY_MS) {
+      if (weekdays.has(new Date(d).getDay())) {
+        out.push(noteEventForDay(n, d, `:${d}`));
+      }
+    }
+  }
+  return out;
 }
 
 export function eventsOnDay(events: CalendarEvent[], day: Date): CalendarEvent[] {

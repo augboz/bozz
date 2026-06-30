@@ -282,7 +282,9 @@ export interface CalendarConnection {
 export interface CalendarNote {
   id: string;
   title: string;
-  /** Local midnight ms — which day this event belongs to. */
+  /** Local midnight ms — which day this event belongs to.
+   *  For a recurring class this is the term-start day (the first day the
+   *  pattern may appear); see `repeat` below. */
   date: number;
   /** Start time in minutes from midnight (e.g. 540 = 09:00). null = all-day. */
   startMin: number | null;
@@ -290,6 +292,22 @@ export interface CalendarNote {
   endMin: number | null;
   color: string;
   notes?: string;
+  /** Optional room / location, e.g. "Room 3.21". Surfaced in the Today brief. */
+  location?: string;
+  /**
+   * Optional recurrence — set ONLY for recurring classes/timetable entries.
+   * Absent (undefined) = a one-off event (legacy behaviour, fully preserved).
+   * Expanded client-side in lib/calendar.ts the same way topic deadlines are
+   * synthesized — there is no separate stored occurrence.
+   */
+  repeat?: {
+    /** Weekdays the class runs on: 0=Sun … 6=Sat (matches Date.getDay()). */
+    weekdays: number[];
+    /** Term start — local midnight ms. Occurrences before this are skipped. */
+    termStart: number;
+    /** Term end — local midnight ms. Occurrences after this are skipped. */
+    termEnd: number;
+  };
 }
 
 export interface CalendarEvent {
@@ -305,6 +323,9 @@ export interface CalendarEvent {
   /** Minutes from midnight — set for timed note events. */
   startMin?: number;
   endMin?: number;
+  /** Optional room / location, e.g. "Room 3.21". Carried from recurring/one-off
+   *  notes so the Today brief and Next-class banner can show where to be. */
+  location?: string;
 }
 
 export interface FeedCacheEntry {
@@ -373,6 +394,14 @@ export interface AppearancePrefs {
   hiddenFolderIds?: string[];
   /** Section the app opens to on launch. Can also be a topic id. */
   defaultSection: SectionId | string;
+  /**
+   * What the Home section shows: the zero-config "Briefing" (the auto-computed
+   * Today brief, full-width) or the customisable widget "Board".
+   * NEW accounts default to 'briefing' (the 90-second-morning promise on open);
+   * existing users default to 'board' so their saved layout is untouched.
+   * Undefined is treated as 'board' for backward-compatibility.
+   */
+  homeLanding?: 'briefing' | 'board';
   /** Corner radius preset for home widgets. */
   widgetShape: WidgetShape;
   /** Border style preset for home widgets. */
