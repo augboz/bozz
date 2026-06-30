@@ -30,7 +30,11 @@ function getStartMin(e: CalendarEvent): number {
 }
 
 export default function TodayScheduleWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, todayEvents, setActiveSection } = ctx;
+  const { t, todayEvents, setActiveSection, openCalendarOnDate } = ctx;
+  // Clicking a concrete event opens the calendar on that event's day; falls back
+  // to plain calendar nav when the host didn't wire openCalendarOnDate.
+  const openOn = (ts: number) =>
+    openCalendarOnDate ? openCalendarOnDate(ts) : setActiveSection('calendar');
 
   const events = todayEvents ?? [];
   const timed = events
@@ -81,13 +85,14 @@ export default function TodayScheduleWidget({ ctx }: { ctx: WidgetCtx }) {
                 ? Math.floor((e.end - e.start) / 60_000) + sm
                 : sm + 60);
               return (
-                <div key={e.id} style={{
+                <button key={e.id} onClick={() => openOn(e.start)} title={e.title} style={{
                   display: 'flex', alignItems: 'center', gap: '0.45rem',
                   padding: '0.35rem 0.5rem',
                   background: e.color + '18',
                   border: `1px solid ${e.color}33`,
                   borderLeft: `3px solid ${e.color}`,
                   borderRadius: '6px',
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
                 }}>
                   <Clock size={10} strokeWidth={1.8} color={e.color} style={{ flexShrink: 0 }} />
                   <span style={{
@@ -102,19 +107,20 @@ export default function TodayScheduleWidget({ ctx }: { ctx: WidgetCtx }) {
                   }}>
                     {e.title}
                   </span>
-                </div>
+                </button>
               );
             })}
 
             {/* ── All-day events ── */}
             {allDay.slice(0, MAX_ALLDAY).map(e => (
-              <div key={e.id} style={{
+              <button key={e.id} onClick={() => openOn(e.start)} title={e.title} style={{
                 display: 'flex', alignItems: 'center', gap: '0.45rem',
                 padding: '0.3rem 0.5rem',
                 background: t.bgAlt,
                 border: `1px solid ${t.border}`,
                 borderLeft: `3px solid ${e.color}`,
                 borderRadius: '6px',
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
               }}>
                 <span style={{
                   fontSize: '0.62rem', color: t.textDim,
@@ -128,7 +134,7 @@ export default function TodayScheduleWidget({ ctx }: { ctx: WidgetCtx }) {
                 }}>
                   {e.title}
                 </span>
-              </div>
+              </button>
             ))}
 
             {/* ── Deadline dots — "I need to do this today" ── */}

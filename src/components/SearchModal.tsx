@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
-import { Plus, Flag, Wallet, Timer, ArrowRight, Inbox, CornerDownLeft } from 'lucide-react';
 import type { SearchEntry } from '../lib/search';
-import type { CommandAction } from '../lib/commands';
 import type { Theme } from '../lib/types';
 import { useFocusTrap, dialogProps } from '../hooks/useFocusTrap';
 
@@ -13,18 +11,13 @@ interface SearchModalProps {
   onClose: () => void;
   onJump: (section: string) => void;
   onRecent: (query: string) => void;
-  /** Build the executable actions for the current query (command palette, P3).
-   *  Optional so older call sites stay valid; when absent it's jump-only. */
-  buildActions?: (query: string) => CommandAction[];
   isMobile?: boolean;
   tbOffset?: number;
 }
 
 const GROUP_ORDER = ['Topics', 'Tasks', 'Applications', 'Calendar', 'Budget', 'Inbox', 'Settings'];
 
-const ACTION_ICON = { plus: Plus, flag: Flag, wallet: Wallet, timer: Timer, arrow: ArrowRight, inbox: Inbox } as const;
-
-export default function SearchModal({ t, entries, recent, onClose, onJump, onRecent, buildActions, isMobile = false, tbOffset = 0 }: SearchModalProps) {
+export default function SearchModal({ t, entries, recent, onClose, onJump, onRecent, isMobile = false, tbOffset = 0 }: SearchModalProps) {
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,23 +35,8 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
     return hits.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group)).slice(0, 40);
   }, [q, fuse]);
 
-  // Actions that the typed query maps to (verbs that DO things). Above results.
-  const actions = useMemo(() => {
-    if (!q.trim() || !buildActions) return [];
-    try { return buildActions(q); } catch { return []; }
-  }, [q, buildActions]);
-
-  // Keyboard navigation runs across one flat list: actions first, then results.
-  const total = actions.length + results.length;
-
   useEffect(() => { setActive(0); }, [q]);
   useEffect(() => { inputRef.current?.focus(); }, []);
-
-  const runAction = (a: CommandAction) => {
-    if (q.trim()) onRecent(q.trim());
-    a.run();
-    onClose();
-  };
 
   const chooseEntry = (e: SearchEntry) => {
     if (q.trim()) onRecent(q.trim());
@@ -66,21 +44,15 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
     onClose();
   };
 
-  const runActive = () => {
-    if (active < actions.length) {
-      const a = actions[active];
-      if (a) runAction(a);
-    } else {
-      const e = results[active - actions.length];
-      if (e) chooseEntry(e);
-    }
-  };
-
   const onKeyDown = (ev: React.KeyboardEvent) => {
     if (ev.key === 'Escape') { onClose(); return; }
-    if (ev.key === 'ArrowDown') { ev.preventDefault(); setActive(a => Math.min(a + 1, total - 1)); }
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); setActive(a => Math.min(a + 1, results.length - 1)); }
     else if (ev.key === 'ArrowUp') { ev.preventDefault(); setActive(a => Math.max(a - 1, 0)); }
-    else if (ev.key === 'Enter' && total > 0) { ev.preventDefault(); runActive(); }
+    else if (ev.key === 'Enter' && results.length > 0) {
+      ev.preventDefault();
+      const e = results[active];
+      if (e) chooseEntry(e);
+    }
   };
 
   let lastGroup = '';
@@ -123,7 +95,7 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
           value={q}
           onChange={e => setQ(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="search or type a command…"
+          placeholder="search…"
           style={{
             background: 'transparent', border: 'none', borderBottom: `1px solid ${t.border}`,
             padding: isMobile ? '1.1rem 1.25rem' : '1rem 1.25rem',
@@ -156,61 +128,16 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
             </div>
           )}
 
-          {/* Actions — typed verbs that DO things. Shown above jump results. */}
-          {actions.length > 0 && (
-            <>
-              <div style={{
-                fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase',
-                color: t.textDim, padding: '0.7rem 1.25rem 0.3rem',
-              }}>
-                Actions
-              </div>
-              {actions.map((a, i) => {
-                const isActive = i === active;
-                const Icon = ACTION_ICON[a.icon] ?? Plus;
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => runAction(a)}
-                    onMouseEnter={() => setActive(i)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '0.6rem',
-                      width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-                      background: isActive ? t.bgAlt : 'transparent', border: 'none',
-                      padding: '0.6rem 1.25rem',
-                    }}
-                  >
-                    <span style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0,
-                      background: t.doingAccent + '22', color: t.doingAccent,
-                    }}>
-                      <Icon size={13} strokeWidth={2} />
-                    </span>
-                    <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                      <span style={{ color: t.text, fontSize: '0.82rem', fontWeight: 500 }}>{a.label}</span>
-                      <span style={{ color: t.textMuted, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {a.detail}
-                      </span>
-                    </span>
-                    {isActive && <CornerDownLeft size={13} strokeWidth={2} color={t.textDim} style={{ flexShrink: 0 }} />}
-                  </button>
-                );
-              })}
-            </>
-          )}
-
-          {q.trim() && total === 0 && (
+          {q.trim() && results.length === 0 && (
             <div style={{ padding: '1.5rem 1.25rem', color: t.textDim, fontSize: '0.85rem', fontStyle: 'italic' }}>
               nothing found
             </div>
           )}
 
           {results.map((e, i) => {
-            const flatIndex = actions.length + i;
             const header = e.group !== lastGroup ? e.group : null;
             lastGroup = e.group;
-            const isActive = flatIndex === active;
+            const isActive = i === active;
             return (
               <div key={e.id}>
                 {header && (
@@ -223,7 +150,7 @@ export default function SearchModal({ t, entries, recent, onClose, onJump, onRec
                 )}
                 <button
                   onClick={() => chooseEntry(e)}
-                  onMouseEnter={() => setActive(flatIndex)}
+                  onMouseEnter={() => setActive(i)}
                   style={{
                     display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem',
                     width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',

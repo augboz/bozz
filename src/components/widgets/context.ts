@@ -11,6 +11,10 @@ export interface WidgetCtx {
   emails: EmailMessage[];
   /** No-op while the home grid is in edit mode (prevents accidental nav). */
   setActiveSection: (id: string) => void;
+  /** Open the Calendar focused on a specific event's date, in DAY mode.
+   *  `ts` is the event's start (unix ms). Optional so older ctx call sites stay
+   *  valid; widgets fall back to plain `setActiveSection('calendar')` when absent. */
+  openCalendarOnDate?: (ts: number) => void;
   /** The user's topics — used by QuickAdd and any topic-aware widget. */
   topics: Topic[];
   /** Add an item to a topic's first non-done stage (or the specified stageId). */

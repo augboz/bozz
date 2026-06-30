@@ -1,9 +1,9 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   format, addMonths, addWeeks, addDays, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar, CalendarPlus, Keyboard } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Plus, Clock, Calendar, CalendarPlus, Keyboard, Trash2 } from 'lucide-react';
 import type {
   CalendarEvent, CalendarFeed, CalendarNote, CalendarViewMode, Theme, Topic,
 } from '../../../lib/types';
@@ -30,6 +30,9 @@ interface CalendarViewProps {
   appleCalError?: string | null;
   tbOffset?: number;
   colorBank?: string[];
+  /** When set/changed (by a click on a specific event elsewhere), focus the
+   *  calendar on that date in DAY mode and open its day panel. */
+  focusRequest?: { date: number; mode?: CalendarViewMode };
 }
 
 const WEEK_OPTS = { weekStartsOn: 1 } as const;
@@ -51,6 +54,18 @@ function minToLabel(min: number): string {
 
 function localMidnight(d: Date): number {
   const n = new Date(d); n.setHours(0, 0, 0, 0); return n.getTime();
+}
+
+/**
+ * Map a note-derived CalendarEvent back to its underlying CalendarNote id.
+ * noteEvents() builds ids as `note:<noteId>` (one-off) or `note:<noteId>:<dayMs>`
+ * (one per recurring occurrence). Note ids never contain ':', so the id is the
+ * single segment after the `note:` prefix. Returns null for non-note events
+ * (feed/deadline), which are read-only and have no deletable note.
+ */
+function noteIdFromEvent(e: CalendarEvent): string | null {
+  if (e.source !== 'note' || !e.id.startsWith('note:')) return null;
+  return e.id.slice('note:'.length).split(':')[0] || null;
 }
 
 // ── Event creation form ───────────────────────────────────────────────────────
@@ -621,13 +636,17 @@ function MonthGrid({ t, cursor, events, onPick }: {
 
 // ── Day panel (slide-in) ──────────────────────────────────────────────────────
 
-function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 0, onCreateNote, colorBank }: {
+function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 0, onCreateNote, colorBank, notes = [], onDeleteNote }: {
   t: Theme; day: Date; events: CalendarEvent[]; onClose: () => void;
   topics?: Topic[];
   onAddTopicItem?: (topicId: string, text: string, deadline: number) => void;
   tbOffset?: number;
   onCreateNote: (note: Omit<CalendarNote, 'id'>) => void;
   colorBank: string[];
+  /** User-created notes — used to tell a recurring class from a one-off event. */
+  notes?: CalendarNote[];
+  /** Delete the note behind a note-source event. Recurring = whole series. */
+  onDeleteNote?: (noteId: string) => void;
 }) {
   const [topicId, setTopicId] = useState<string>(() => topics?.[0]?.id ?? '');
   const [text, setText] = useState('');
@@ -637,6 +656,17 @@ function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 
   const timedEvents = events.filter(e => !e.allDay).sort((a, b) => a.start - b.start);
   const allDayEvents = events.filter(e => e.allDay && e.source !== 'deadline');
   const deadlines = events.filter(e => e.source === 'deadline');
+
+  // Delete a user-created event. For a recurring class, confirm first (it removes
+  // the whole series). Feed (.ics) events have no note id, so no delete is offered.
+  const deleteEvent = (e: CalendarEvent) => {
+    const noteId = noteIdFromEvent(e);
+    if (!noteId || !onDeleteNote) return;
+    const note = notes.find(n => n.id === noteId);
+    const isRecurring = !!note?.repeat && (note.repeat.weekdays ?? []).length > 0;
+    if (isRecurring && !window.confirm('Delete this class? This removes the whole repeating series.')) return;
+    onDeleteNote(noteId);
+  };
 
   const add = () => {
     if (!text.trim() || !useTopics) return;
@@ -676,6 +706,11 @@ function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 
                   </span>
                   <span style={{ flex: 1, fontSize: '0.82rem', color: t.text }}>{e.title}</span>
                   <EventSourceBadge source={e.source} />
+                  {noteIdFromEvent(e) && onDeleteNote && (
+                    <button onClick={() => deleteEvent(e)} title="Delete event" aria-label="Delete event" style={deleteBtn(t)}>
+                      <Trash2 size={13} strokeWidth={1.6} />
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -692,6 +727,11 @@ function DayPanel({ t, day, events, onClose, topics, onAddTopicItem, tbOffset = 
               <div key={e.id} style={eventRow(t, e.color)}>
                 <span style={{ flex: 1, fontSize: '0.82rem', color: t.text }}>{e.title}</span>
                 <EventSourceBadge source={e.source} />
+                {noteIdFromEvent(e) && onDeleteNote && (
+                  <button onClick={() => deleteEvent(e)} title="Delete event" aria-label="Delete event" style={deleteBtn(t)}>
+                    <Trash2 size={13} strokeWidth={1.6} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -805,10 +845,22 @@ export default function CalendarView({
   appleCalError,
   tbOffset = 0,
   colorBank = [] as string[],
+  focusRequest,
 }: CalendarViewProps) {
   const [mode, setMode] = useState<CalendarViewMode>('month');
   const [cursor, setCursor] = useState<Date>(new Date());
   const [selected, setSelected] = useState<Date | null>(null);
+
+  // Focus request — when a specific event is clicked elsewhere (Today, Week…),
+  // jump to its date in DAY mode and open that day's panel. Keyed off the request
+  // object's identity so each click re-focuses even on the same date.
+  useEffect(() => {
+    if (!focusRequest) return;
+    const d = new Date(focusRequest.date);
+    setCursor(d);
+    setMode(focusRequest.mode ?? 'day');
+    setSelected(d);
+  }, [focusRequest]);
   const [createFor, setCreateFor] = useState<{ day: Date; startMin?: number } | null>(null);
   const [colorPickingFor, setColorPickingFor] = useState<string | null>(null);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
@@ -855,6 +907,13 @@ export default function CalendarView({
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     onCalendarNotesChange?.([...calendarNotes, { id, ...raw }]);
     setCreateFor(null);
+  };
+
+  // Remove a user-created note (a one-off event or a whole recurring class). The
+  // grid, day panel, and every notes-derived surface (Today/Week/Deadlines)
+  // recompute from calendarNotes, so the event disappears everywhere at once.
+  const deleteNote = (noteId: string) => {
+    onCalendarNotesChange?.((calendarNotes ?? []).filter(n => n.id !== noteId));
   };
 
   const weekDays = mode === 'week'
@@ -1168,6 +1227,8 @@ export default function CalendarView({
           onAddTopicItem={onAddTopicItem}
           tbOffset={tbOffset}
           colorBank={colorBank}
+          notes={calendarNotes}
+          onDeleteNote={onCalendarNotesChange ? deleteNote : undefined}
           onCreateNote={note => {
             saveNote(note);
             setSelected(null);
@@ -1244,4 +1305,10 @@ const iconBtnStyle = (t: Theme): React.CSSProperties => ({
   background: 'transparent', border: 'none', cursor: 'pointer',
   color: t.textMuted, padding: '0.2rem', display: 'flex', alignItems: 'center',
   borderRadius: '4px',
+});
+
+const deleteBtn = (t: Theme): React.CSSProperties => ({
+  background: 'transparent', border: 'none', cursor: 'pointer',
+  color: t.textDim, padding: '0.2rem', display: 'flex', alignItems: 'center',
+  borderRadius: '4px', flexShrink: 0,
 });

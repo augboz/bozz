@@ -167,7 +167,7 @@ function untilLabel(ms: number): string {
  * live. Migration-safe — `location` is optional, so it's simply omitted when a
  * one-off note has none.
  */
-function NextClassBanner({ event, t }: { event: CalendarEvent; t: WidgetCtx['t'] }) {
+function NextClassBanner({ event, t, onOpen }: { event: CalendarEvent; t: WidgetCtx['t']; onOpen?: (ts: number) => void }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(x => x + 1), 30_000);
@@ -178,14 +178,18 @@ function NextClassBanner({ event, t }: { event: CalendarEvent; t: WidgetCtx['t']
   const until = untilLabel(event.start - Date.now());
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap',
-      padding: '0.4rem 0.55rem', marginBottom: '0.6rem',
-      background: event.color + '1a',
-      border: `1px solid ${event.color}40`,
-      borderLeft: `3px solid ${event.color}`,
-      borderRadius: '7px',
-    }}>
+    <button
+      onClick={() => onOpen?.(event.start)}
+      title={event.title}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', width: '100%',
+        padding: '0.4rem 0.55rem', marginBottom: '0.6rem',
+        background: event.color + '1a',
+        border: `1px solid ${event.color}40`,
+        borderLeft: `3px solid ${event.color}`,
+        borderRadius: '7px',
+        cursor: onOpen ? 'pointer' : 'default', fontFamily: 'inherit', textAlign: 'left',
+      }}>
       <span style={{ fontSize: '0.56rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: event.color, flexShrink: 0 }}>
         Next
       </span>
@@ -201,7 +205,7 @@ function NextClassBanner({ event, t }: { event: CalendarEvent; t: WidgetCtx['t']
       <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 600, color: event.color, flexShrink: 0 }}>
         {until}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -407,11 +411,14 @@ function CloseOutCard({ ctx, prios, todayMs, t, setActiveSection }: {
   );
 }
 
-function EventsSection({ events, t, setActiveSection }: {
+function EventsSection({ events, t, setActiveSection, onOpenEvent }: {
   events: CalendarEvent[];
   t: WidgetCtx['t'];
   setActiveSection: (id: string) => void;
+  /** Open the calendar on a specific event's date (day view). */
+  onOpenEvent?: (ts: number) => void;
 }) {
+  const openOn = (ts: number) => onOpenEvent ? onOpenEvent(ts) : setActiveSection('calendar');
   const timed    = events.filter(e => !e.allDay).sort((a, b) => a.start - b.start);
   const allDay   = events.filter(e => e.allDay && e.source !== 'deadline');
   const deadlines = events.filter(e => e.source === 'deadline');
@@ -435,13 +442,14 @@ function EventsSection({ events, t, setActiveSection }: {
         const sm = getStartMin(e);
         const em = getEndMin(e, sm);
         return (
-          <div key={e.id} style={{
+          <button key={e.id} onClick={() => openOn(e.start)} title={e.title} style={{
             display: 'flex', alignItems: 'center', gap: '0.4rem',
             padding: '0.3rem 0.45rem',
             background: e.color + '18',
             border: `1px solid ${e.color}33`,
             borderLeft: `3px solid ${e.color}`,
             borderRadius: '6px',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
           }}>
             <Clock size={9} strokeWidth={2} color={e.color} style={{ flexShrink: 0 }} />
             <span style={{ fontSize: '0.66rem', color: e.color, fontWeight: 500, flexShrink: 0 }}>
@@ -458,25 +466,26 @@ function EventsSection({ events, t, setActiveSection }: {
                 <MapPin size={9} strokeWidth={2} color={t.textDim} />{e.location}
               </span>
             )}
-          </div>
+          </button>
         );
       })}
 
       {/* All-day */}
       {allDay.slice(0, MAX_ALLDAY).map(e => (
-        <div key={e.id} style={{
+        <button key={e.id} onClick={() => openOn(e.start)} title={e.title} style={{
           display: 'flex', alignItems: 'center', gap: '0.4rem',
           padding: '0.28rem 0.45rem',
           background: t.bgAlt,
           border: `1px solid ${t.border}`,
           borderLeft: `3px solid ${e.color}`,
           borderRadius: '6px',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
         }}>
           <span style={{ fontSize: '0.62rem', color: t.textDim, flexShrink: 0, width: '42px' }}>all day</span>
           <span style={{ flex: 1, fontSize: '0.78rem', color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {e.title}
           </span>
-        </div>
+        </button>
       ))}
 
       {/* Deadline dots */}
@@ -660,7 +669,7 @@ function SectionLabel({ icon: Icon, label, count, t }: {
 // ── Main widget ───────────────────────────────────────────────────────────────
 
 export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, todayEvents = [], widgetConfig, setActiveSection } = ctx;
+  const { t, todayEvents = [], widgetConfig, setActiveSection, openCalendarOnDate } = ctx;
 
   const showEvents = widgetConfig.showEvents !== false;
   const showTasks  = widgetConfig.showTasks  !== false;
@@ -718,7 +727,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
 
       {/* Persistent "next class" banner — only for a still-upcoming timed event. */}
       {showEvents && nextEvent && nextEvent.start >= Date.now() && (
-        <NextClassBanner event={nextEvent} t={t} />
+        <NextClassBanner event={nextEvent} t={t} onOpen={openCalendarOnDate} />
       )}
 
       {/* P-B informational "start now" red flag for big tasks due very soon. */}
@@ -740,7 +749,7 @@ export default function TodayWidget({ ctx }: { ctx: WidgetCtx }) {
               {labelled && <div style={{ height: '1px', background: t.border, margin: '0 -0.25rem' }} />}
               <div>
                 {labelled && <SectionLabel icon={Clock} label="Events" count={timedCount + allDayCount} t={t} />}
-                <EventsSection events={todayEvents} t={t} setActiveSection={setActiveSection} />
+                <EventsSection events={todayEvents} t={t} setActiveSection={setActiveSection} onOpenEvent={openCalendarOnDate} />
               </div>
             </>
           )}

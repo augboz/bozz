@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import type {
-  BudgetData, CalendarEvent, InboxItem, SectionId, Topic,
+  BudgetData, CalendarEvent, InboxItem, SectionId,
 } from './types';
 
 export interface SearchEntry {
@@ -15,7 +15,6 @@ export interface SearchSources {
   budget: BudgetData;
   inbox: InboxItem[];
   feedEvents: CalendarEvent[];
-  topics?: Topic[];
 }
 
 const SETTINGS_ENTRIES = [
@@ -25,28 +24,6 @@ const SETTINGS_ENTRIES = [
 
 export function buildSearchIndex(s: SearchSources): SearchEntry[] {
   const out: SearchEntry[] = [];
-
-  // Topics + their items first — these are the user's own content, the most
-  // likely jump target. Done items (in a `done: true` stage) are skipped so the
-  // palette stays focused on live work.
-  for (const topic of s.topics ?? []) {
-    out.push({
-      id: `topic:${topic.id}`,
-      label: topic.name || 'New topic',
-      sub: 'Topic',
-      group: 'Topics', section: topic.id as SectionId,
-    });
-    const doneStageIds = new Set((topic.stages ?? []).filter(st => st.done).map(st => st.id));
-    for (const item of topic.items ?? []) {
-      if (doneStageIds.has(item.stageId)) continue;
-      out.push({
-        id: `item:${topic.id}:${item.id}`,
-        label: item.text,
-        sub: topic.name || 'Topic',
-        group: 'Tasks', section: topic.id as SectionId,
-      });
-    }
-  }
 
   for (const tx of s.budget.transactions) {
     out.push({

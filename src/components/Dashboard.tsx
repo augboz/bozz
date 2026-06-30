@@ -6,7 +6,6 @@ import {
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
 import { predictTopic } from '../lib/taskParser';
-import { matchCommands } from '../lib/commands';
 import { deadlineEntries, dueTimestamp } from './widgets/util';
 import { runNudgeCheck } from '../lib/deadlineNudges';
 import { nextId } from '../lib/ids';
@@ -99,6 +98,10 @@ export default function Dashboard() {
   const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(DEFAULT_REVIEW_SETTINGS);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  // Calendar focus request — set when a specific event is clicked elsewhere so
+  // the Calendar opens in DAY mode on that event's date. A fresh object per click
+  // (CalendarView keys its focus effect on identity) re-focuses even on same date.
+  const [calendarFocus, setCalendarFocus] = useState<{ date: number; mode?: import('../lib/types').CalendarViewMode } | null>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [oauthAccounts, setOauthAccounts] = useState<OAuthAccount[]>([]);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
@@ -721,6 +724,14 @@ export default function Dashboard() {
   const homeLanding: 'briefing' | 'week' | 'board' = appearance.homeLanding ?? 'board';
   const setHomeLanding = (mode: 'briefing' | 'week' | 'board') => patchAppearance({ homeLanding: mode });
 
+  // Open the Calendar focused on a specific event's date, in DAY mode. Used when
+  // a user clicks a concrete calendar event (Today / Week / mini-calendar) so the
+  // calendar lands on that day rather than the default month/today.
+  const openCalendarOnDate = (ts: number) => {
+    setCalendarFocus({ date: ts, mode: 'day' });
+    setActiveSection('calendar');
+  };
+
   // ── Topic / folder editing from the sidebar edit mode ──────────────────────
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 
@@ -825,38 +836,6 @@ export default function Dashboard() {
       bucket.keywords = ['deadline', 'due', 'exam', 'submission', 'coursework', 'assignment'];
       bucket.items = [newItem(bucket)];
       return [...prev, bucket];
-    });
-  };
-
-  // File every Quicks (inbox) item that maps to a predicted topic into that
-  // topic, removing it from Quicks. Reuses predictTopic + the same append shape
-  // as addTopicItem. A no-op for items with no confident prediction (they stay
-  // in Quicks). Powers the "file all predicted" command-palette action.
-  const fileAllPredicted = () => {
-    setTopics(prevTopics => {
-      const filed = new Set<number>();
-      const next = prevTopics.map(top => {
-        const incoming = (inbox ?? [])
-          .filter(it => {
-            if (filed.has(it.id)) return false;
-            const predicted = predictTopic(it.text, prevTopics);
-            return predicted?.id === top.id;
-          })
-          .map(it => {
-            filed.add(it.id);
-            const firstStage = top.stages.find(s => !s.done) ?? top.stages[0];
-            return {
-              id: nextId(),
-              text: it.text,
-              stageId: firstStage?.id ?? '',
-              completedAt: null,
-              deadline: it.deadline ?? null,
-            };
-          });
-        return incoming.length ? { ...top, items: [...top.items, ...incoming] } : top;
-      });
-      if (filed.size > 0) setInbox(prev => prev.filter(it => !filed.has(it.id)));
-      return next;
     });
   };
 
@@ -1670,6 +1649,7 @@ export default function Dashboard() {
               ctx={{
                 t, budget, emails,
                 setActiveSection,
+                openCalendarOnDate,
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
@@ -1687,6 +1667,7 @@ export default function Dashboard() {
               ctx={{
                 t, budget, emails,
                 setActiveSection,
+                openCalendarOnDate,
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
@@ -1726,6 +1707,7 @@ export default function Dashboard() {
               ctx={{
                 t, budget, emails,
                 setActiveSection,
+                openCalendarOnDate,
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
@@ -1760,6 +1742,7 @@ export default function Dashboard() {
               gcalError={gcalError ?? undefined}
               colorBank={appearance.colorBank ?? []}
               tbOffset={tbOffset}
+              focusRequest={calendarFocus ?? undefined}
             />
           )}
           {activeSection === 'deadlines' && (
@@ -1767,6 +1750,7 @@ export default function Dashboard() {
               ctx={{
                 t, budget, emails,
                 setActiveSection,
+                openCalendarOnDate,
                 topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                 onAdvanceStage, colorBank: appearance.colorBank ?? [],
                 habits, onHabitsChange: setHabits,
@@ -1881,6 +1865,7 @@ export default function Dashboard() {
                   ctx={{
                     t, budget, emails,
                     setActiveSection,
+                    openCalendarOnDate,
                     topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
                     onAdvanceStage, colorBank: appearance.colorBank ?? [],
                     habits, onHabitsChange: setHabits,
@@ -2011,33 +1996,13 @@ export default function Dashboard() {
         <SearchModal
           t={t}
           entries={buildSearchIndex({
-            budget, inbox, feedEvents, topics,
+            budget, inbox, feedEvents,
           })}
           recent={recentSearches}
           onClose={() => setSearchOpen(false)}
           onJump={(section) => setActiveSection(section)}
           onRecent={(query) =>
             setRecentSearches(prev => [query, ...prev.filter(x => x !== query)].slice(0, 5))}
-          buildActions={(query) => matchCommands(query, {
-            topics,
-            navTargets: [
-              ...allSections.filter(s => !appearance.hiddenSections.includes(s.id)).map(s => ({ id: s.id, label: s.label })),
-              ...topics.map(tp => ({ id: tp.id, label: tp.name || 'New topic' })),
-            ],
-            addTopicItem: (topicId, text, deadline) => addTopicItem(topicId, text, deadline),
-            addDeadline,
-            addToInbox,
-            addTransaction: (tx) => setBudget(b => ({ ...b, transactions: [...b.transactions, tx] })),
-            setActiveSection,
-            onStartPomodoro: () => {
-              setActiveSection('home');
-              // Bring the Board into view (where the pomodoro widget lives), then
-              // signal it to start. The widget listens for this in-app event.
-              setHomeLanding('board');
-              window.setTimeout(() => window.dispatchEvent(new CustomEvent('bozz:start-pomodoro')), 60);
-            },
-            onFileAllPredicted: fileAllPredicted,
-          })}
           isMobile={isMobile}
           tbOffset={tbOffset}
         />

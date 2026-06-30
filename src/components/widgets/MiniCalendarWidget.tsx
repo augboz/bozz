@@ -1,3 +1,4 @@
+import type React from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, format,
 } from 'date-fns';
@@ -10,7 +11,7 @@ import type { WidgetCtx } from './context';
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function MiniCalendarWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, setActiveSection } = ctx;
+  const { t, setActiveSection, openCalendarOnDate } = ctx;
   const now = new Date();
   const first = startOfMonth(now);
   const days = eachDayOfInterval({ start: first, end: endOfMonth(now) });
@@ -43,11 +44,17 @@ export default function MiniCalendarWidget({ ctx }: { ctx: WidgetCtx }) {
         {days.map(d => {
           const dots = accentsForDay(d);
           const today = isToday(d);
+          // Clicking a day cell opens the calendar focused on that day. Stop
+          // propagation so it doesn't also fire the Widget's open-calendar click.
+          const onPick = openCalendarOnDate
+            ? (ev: React.MouseEvent) => { ev.stopPropagation(); openCalendarOnDate(d.getTime()); }
+            : undefined;
           return (
-            <div key={d.toISOString()} style={{
+            <button key={d.toISOString()} onClick={onPick} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: '2px', padding: '0.25rem 0', borderRadius: '6px',
               background: today ? t.bgAlt : 'transparent',
+              border: 'none', cursor: onPick ? 'pointer' : 'default', fontFamily: 'inherit',
             }}>
               <span style={{
                 fontSize: '0.7rem',
@@ -61,7 +68,7 @@ export default function MiniCalendarWidget({ ctx }: { ctx: WidgetCtx }) {
                   <span key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', background: c }} />
                 ))}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

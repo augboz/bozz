@@ -77,11 +77,14 @@ interface DayBucket {
 
 // ── Day column ─────────────────────────────────────────────────────────────────
 
-function DayColumn({ day, t, setActiveSection }: {
+function DayColumn({ day, t, setActiveSection, onOpenEvent }: {
   day: DayBucket; t: Theme; setActiveSection: (id: string) => void;
+  /** Open the calendar on a specific event's date (day view). */
+  onOpenEvent?: (ts: number) => void;
 }) {
   const empty = day.timed.length === 0 && day.allDay.length === 0 && day.deadlines.length === 0;
   const heavy = day.timed.length + day.deadlines.length >= 4;
+  const openOn = (ts: number) => onOpenEvent ? onOpenEvent(ts) : setActiveSection('calendar');
 
   return (
     <div style={{
@@ -120,12 +123,13 @@ function DayColumn({ day, t, setActiveSection }: {
         const sm = getStartMin(e);
         const em = getEndMin(e, sm);
         return (
-          <div key={e.id} title={e.title} style={{
+          <button key={e.id} onClick={() => openOn(e.start)} title={e.title} style={{
             display: 'flex', flexDirection: 'column', gap: '1px',
             padding: '0.25rem 0.35rem',
             background: e.color + '1a',
             borderLeft: `3px solid ${e.color}`,
             borderRadius: '5px',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.58rem', color: e.color, fontWeight: 500 }}>
               <Clock size={8} strokeWidth={2} /> {minToLabel(sm)}–{minToLabel(em)}
@@ -138,22 +142,23 @@ function DayColumn({ day, t, setActiveSection }: {
                 <MapPin size={8} strokeWidth={2} />{e.location}
               </span>
             )}
-          </div>
+          </button>
         );
       })}
 
       {/* All-day (non-deadline) events */}
       {day.allDay.map(e => (
-        <div key={e.id} title={e.title} style={{
+        <button key={e.id} onClick={() => openOn(e.start)} title={e.title} style={{
           padding: '0.22rem 0.35rem',
           background: t.bgAlt,
           borderLeft: `3px solid ${e.color}`,
           borderRadius: '5px',
           fontSize: '0.68rem', color: t.text,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
         }}>
           {e.title}
-        </div>
+        </button>
       ))}
 
       {/* Deadline chips on their due day */}
@@ -318,7 +323,7 @@ export default function WeekView({ ctx, onSwitchToBriefing, onSwitchToBoard }: {
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
         {days.map(day => (
           <div key={day.dayMs} style={{ flex: '1 1 130px', minWidth: '130px', display: 'flex' }}>
-            <DayColumn day={day} t={t} setActiveSection={ctx.setActiveSection} />
+            <DayColumn day={day} t={t} setActiveSection={ctx.setActiveSection} onOpenEvent={ctx.openCalendarOnDate} />
           </div>
         ))}
       </div>
