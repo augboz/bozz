@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, RefreshCw } from 'lucide-react';
+import { BookOpen, RefreshCw, Plus } from 'lucide-react';
 import { isTauri } from '../../lib/platform';
-import { getItem } from '../../lib/storage';
+import { getItem, setItem } from '../../lib/storage';
+import { extractNotionPageId } from '../../lib/notion';
 import { Widget, WidgetHeader, EmptyWidget } from '../shared/Widget';
 import type { WidgetCtx } from './context';
 
@@ -52,6 +53,8 @@ export default function NotionWidget({ ctx }: { ctx: WidgetCtx }) {
   const [hasToken, setHasToken] = useState(false);
   const [hasPages, setHasPages] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -118,24 +121,90 @@ export default function NotionWidget({ ctx }: { ctx: WidgetCtx }) {
     setLoading(false);
   }, []);
 
+  // Add a page straight from the widget: paste its "Copy link" URL, we pull the
+  // id out and append it to the saved Notion config, then reload to fetch its
+  // title. Mirrors the Settings → Connectors flow so both stay in sync.
+  const addPage = useCallback(async () => {
+    const raw = urlInput.trim();
+    if (!raw) return;
+    const id = extractNotionPageId(raw);
+    if (!id) return;
+    const saved = await getItem('notionWidget');
+    let cfg: NotionConfig | null = null;
+    try { cfg = saved?.value ? normaliseConfig(JSON.parse(saved.value)) : null; } catch { /* ignore */ }
+    if (!cfg) cfg = { token: '', pages: [] };
+    if (!cfg.pages.some(p => p.id === id)) {
+      cfg = { ...cfg, pages: [...cfg.pages, { id, label: '' }] };
+      await setItem('notionWidget', JSON.stringify(cfg));
+    }
+    setUrlInput('');
+    setAdding(false);
+    await reload();
+  }, [urlInput, reload]);
+
   useEffect(() => { reload(); }, [reload]);
 
   return (
     <Widget t={t} accent={ACCENT}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <WidgetHeader label="Notion" accent={ACCENT} t={t} icon={BookOpen} />
-        <button
-          onClick={reload}
-          aria-label="Reload"
-          title="Reload from settings"
-          style={{
-            background: 'transparent', border: 'none', color: t.textDim,
-            cursor: 'pointer', padding: '0.15rem', display: 'flex',
-          }}
-        >
-          <RefreshCw size={11} strokeWidth={1.5} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+          {hasToken && (
+            <button
+              onClick={() => setAdding(a => !a)}
+              aria-label="Add a page"
+              title="Add a page by its link"
+              style={{
+                background: 'transparent', border: 'none', color: t.textDim,
+                cursor: 'pointer', padding: '0.15rem', display: 'flex',
+              }}
+            >
+              <Plus size={12} strokeWidth={1.8} />
+            </button>
+          )}
+          <button
+            onClick={reload}
+            aria-label="Reload"
+            title="Reload from settings"
+            style={{
+              background: 'transparent', border: 'none', color: t.textDim,
+              cursor: 'pointer', padding: '0.15rem', display: 'flex',
+            }}
+          >
+            <RefreshCw size={11} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
+
+      {adding && hasToken && (
+        <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.6rem' }}>
+          <input
+            autoFocus
+            value={urlInput}
+            onChange={e => setUrlInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') void addPage();
+              if (e.key === 'Escape') { setAdding(false); setUrlInput(''); }
+            }}
+            placeholder="Paste a Notion page link"
+            style={{
+              flex: 1, minWidth: 0, background: t.input, border: `1px solid ${t.border}`,
+              borderRadius: '7px', padding: '0.35rem 0.55rem', color: t.text,
+              fontSize: '0.78rem', fontFamily: 'inherit', outline: 'none',
+            }}
+          />
+          <button
+            onClick={() => void addPage()}
+            style={{
+              background: ACCENT, border: 'none', borderRadius: '7px',
+              padding: '0.35rem 0.7rem', color: '#fff', fontSize: '0.76rem',
+              fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            Add
+          </button>
+        </div>
+      )}
 
       {loading && <EmptyWidget text="Loading…" t={t} />}
 
@@ -143,8 +212,8 @@ export default function NotionWidget({ ctx }: { ctx: WidgetCtx }) {
         <EmptyWidget text="Set up Notion in Settings → Connectors" t={t} />
       )}
 
-      {!loading && hasToken && !hasPages && (
-        <EmptyWidget text="Add pages in Settings → Connectors" t={t} />
+      {!loading && hasToken && !hasPages && !adding && (
+        <EmptyWidget text="No pages yet." t={t} actionLabel="add a page →" onAction={() => setAdding(true)} />
       )}
 
       {!loading && pages.length > 0 && (

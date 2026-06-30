@@ -5,6 +5,7 @@ import { getItem, setItem, deleteItem } from '../../../lib/storage';
 import { connectSpotify, SPOTIFY_PORT } from '../../../lib/oauth/spotify';
 import { secretDelete, tokenKey } from '../../../lib/oauth/keyring';
 import type { Theme, SpotifyAccount } from '../../../lib/types';
+import { extractNotionPageId } from '../../../lib/notion';
 
 // ── Notion ──────────────────────────────────────────────────────────────────
 
@@ -22,15 +23,6 @@ interface LoadedPage extends NotionPageRef {
 }
 
 const NOTION_VERSION = '2022-06-28';
-
-function extractPageId(input: string): string {
-  const clean = input.trim();
-  const uuidMatch = clean.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
-  if (uuidMatch) return uuidMatch[1].replace(/-/g, '');
-  const hexMatch = clean.match(/([a-f0-9]{32})$/i);
-  if (hexMatch) return hexMatch[1];
-  return clean;
-}
 
 function toUuid(id: string): string {
   const h = id.replace(/-/g, '');
@@ -139,7 +131,7 @@ function NotionSection({ t }: { t: Theme }) {
   const addPage = async () => {
     const raw = pageUrlInput.trim();
     if (!raw || !config?.token) return;
-    const id = extractPageId(raw);
+    const id = extractNotionPageId(raw);
     const newPages: NotionPageRef[] = [...(config.pages ?? []), { id, label: pageNameInput.trim() }];
     const cfg: NotionConfig = { token: config.token, pages: newPages };
     await persistConfig(cfg);
