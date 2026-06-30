@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type ElementType, type CSSProperties } from 'react';
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus, Flame,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -65,7 +65,6 @@ import HealthView from './sections/HealthView';
 import QuickAddModal from './QuickAddModal';
 import BudgetView from './sections/budget/BudgetView';
 import InboxView from './sections/InboxView';
-import DeadlinesView from './sections/DeadlinesView';
 import ReviewView from './sections/review/ReviewView';
 import EmailView from './sections/email/EmailView';
 import SearchModal from './SearchModal';
@@ -1003,7 +1002,6 @@ export default function Dashboard() {
   const allSections: Array<{ id: SectionId; label: string; icon: ElementType }> = [
     { id: 'home', label: 'Home', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-    { id: 'deadlines', label: 'Deadlines', icon: Flame },
     { id: 'budget', label: 'Budget', icon: Wallet },
     { id: 'inbox', label: 'Inbox', icon: Inbox },
     { id: 'review', label: 'Review', icon: NotebookPen },
@@ -1054,7 +1052,7 @@ export default function Dashboard() {
   // Built-in sections (email, calendar, budget, etc.) remain valid even when hidden from
   // the sidebar — only bounce if it's a topic ID that no longer exists.
   const builtInSectionIds = new Set(['home', 'settings', 'inbox', 'apps',
-    'calendar', 'deadlines', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
+    'calendar', 'budget', 'review', 'email', 'planner', 'dailyPlanner', 'habits', 'health',
     'worlds']);
   useEffect(() => {
     if (builtInSectionIds.has(activeSection)) return; // always valid, even if hidden from nav
@@ -1738,21 +1736,6 @@ export default function Dashboard() {
               colorBank={appearance.colorBank ?? []}
               tbOffset={tbOffset}
               focusRequest={calendarFocus ?? undefined}
-            />
-          )}
-          {activeSection === 'deadlines' && (
-            <DeadlinesView
-              ctx={{
-                t, budget, emails,
-                setActiveSection,
-                openCalendarOnDate,
-                topics, addTopicItem, addToInbox, addDeadline, dailyPlan, onDailyPlanChange: setDailyPlan,
-                onAdvanceStage, colorBank: appearance.colorBank ?? [],
-                habits, onHabitsChange: setHabits,
-                todayEvents, upcomingEvents: deadlineWindowEvents, calendarNotes, onCalendarNotesChange: setCalendarNotes,
-                widgetConfig: {}, onWidgetConfig: () => {},
-                onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
-              }}
             />
           )}
           {activeSection === 'dailyPlanner' && (

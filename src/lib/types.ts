@@ -1,5 +1,5 @@
 export type Status = 'todo' | 'doing' | 'done';
-export type SectionId = 'home' | 'calendar' | 'budget' | 'inbox' | 'review' | 'email' | 'settings' | 'planner' | 'dailyPlanner' | 'habits' | 'health' | 'apps' | 'deadlines';
+export type SectionId = 'home' | 'calendar' | 'budget' | 'inbox' | 'review' | 'email' | 'settings' | 'planner' | 'dailyPlanner' | 'habits' | 'health' | 'apps';
 
 // ── User-defined topics ─────────────────────────────────────────────────────
 // A "topic" is a user-created task list with custom stages (e.g. To do /

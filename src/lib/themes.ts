@@ -72,5 +72,4 @@ export const sectionAccents: Record<SectionId, string> = {
   habits:      '#90b488',
   health:      '#9ab8a8',
   apps:        '#9d8ac4',
-  deadlines:   '#d98b6a',
 };
