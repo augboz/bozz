@@ -320,12 +320,12 @@ export default function Dashboard() {
       const brandNewAccount = !appearanceLoaded && !loadedHomeItems
         && (!loadedTopics || loadedTopics.length === 0);
 
-      // Home landing surface (P1): NEW accounts open to the zero-config Briefing
-      // (the 90-second-morning promise on launch); existing users keep the Board
-      // so their saved widget layout is untouched. Only defaulted when the user
-      // has no explicit stored preference, so a returning user's choice wins.
+      // Home landing surface: default everyone to the Board (the customisable
+      // widget home). Only defaulted when the user has no explicit stored
+      // preference, so a returning user's saved choice always wins. The landing
+      // is changeable any time in Settings -> "Home shows".
       if (appr.homeLanding == null) {
-        appr.homeLanding = brandNewAccount ? 'briefing' : 'board';
+        appr.homeLanding = 'board';
       }
 
       setAppearance(appr);
