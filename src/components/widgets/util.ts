@@ -11,7 +11,7 @@ export interface DeadlineEntry {
 }
 
 /** Titles that read as a deadline rather than a regular timed class/meeting. */
-const DEADLINE_TITLE = /exam|deadline|due|submission|coursework|assignment|quiz|test/i;
+const DEADLINE_TITLE = /exam|deadline|due|submission|coursework|assignment|assessment|quiz|test/i;
 
 /** Local-midnight ms for a timestamp — used to group/dedupe by calendar day. */
 function dayStart(ts: number): number {
@@ -34,13 +34,16 @@ function eventItemId(id: string): number {
 }
 
 /**
- * Is this calendar event deadline-like? All-day events (the classic exam /
- * coursework block), OR anything whose title reads as a due date / submission.
- * Timed lectures and ordinary meetings are intentionally excluded.
+ * Is this calendar event deadline-like? Only when its TITLE reads as a due date /
+ * exam / submission. We deliberately do NOT treat every all-day event as a
+ * deadline: a plain all-day note ("do this") is just an event, and counting it as
+ * a deadline made it show up TWICE — once as an event and once as a deadline chip
+ * (in the Week view and the Briefing). Timed lectures / ordinary meetings are
+ * excluded too; topic deadlines come through the topic-items path above.
  */
 function isDeadlineLikeEvent(e: CalendarEvent): boolean {
   if (e.source === 'deadline') return false; // already surfaced via topic items
-  return e.allDay || DEADLINE_TITLE.test(e.title);
+  return DEADLINE_TITLE.test(e.title);
 }
 
 /**
