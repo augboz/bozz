@@ -14,9 +14,9 @@
  * Purely a composition over existing WidgetCtx state — no new schema, no sync.
  */
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  CalendarDays, LayoutGrid, CalendarRange, Clock, Flag, MapPin,
+  Clock, Flag, MapPin,
 } from 'lucide-react';
 import type { Theme, CalendarEvent } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
@@ -199,39 +199,6 @@ function DayColumn({ day, t, setActiveSection, onOpenEvent }: {
   );
 }
 
-// ── Header toggle (Briefing / Board / Week) ────────────────────────────────────
-
-function LandingToggle({ t, onBriefing, onBoard }: {
-  t: Theme; onBriefing: () => void; onBoard: () => void;
-}) {
-  const tabBtn = (active: boolean): CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-    background: active ? t.doingAccent : 'transparent',
-    color: active ? '#fff' : t.text,
-    border: 'none', borderLeft: `1px solid ${t.border}`,
-    padding: '0.35rem 0.7rem', fontSize: '0.74rem', fontWeight: active ? 600 : 400,
-    cursor: active ? 'default' : 'pointer', fontFamily: 'inherit',
-  });
-
-  return (
-    <div style={{
-      display: 'inline-flex', borderRadius: '9px', overflow: 'hidden',
-      border: `1px solid ${t.borderStrong}`,
-      background: `var(--glass-bg, ${t.panel})`,
-    }}>
-      <button onClick={onBriefing} title="Switch to your morning Briefing" style={{ ...tabBtn(false), borderLeft: 'none' }}>
-        <CalendarDays size={13} strokeWidth={1.8} /> Briefing
-      </button>
-      <span style={tabBtn(true)}>
-        <CalendarRange size={13} strokeWidth={1.8} /> Week
-      </span>
-      <button onClick={onBoard} title="Switch to your customisable Board" style={tabBtn(false)}>
-        <LayoutGrid size={13} strokeWidth={1.8} /> Board
-      </button>
-    </div>
-  );
-}
-
 /** Time-of-day greeting, reinforcing the "your week" framing. */
 function greeting(): string {
   const h = new Date().getHours();
@@ -242,10 +209,8 @@ function greeting(): string {
 
 // ── Main view ──────────────────────────────────────────────────────────────────
 
-export default function WeekView({ ctx, onSwitchToBriefing, onSwitchToBoard }: {
+export default function WeekView({ ctx }: {
   ctx: WidgetCtx;
-  onSwitchToBriefing: () => void;
-  onSwitchToBoard: () => void;
 }) {
   const t: Theme = ctx.t;
   const [showWeekend, setShowWeekend] = useState(false);
@@ -295,14 +260,8 @@ export default function WeekView({ ctx, onSwitchToBriefing, onSwitchToBoard }: {
 
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
-      {/* Header: greeting + landing toggle */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: '0.75rem', marginBottom: '0.85rem', flexWrap: 'wrap',
-      }}>
-        <div style={{ fontSize: '0.82rem', color: t.textMuted }}>{greeting()}</div>
-        <LandingToggle t={t} onBriefing={onSwitchToBriefing} onBoard={onSwitchToBoard} />
-      </div>
+      {/* Greeting */}
+      <div style={{ fontSize: '0.82rem', color: t.textMuted, marginBottom: '0.85rem' }}>{greeting()}</div>
 
       {/* Weekend toggle */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.6rem' }}>

@@ -1658,8 +1658,6 @@ export default function Dashboard() {
                 widgetConfig: {}, onWidgetConfig: () => {},
                 onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
               }}
-              onSwitchToWeek={() => setHomeLanding('week')}
-              onSwitchToBoard={() => setHomeLanding('board')}
             />
           )}
           {activeSection === 'home' && homeLanding === 'week' && (
@@ -1676,8 +1674,6 @@ export default function Dashboard() {
                 widgetConfig: {}, onWidgetConfig: () => {},
                 onTopicChange: (next) => setTopics(prev => prev.map(tp => tp.id === next.id ? next : tp)),
               }}
-              onSwitchToBriefing={() => setHomeLanding('briefing')}
-              onSwitchToBoard={() => setHomeLanding('board')}
             />
           )}
           <div style={{ display: activeSection === 'home' && homeLanding === 'board' ? undefined : 'none' }}>
@@ -1698,8 +1694,6 @@ export default function Dashboard() {
               items={homeItems}
               setItems={setHomeItems}
               onReplayWalkthroughs={replayWalkthroughs}
-              onSwitchToBriefing={() => setHomeLanding('briefing')}
-              onSwitchToWeek={() => setHomeLanding('week')}
               widgetShape={appearance.widgetShape ?? 'rounded'}
               widgetBorder={appearance.widgetBorder ?? 'normal'}
               onWidgetShape={(s) => patchAppearance({ widgetShape: s })}
