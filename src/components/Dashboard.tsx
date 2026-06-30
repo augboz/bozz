@@ -319,11 +319,15 @@ export default function Dashboard() {
       const brandNewAccount = !appearanceLoaded && !loadedHomeItems
         && (!loadedTopics || loadedTopics.length === 0);
 
-      // Home landing surface: default everyone to the Board (the customisable
-      // widget home). Only defaulted when the user has no explicit stored
-      // preference, so a returning user's saved choice always wins. The landing
-      // is changeable any time in Settings -> "Home shows".
-      if (appr.homeLanding == null) {
+      // Home landing surface: the Board (the customisable widget home) is the
+      // default for everyone. Older builds auto-assigned 'briefing' to new
+      // accounts, so run a ONE-TIME reset to Board for any account that predates
+      // this guard, so the default actually takes effect. After the migration a
+      // landing chosen in Settings -> "Home shows" sticks; unset falls back to Board.
+      if (!appr.homeLandingBoardMigrated) {
+        appr.homeLanding = 'board';
+        appr.homeLandingBoardMigrated = true;
+      } else if (appr.homeLanding == null) {
         appr.homeLanding = 'board';
       }
 

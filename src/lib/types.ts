@@ -421,11 +421,16 @@ export interface AppearancePrefs {
    * What the Home section shows: the zero-config "Briefing" (the auto-computed
    * Today brief, full-width), the "Week" surface (the days ahead, fused from
    * classes + deadlines + plan), or the customisable widget "Board".
-   * NEW accounts default to 'briefing' (the 90-second-morning promise on open);
-   * existing users default to 'board' so their saved layout is untouched.
+   * Defaults to 'board' for everyone; changeable in Settings -> "Home shows".
    * Undefined is treated as 'board' for backward-compatibility.
    */
   homeLanding?: 'briefing' | 'week' | 'board';
+  /**
+   * One-time migration guard: older builds auto-assigned 'briefing' to new
+   * accounts, so when this is falsy we reset the landing to 'board' once, then
+   * set it true. A landing chosen after the migration sticks.
+   */
+  homeLandingBoardMigrated?: boolean;
   /** Corner radius preset for home widgets. */
   widgetShape: WidgetShape;
   /** Border style preset for home widgets. */
