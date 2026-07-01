@@ -26,9 +26,14 @@ interface SpotlightProps {
   total: number;
   accent: string;
   onExit: () => void;
+  /** Hide the "N / total" pill — the first run should feel like one calm hint,
+   *  not a numbered procedure. The opt-in tours keep it. */
+  showCounter?: boolean;
+  /** When set, clicking the dimmed area advances the step (reveal beats only). */
+  onTapAdvance?: () => void;
 }
 
-function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: SpotlightProps) {
+function SpotlightOverlay({ rects, tip, step, total, accent, onExit, showCounter = true, onTapAdvance }: SpotlightProps) {
   const BAR_H = 72;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -44,13 +49,17 @@ function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: Spotlight
 
   return createPortal(
     <>
-      {hasHole ? (
+      {(() => {
+        // Reveal beats let the user click the dim to move on (never a forced wait).
+        const tap = onTapAdvance ? { onClick: onTapAdvance } : {};
+        const cur = onTapAdvance ? { cursor: 'pointer' as const } : {};
+        return hasHole ? (
         <>
           {/* Dim panels leave the spotlighted element clickable (the hole). */}
-          <div style={{ position:'fixed', zIndex:9990, top:0, left:0, right:0, height:minY, background:DIM }} />
-          <div style={{ position:'fixed', zIndex:9990, top:maxY, left:0, right:0, bottom:0, background:DIM }} />
-          <div style={{ position:'fixed', zIndex:9990, top:minY, bottom:vh-maxY, left:0, width:minX, background:DIM }} />
-          <div style={{ position:'fixed', zIndex:9990, top:minY, bottom:vh-maxY, left:maxX, right:0, background:DIM }} />
+          <div {...tap} style={{ position:'fixed', zIndex:9990, top:0, left:0, right:0, height:minY, background:DIM, ...cur }} />
+          <div {...tap} style={{ position:'fixed', zIndex:9990, top:maxY, left:0, right:0, bottom:0, background:DIM, ...cur }} />
+          <div {...tap} style={{ position:'fixed', zIndex:9990, top:minY, bottom:vh-maxY, left:0, width:minX, background:DIM, ...cur }} />
+          <div {...tap} style={{ position:'fixed', zIndex:9990, top:minY, bottom:vh-maxY, left:maxX, right:0, background:DIM, ...cur }} />
           <div style={{
             position:'fixed', zIndex:9991, pointerEvents:'none',
             left:minX, top:minY, width:maxX-minX, height:maxY-minY,
@@ -59,8 +68,9 @@ function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: Spotlight
           }} />
         </>
       ) : (
-        <div style={{ position:'fixed', zIndex:9990, inset:0, background:DIM }} />
-      )}
+        <div {...tap} style={{ position:'fixed', zIndex:9990, inset:0, background:DIM, ...cur }} />
+      );
+      })()}
 
       <div style={{
         position:'fixed', zIndex:9992, left:0, right:0, top:0, minHeight:BAR_H,
@@ -68,17 +78,24 @@ function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: Spotlight
         borderBottom:'1px solid rgba(255,255,255,0.08)',
         display:'flex', alignItems:'center', padding:'0.85rem 1.5rem', gap:'1.1rem',
       }}>
-        <span style={{
-          flexShrink:0, fontSize:'0.78rem', fontWeight:700, color:accent,
-          fontVariantNumeric:'tabular-nums',
-          background:accent + '1f', border:`1px solid ${accent}55`, borderRadius:'999px',
-          padding:'0.25rem 0.7rem',
-        }}>
-          {step + 1} / {total}
-        </span>
+        {showCounter && (
+          <span style={{
+            flexShrink:0, fontSize:'0.78rem', fontWeight:700, color:accent,
+            fontVariantNumeric:'tabular-nums',
+            background:accent + '1f', border:`1px solid ${accent}55`, borderRadius:'999px',
+            padding:'0.25rem 0.7rem',
+          }}>
+            {step + 1} / {total}
+          </span>
+        )}
         <span style={{ flex:1, fontSize:'1.02rem', fontWeight:450, color:'rgba(255,255,255,0.95)', lineHeight:1.5 }}>
           {tip}
         </span>
+        {onTapAdvance && (
+          <span style={{ flexShrink:0, fontSize:'0.78rem', color:'rgba(255,255,255,0.45)' }}>
+            click anywhere to continue
+          </span>
+        )}
         <button onClick={onExit} style={{
           flexShrink:0, background:'transparent', border:'1px solid rgba(255,255,255,0.22)', borderRadius:'10px',
           padding:'0.45rem 0.95rem', color:'rgba(255,255,255,0.78)', fontSize:'0.86rem', fontFamily:'inherit',
@@ -119,6 +136,9 @@ interface WalkStep {
   tip: string;
   advance: (ctx: StepCtx) => boolean;
   autoMs?: number; // generous fallback for optional / explanation-only steps
+  /** A pure-reveal step the user can click anywhere to move past (with autoMs as
+   *  a floor), so a first impression is never a cage they must wait out. */
+  tapToAdvance?: boolean;
 }
 
 // The first-run walk: shown automatically to a brand-new account the moment it
@@ -127,11 +147,14 @@ interface WalkStep {
 // beat after. Deliberately short — this is not the four-part setup tour. Every
 // step is skippable via the overlay's Exit button.
 const FIRST_RUN_STEPS: WalkStep[] = [
-  { targets:['briefing-today'],   tip:'This is your morning, all in one place. Everything you add lands right here.', advance:() => false, autoMs:3800 },
-  { targets:['quick-add'],        tip:'Here is the one thing to learn: capturing. Click Quick add to try it now.', advance:c => c.domHas('quick-add-modal') },
-  { targets:['quick-add-modal'],  tip:'Type anything on your mind and press Enter. Capture now, sort it later.', advance:c => !c.domHas('quick-add-modal') },
-  { targets:[],                   tip:'That is it. Your morning is ready every time you open Bozz. See you tomorrow.', advance:() => false, autoMs:3600 },
+  { targets:['briefing-today'],  tip:'This is your morning. Everything you add shows up right here.', advance:() => false, autoMs:2500, tapToAdvance:true },
+  { targets:['quick-add'],       tip:'One thing worth knowing: get a thought out of your head fast. Click Quick add to try it.', advance:c => c.domHas('quick-add-modal') },
+  { targets:['quick-add-modal'], tip:'Type anything on your mind and press Enter. Capture now, sort it later.', advance:c => !c.domHas('quick-add-modal') },
 ];
+// The payoff is deliberately NOT a fourth dimmed step. Ending on a dark screen
+// hides the very thing we want the user to trust; instead the walk finishes here
+// and the caller lifts the overlay to reveal the real, un-dimmed morning with a
+// quiet fading sign-off (see finishFirstRunTour + the payoff pill in Dashboard).
 
 const SIDEBAR_STEPS: WalkStep[] = [
   { targets:['edit-nav'],      tip:'A topic is an area of your life, like Uni, Work or the gym. Click Edit to start.', advance:c => c.sidebarEditing || c.domHas('nav-add-menu') },
@@ -242,7 +265,11 @@ function useWalkEngine(
     return () => window.clearTimeout(tid);
   }, [step]);
 
-  return { step, rects, total };
+  // Manual advance for tap-to-continue reveal beats (same guarded path as the
+  // poll/timer, so it can never double-fire).
+  const advance = () => fire.current();
+
+  return { step, rects, total, advance };
 }
 
 // ── Walk entry card (always re-runnable, no "done" state) ─────────────────────
@@ -311,6 +338,11 @@ export default function Onboarding({
   autoStartFlow, onFirstRunEnd,
 }: OnboardingProps) {
   const [walkState, setWalkState] = useState<WalkState | null>(null);
+  // True once THIS mount auto-started the first-run walk. Tracked on a ref (not
+  // the live autoStartFlow prop) so finalisation doesn't depend on the prop still
+  // being set at exit time, and so onFirstRunEnd fires exactly once.
+  const autoStarted = useRef(false);
+  const firstRunEnded = useRef(false);
 
   const startWalk = (flow: Flow) => {
     // The topic-page walkthrough drives the topic page, not the sidebar — if the
@@ -321,16 +353,16 @@ export default function Onboarding({
   };
   const exitWalk = () => {
     // An auto-started flow (the first run) must tell the caller it's over on ANY
-    // exit — finished or skipped — so dismissal is finalised exactly once.
-    const wasAuto = walkState?.flow === autoStartFlow && autoStartFlow != null;
+    // exit — finished or skipped — so dismissal is finalised exactly once. Gate on
+    // the ref, not the prop, so a mid-flight prop change can't strand dismissal.
+    const wasAuto = autoStarted.current && !firstRunEnded.current;
     setWalkState(null);
     onWalkEnd();
-    if (wasAuto) onFirstRunEnd?.();
+    if (wasAuto) { firstRunEnded.current = true; onFirstRunEnd?.(); }
   };
 
   // Auto-run the first-run flow once, the moment the caller asks for it (right
   // after the welcome overlays close). Guarded so it never restarts after it ends.
-  const autoStarted = useRef(false);
   useEffect(() => {
     if (!autoStartFlow || autoStarted.current) return;
     autoStarted.current = true;
@@ -342,7 +374,7 @@ export default function Onboarding({
 
   const ctx = { section: activeSection, currentTopicId, sidebarEditing, topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised };
 
-  const { step, rects, total } = useWalkEngine(
+  const { step, rects, total, advance } = useWalkEngine(
     walkState,
     ctx,
     () => setWalkState(prev => prev ? { ...prev, step: prev.step + 1 } : null),
@@ -379,7 +411,12 @@ export default function Onboarding({
       )}
 
       {walkState && step && (
-        <SpotlightOverlay rects={rects} tip={step.tip} step={walkState.step} total={total} accent={t.doneAccent} onExit={exitWalk} />
+        <SpotlightOverlay
+          rects={rects} tip={step.tip} step={walkState.step} total={total}
+          accent={t.doneAccent} onExit={exitWalk}
+          showCounter={walkState.flow !== 'firstRun'}
+          onTapAdvance={step.tapToAdvance ? advance : undefined}
+        />
       )}
     </>
   );

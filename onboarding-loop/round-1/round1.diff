@@ -1,0 +1,304 @@
+diff --git a/src/components/Dashboard.tsx b/src/components/Dashboard.tsx
+index 03721f5..a237e96 100644
+--- a/src/components/Dashboard.tsx
++++ b/src/components/Dashboard.tsx
+@@ -120,6 +120,9 @@ export default function Dashboard() {
+   // Replay mode: force the getting-started guide to show even after every step
+   // is complete, so "Replay walkthroughs" in Settings can always bring it back.
+   const [onbForced, setOnbForced] = useState(false);
++  // First-run guided walk: auto-started once, right after the welcome overlays
++  // close, to teach the core action (capturing) on the user's real morning.
++  const [firstRunTour, setFirstRunTour] = useState(false);
+   const onbInit = useRef(false);
+   // First-run flow — shown once to brand-new accounts before anything else.
+   // 'theme' = pick dark/light, 'coldstart' = guided "what are you here for?"
+@@ -348,7 +351,13 @@ export default function Dashboard() {
+       // accounts, so run a ONE-TIME reset to Board for any account that predates
+       // this guard, so the default actually takes effect. After the migration a
+       // landing chosen in Settings -> "Home shows" sticks; unset falls back to Board.
+-      if (!appr.homeLandingBoardMigrated) {
++      if (brandNewAccount) {
++        // Brand-new: land on the Briefing ("your morning in 90 seconds") — the
++        // north-star promise — not the customisable Board grid. Mark migrated so
++        // the choice sticks until they change it in Settings -> "Home shows".
++        appr.homeLanding = 'briefing';
++        appr.homeLandingBoardMigrated = true;
++      } else if (!appr.homeLandingBoardMigrated) {
+         appr.homeLanding = 'board';
+         appr.homeLandingBoardMigrated = true;
+       } else if (appr.homeLanding == null) {
+@@ -437,8 +446,22 @@ export default function Dashboard() {
+   const finishWelcome = () => {
+     setActiveSection('home');
+     setWelcomePhase(null);
+-    setOnbDismissed(true);
+     void save('welcomeComplete', true);
++    // Instead of silently dismissing the tutor (the old behaviour, which is
++    // exactly why a new user landed on a grid with no idea what to do), auto-run
++    // ONE short guided walk on their real morning. It teaches the core action and
++    // then finalises dismissal itself (finishFirstRunTour). Keep the guide mounted
++    // so the spotlight persists even if the walk navigates.
++    setFirstRunTour(true);
++    setOnbKeepMounted(true);
++  };
++
++  // The first-run walk is over (finished or skipped) — now finalise dismissal so
++  // it never runs again, and drop back to a normal, un-spotlighted home.
++  const finishFirstRunTour = () => {
++    setFirstRunTour(false);
++    setOnbKeepMounted(false);
++    setOnbDismissed(true);
+     void save('onboardingDismissed', true);
+   };
+ 
+@@ -1669,6 +1692,8 @@ export default function Dashboard() {
+                 onWalkStart={() => setOnbKeepMounted(true)}
+                 onWalkEnd={() => setOnbKeepMounted(false)}
+                 onExitSidebarEdit={() => setSidebarEditing(false)}
++                autoStartFlow={firstRunTour ? 'firstRun' : undefined}
++                onFirstRunEnd={finishFirstRunTour}
+               />
+             </ErrorBoundary>
+           )}
+diff --git a/src/components/onboarding/Onboarding.tsx b/src/components/onboarding/Onboarding.tsx
+index 3859f6d..9635c6b 100644
+--- a/src/components/onboarding/Onboarding.tsx
++++ b/src/components/onboarding/Onboarding.tsx
+@@ -99,7 +99,7 @@ function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: Spotlight
+ 
+ // ── Step model ────────────────────────────────────────────────────────────────
+ 
+-export type Flow = 'sidebar' | 'topicPage' | 'connect' | 'quicks';
++export type Flow = 'firstRun' | 'sidebar' | 'topicPage' | 'connect' | 'quicks';
+ 
+ interface StepCtx {
+   section: string;
+@@ -121,6 +121,18 @@ interface WalkStep {
+   autoMs?: number; // generous fallback for optional / explanation-only steps
+ }
+ 
++// The first-run walk: shown automatically to a brand-new account the moment it
++// lands on its populated morning. It teaches the ONE core action (capturing a
++// thought) on the user's real data, with a reveal beat before and a calm payoff
++// beat after. Deliberately short — this is not the four-part setup tour. Every
++// step is skippable via the overlay's Exit button.
++const FIRST_RUN_STEPS: WalkStep[] = [
++  { targets:['briefing-today'],   tip:'This is your morning, all in one place. Everything you add lands right here.', advance:() => false, autoMs:3800 },
++  { targets:['quick-add'],        tip:'Here is the one thing to learn: capturing. Click Quick add to try it now.', advance:c => c.domHas('quick-add-modal') },
++  { targets:['quick-add-modal'],  tip:'Type anything on your mind and press Enter. Capture now, sort it later.', advance:c => !c.domHas('quick-add-modal') },
++  { targets:[],                   tip:'That is it. Your morning is ready every time you open Bozz. See you tomorrow.', advance:() => false, autoMs:3600 },
++];
++
+ const SIDEBAR_STEPS: WalkStep[] = [
+   { targets:['edit-nav'],      tip:'A topic is an area of your life, like Uni, Work or the gym. Click Edit to start.', advance:c => c.sidebarEditing || c.domHas('nav-add-menu') },
+   { targets:['nav-add-menu'],  tip:'Click + to add to your sidebar.', advance:c => c.domHas('nav-new-topic') },
+@@ -150,6 +162,7 @@ const QUICKS_STEPS: WalkStep[] = [
+ ];
+ 
+ const FLOW_STEPS: Record<Flow, WalkStep[]> = {
++  firstRun: FIRST_RUN_STEPS,
+   sidebar: SIDEBAR_STEPS, topicPage: TOPICPAGE_STEPS, connect: CONNECT_STEPS, quicks: QUICKS_STEPS,
+ };
+ 
+@@ -283,12 +296,19 @@ export interface OnboardingProps {
+   onWalkEnd: () => void;
+   /** Leave sidebar edit mode (used when a non-sidebar walkthrough starts). */
+   onExitSidebarEdit: () => void;
++  /** When set, auto-run this flow once on mount (the brand-new-account first run).
++   *  Clear it again once onFirstRunEnd fires so the flow never restarts. */
++  autoStartFlow?: Flow;
++  /** Fired when an auto-started flow ends by ANY means (finished or exited early),
++   *  so the caller can finalise dismissal and reveal the payoff. */
++  onFirstRunEnd?: () => void;
+ }
+ 
+ export default function Onboarding({
+   t, activeSection, currentTopicId, sidebarEditing,
+   topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised,
+   onDismiss, onWalkStart, onWalkEnd, onExitSidebarEdit,
++  autoStartFlow, onFirstRunEnd,
+ }: OnboardingProps) {
+   const [walkState, setWalkState] = useState<WalkState | null>(null);
+ 
+@@ -299,7 +319,26 @@ export default function Onboarding({
+     setWalkState({ flow, step: 0 });
+     onWalkStart();
+   };
+-  const exitWalk = () => { setWalkState(null); onWalkEnd(); };
++  const exitWalk = () => {
++    // An auto-started flow (the first run) must tell the caller it's over on ANY
++    // exit — finished or skipped — so dismissal is finalised exactly once.
++    const wasAuto = walkState?.flow === autoStartFlow && autoStartFlow != null;
++    setWalkState(null);
++    onWalkEnd();
++    if (wasAuto) onFirstRunEnd?.();
++  };
++
++  // Auto-run the first-run flow once, the moment the caller asks for it (right
++  // after the welcome overlays close). Guarded so it never restarts after it ends.
++  const autoStarted = useRef(false);
++  useEffect(() => {
++    if (!autoStartFlow || autoStarted.current) return;
++    autoStarted.current = true;
++    onExitSidebarEdit();
++    setWalkState({ flow: autoStartFlow, step: 0 });
++    onWalkStart();
++  // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [autoStartFlow]);
+ 
+   const ctx = { section: activeSection, currentTopicId, sidebarEditing, topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised };
+ 
+@@ -312,7 +351,7 @@ export default function Onboarding({
+ 
+   return (
+     <>
+-      {activeSection === 'home' && !walkState && (
++      {activeSection === 'home' && !walkState && !autoStartFlow && (
+         <div style={{
+           border:`1px solid ${t.border}`, borderRadius:'20px',
+           padding:'1.5rem 1.6rem', marginBottom:'1.5rem', background:t.panel ?? t.bg,
+diff --git a/src/components/onboarding/WelcomeTimetable.tsx b/src/components/onboarding/WelcomeTimetable.tsx
+index 5c01faa..01c7464 100644
+--- a/src/components/onboarding/WelcomeTimetable.tsx
++++ b/src/components/onboarding/WelcomeTimetable.tsx
+@@ -70,7 +70,7 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
+           Add your timetable
+         </h1>
+         <div style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', maxWidth: '460px' }}>
+-          Your real classes drop straight onto the calendar and into Today, so your morning is set up before you’ve typed a thing.
++          Type your weekly classes or fixed events. In a moment you’ll watch your morning build itself, no calendar links needed.
+         </div>
+       </div>
+ 
+@@ -88,6 +88,7 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
+             onAddNotes={onAddNotes}
+             onClose={onSkip}
+             compact
++            showExample
+           />
+         ) : (
+           <>
+diff --git a/src/components/sections/BriefingView.tsx b/src/components/sections/BriefingView.tsx
+index 606bde7..113dfb8 100644
+--- a/src/components/sections/BriefingView.tsx
++++ b/src/components/sections/BriefingView.tsx
+@@ -41,8 +41,9 @@ export default function BriefingView({ ctx }: { ctx: WidgetCtx }) {
+       </div>
+ 
+       {/* The brief, full-width. A min-height keeps the scroll area usable on a
+-          short brief; max-width keeps line lengths readable on wide screens. */}
+-      <div style={{ maxWidth: '760px', minHeight: '60vh', display: 'flex' }}>
++          short brief; max-width keeps line lengths readable on wide screens.
++          data-onb anchors the first-run "this is your morning" spotlight. */}
++      <div data-onb="briefing-today" style={{ maxWidth: '760px', minHeight: '60vh', display: 'flex' }}>
+         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+           <TodayWidget ctx={briefingCtx} />
+         </div>
+diff --git a/src/components/sections/calendar/TypeTimetableForm.tsx b/src/components/sections/calendar/TypeTimetableForm.tsx
+index b12342c..00ed88f 100644
+--- a/src/components/sections/calendar/TypeTimetableForm.tsx
++++ b/src/components/sections/calendar/TypeTimetableForm.tsx
+@@ -11,7 +11,7 @@
+  */
+ 
+ import { useMemo, useState } from 'react';
+-import { CalendarPlus, Check } from 'lucide-react';
++import { CalendarPlus, Check, ArrowRight, WandSparkles } from 'lucide-react';
+ import type { CalendarNote, Theme } from '../../../lib/types';
+ import { parseTimetable, formatDays, formatTimeRange } from '../../../lib/timetableParser';
+ import ColorBankPicker from '../../shared/ColorBankPicker';
+@@ -42,8 +42,13 @@ export function buildTimetableNotes(text: string, color: string): Omit<CalendarN
+   }));
+ }
+ 
++/** The single worked example shown before the user types, so they see exactly
++ *  what to write and what it turns into. Kept parseable so the preview chip is real. */
++const DEFAULT_EXAMPLE = 'Mon 9-11 Biology Room 2.14';
++
+ export default function TypeTimetableForm({
+   t, colorBank, onAddNotes, onClose, autoFocus = true, compact = false,
++  exampleLine = DEFAULT_EXAMPLE, showExample = false,
+ }: {
+   t: Theme;
+   colorBank: string[];
+@@ -53,11 +58,19 @@ export default function TypeTimetableForm({
+   autoFocus?: boolean;
+   /** Slightly tighter spacing when embedded (onboarding overlay). */
+   compact?: boolean;
++  /** The worked-example line demonstrated above the box (shown while it's empty). */
++  exampleLine?: string;
++  /** Show the "type it like this" worked example (the first-run onboarding uses it). */
++  showExample?: boolean;
+ }) {
+   const bank = colorBank.length > 0 ? colorBank : DEFAULT_CLASS_COLORS;
+   const [text, setText] = useState('');
+   const [color, setColor] = useState(bank[0] ?? DEFAULT_CLASS_COLORS[0]);
+ 
++  // Parse the worked example once so the demo chip below shows the REAL result
++  // the parser would produce, not a hand-drawn mock.
++  const example = useMemo(() => parseTimetable(exampleLine)[0] ?? null, [exampleLine]);
++
+   // Live preview — reparse on every keystroke (cheap, all-offline).
+   const parsed = useMemo(() => parseTimetable(text), [text]);
+   // Lines that have content but didn't parse, so we can nudge the user.
+@@ -91,6 +104,51 @@ export default function TypeTimetableForm({
+         One class per line. We work out the day, time and room for you.
+       </div>
+ 
++      {/* Worked example — shows the format succeeding BEFORE the user types, so
++          the one hard rule (start with a day) is taught by showing, not by an
++          error after they fail. Only while the box is empty; the live preview
++          takes over the moment they type. One-tap "Use this" fills the box so
++          they can edit it into their own class (opt-in — never auto-filled). */}
++      {showExample && example && text.trim() === '' && (
++        <div style={{
++          display: 'flex', flexDirection: 'column', gap: '0.5rem',
++          background: t.bgAlt, border: `1px dashed ${t.border}`, borderRadius: '9px',
++          padding: '0.6rem 0.7rem',
++        }}>
++          <div style={{ fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.textDim }}>
++            Type it like this
++          </div>
++          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
++            <code style={{
++              fontSize: '0.8rem', color: t.text, background: t.input,
++              border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0.28rem 0.5rem',
++            }}>{exampleLine}</code>
++            <ArrowRight size={14} strokeWidth={1.8} color={t.textDim} style={{ flexShrink: 0 }} />
++            <span style={{
++              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
++              background: t.panel, border: `1px solid ${t.border}`,
++              borderLeft: `3px solid ${color}`, borderRadius: '6px', padding: '0.28rem 0.55rem',
++            }}>
++              <span style={{ fontSize: '0.8rem', color: t.text, fontWeight: 500 }}>{example.title}</span>
++              <span style={{ fontSize: '0.66rem', color: t.textMuted }}>{formatDays(example.weekdays)}</span>
++              <span style={{ fontSize: '0.66rem', color: t.textMuted }}>{formatTimeRange(example.startMin, example.endMin)}</span>
++              {example.location && <span style={{ fontSize: '0.64rem', color: t.textDim }}>{example.location}</span>}
++            </span>
++          </div>
++          <button
++            onClick={() => setText(exampleLine)}
++            style={{
++              alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
++              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px',
++              padding: '0.3rem 0.6rem', color: t.textMuted, cursor: 'pointer',
++              fontSize: '0.72rem', fontFamily: 'inherit',
++            }}
++          >
++            <WandSparkles size={12} strokeWidth={1.7} /> Use this example, then edit it
++          </button>
++        </div>
++      )}
++
+       <textarea
+         autoFocus={autoFocus}
+         value={text}
+@@ -99,7 +157,7 @@ export default function TypeTimetableForm({
+           // Cmd/Ctrl+Enter confirms; plain Enter makes a new line (multi-class).
+           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
+         }}
+-        placeholder={'Mon 9-11 BIO101 Room 3.21\nWed 2pm Stats\nFri 10-12 Lab\nMon/Wed 14:00-15:30 Linear Algebra'}
++        placeholder={'Mon 9-11 Biology\nWed 2-4 Statistics\nFri 10-12 Lab'}
+         rows={compact ? 4 : 5}
+         style={{
+           width: '100%', boxSizing: 'border-box',

@@ -67,16 +67,16 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
         style={{ width: '52px', height: '52px', borderRadius: '13px', objectFit: 'cover' }} />
       <div style={{ textAlign: 'center' }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#f2f2f2', letterSpacing: '-0.02em' }}>
-          Add your timetable
+          Add your week
         </h1>
         <div style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', maxWidth: '460px' }}>
-          Type your weekly classes or fixed events. In a moment you’ll watch your morning build itself, no calendar links needed.
+          Type your weekly classes or fixed events. No calendar links needed. Your morning fills itself in.
         </div>
       </div>
 
       {/* Tab switch — Type (default) vs Paste a link */}
       <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-        {tabBtn('type', 'Type my classes', Keyboard)}
+        {tabBtn('type', 'Type it in', Keyboard)}
         {tabBtn('paste', 'Paste a link', Link2)}
       </div>
 

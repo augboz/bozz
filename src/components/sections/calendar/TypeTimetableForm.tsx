@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { CalendarPlus, Check, ArrowRight, WandSparkles } from 'lucide-react';
+import { CalendarPlus, Check, ArrowRight, Pencil } from 'lucide-react';
 import type { CalendarNote, Theme } from '../../../lib/types';
 import { parseTimetable, formatDays, formatTimeRange } from '../../../lib/timetableParser';
 import ColorBankPicker from '../../shared/ColorBankPicker';
@@ -43,8 +43,9 @@ export function buildTimetableNotes(text: string, color: string): Omit<CalendarN
 }
 
 /** The single worked example shown before the user types, so they see exactly
- *  what to write and what it turns into. Kept parseable so the preview chip is real. */
-const DEFAULT_EXAMPLE = 'Mon 9-11 Biology Room 2.14';
+ *  what to write and what it turns into. Role-neutral (Bozz's primary user is a
+ *  knowledge worker, not only a student). Kept parseable so the preview chip is real. */
+const DEFAULT_EXAMPLE = 'Mon 9-11 Team meeting Room 4';
 
 export default function TypeTimetableForm({
   t, colorBank, onAddNotes, onClose, autoFocus = true, compact = false,
@@ -97,11 +98,11 @@ export default function TypeTimetableForm({
         display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
         fontSize: '0.78rem', color: t.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase',
       }}>
-        <CalendarPlus size={13} strokeWidth={1.6} /> Type your classes
+        <CalendarPlus size={13} strokeWidth={1.6} /> Type your week
       </div>
 
       <div style={{ fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, margin: '-0.2rem 0 0' }}>
-        One class per line. We work out the day, time and room for you.
+        One per line. We work out the day, time and place for you.
       </div>
 
       {/* Worked example — shows the format succeeding BEFORE the user types, so
@@ -144,7 +145,7 @@ export default function TypeTimetableForm({
               fontSize: '0.72rem', fontFamily: 'inherit',
             }}
           >
-            <WandSparkles size={12} strokeWidth={1.7} /> Use this example, then edit it
+            <Pencil size={12} strokeWidth={1.7} /> Use this example
           </button>
         </div>
       )}
@@ -157,7 +158,7 @@ export default function TypeTimetableForm({
           // Cmd/Ctrl+Enter confirms; plain Enter makes a new line (multi-class).
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
         }}
-        placeholder={'Mon 9-11 Biology\nWed 2-4 Statistics\nFri 10-12 Lab'}
+        placeholder={'Mon 9-11 Team meeting Room 4\nWed 2-4 Gym\nThu 6-7 Football'}
         rows={compact ? 4 : 5}
         style={{
           width: '100%', boxSizing: 'border-box',
@@ -171,7 +172,7 @@ export default function TypeTimetableForm({
       {parsed.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
           <div style={{ fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.textDim }}>
-            {parsed.length} class{parsed.length === 1 ? '' : 'es'} found
+            {parsed.length} event{parsed.length === 1 ? '' : 's'} found
           </div>
           {parsed.map((p, i) => (
             <div key={i} style={{
@@ -196,13 +197,13 @@ export default function TypeTimetableForm({
 
       {text.trim() && parsed.length === 0 && (
         <div style={{ fontSize: '0.72rem', color: t.textDim, lineHeight: 1.5 }}>
-          Couldn’t read a class yet. Start each line with a day, e.g.{' '}
-          <code style={{ fontSize: '0.7rem' }}>Mon 9-11 Biology</code>.
+          Couldn’t read an event yet. Start each line with a day, e.g.{' '}
+          <code style={{ fontSize: '0.7rem' }}>Mon 9-11 Team meeting</code>.
         </div>
       )}
       {parsed.length > 0 && unparsedCount > 0 && (
         <div style={{ fontSize: '0.7rem', color: t.textDim }}>
-          {unparsedCount} line{unparsedCount === 1 ? '' : 's'} skipped. Each class needs a day + a time.
+          {unparsedCount} line{unparsedCount === 1 ? '' : 's'} skipped. Each one needs a day + a time.
         </div>
       )}
 
@@ -232,7 +233,7 @@ export default function TypeTimetableForm({
           }}
         >
           <Check size={14} strokeWidth={2} />
-          {parsed.length > 0 ? `Add ${parsed.length} class${parsed.length === 1 ? '' : 'es'}` : 'Add classes'}
+          {parsed.length > 0 ? `Add ${parsed.length} event${parsed.length === 1 ? '' : 's'}` : 'Add to your week'}
         </button>
         <button onClick={onClose} style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
