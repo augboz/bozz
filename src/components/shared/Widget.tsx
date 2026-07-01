@@ -9,8 +9,13 @@ interface WidgetProps {
 
 export function Widget({ children, t, accent, onClick, gridSpan = 1, compact = false, noPadding = false }: WidgetProps) {
   const [hover, setHover] = useState(false);
+  // Padding lives in CSS (see .w-shell in index.css) so container queries can
+  // shrink it as the widget gets small — inline padding can't be overridden by
+  // a @container rule. The class encodes the compact / no-padding variants.
+  const shellClass = `w-shell${noPadding ? ' w-shell-nopad' : compact ? ' w-shell-compact' : ''}`;
   return (
     <div
+      className={shellClass}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -24,7 +29,6 @@ export function Widget({ children, t, accent, onClick, gridSpan = 1, compact = f
         boxShadow: hover
           ? 'var(--widget-shadow-hover, 0 2px 0 rgba(255,255,255,0.10) inset, 0 20px 60px rgba(0,0,0,0.65), 0 4px 16px rgba(0,0,0,0.35))'
           : 'var(--widget-shadow, none)',
-        padding: noPadding ? 0 : compact ? '1.1rem 1.5rem' : '1.5rem 1.75rem',
         cursor: onClick ? 'pointer' : 'default',
         transition: 'transform 0.25s var(--ease, cubic-bezier(0.16,1,0.3,1)), border-color 0.2s, box-shadow 0.25s var(--ease, cubic-bezier(0.16,1,0.3,1))',
         gridColumn: `span ${gridSpan}`,
@@ -56,10 +60,11 @@ export function WidgetHeader({ label, accent: _accent, t, icon: Icon }: { label:
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
       {Icon && <Icon size={11} strokeWidth={1.6} color={t.textDim} style={{ flexShrink: 0 }} />}
-      <span style={{
+      <span className="w-header-label" style={{
         fontSize: '0.65rem', color: 'var(--w-text, ' + t.textMuted + ')',
         letterSpacing: '0.07em', fontWeight: 500,
         textTransform: 'uppercase' as const,
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {label}
       </span>

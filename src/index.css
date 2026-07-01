@@ -232,3 +232,29 @@ select:focus-visible,
 .widget-edit-overlay .widget-interactive {
   pointer-events: auto;
 }
+
+/* ── Responsive widgets ──────────────────────────────────────────────────────
+   Each grid cell is a size container, so a widget adapts to whatever size the
+   user drags it to (no fixed minimum). Padding lives here (not inline) so the
+   @container rules below can shrink it; header labels hide once the widget is
+   too narrow to read them, killing wasted space at small sizes. */
+.widget-cell { container: widget / size; }
+
+.w-shell { padding: 1.5rem 1.75rem; }
+.w-shell.w-shell-compact { padding: 1.1rem 1.5rem; }
+.w-shell.w-shell-nopad { padding: 0; }
+
+@container widget (max-width: 240px) {
+  .w-shell { padding: 1.05rem 1.15rem; }
+  .w-shell.w-shell-compact { padding: 0.9rem 1rem; }
+}
+@container widget (max-width: 160px) {
+  .w-shell { padding: 0.7rem 0.8rem; }
+  .w-shell.w-shell-compact { padding: 0.6rem 0.7rem; }
+  /* Too narrow to read the uppercase label — drop it, keep the icon. */
+  .w-header-label { display: none; }
+}
+@container widget (max-height: 90px) {
+  /* Very short: trim vertical padding so content isn't clipped by blank space. */
+  .w-shell, .w-shell.w-shell-compact { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+}

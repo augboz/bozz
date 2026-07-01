@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
 import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen } from 'lucide-react';
-import WidgetSizeStepper from '../shared/WidgetSizeStepper';
 import type { HomeWidgetItem, Theme, ImapAccount, WidgetShape, WidgetBorder } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
 import { WIDGET_REGISTRY, WIDGET_LIST, STARTER_TEMPLATES, type StarterTemplate } from '../widgets/registry';
@@ -143,18 +142,6 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
   };
 
   // Precise resize from the +/- stepper: clamp to the widget's min and the grid width.
-  const setWidgetSize = (id: string, w: number, h: number) => {
-    setItems(prev => prev.map(it => {
-      if (it.i !== id) return it;
-      const meta = WIDGET_REGISTRY[it.type];
-      return {
-        ...it,
-        w: Math.max(meta.minSize.w, Math.min(COLS, Math.round(w))),
-        h: Math.max(meta.minSize.h, Math.round(h)),
-      };
-    }));
-  };
-
   // Listen for viewport changes so resizing the desktop window or rotating
   // a phone correctly swaps between mobile-stack and desktop-grid.
   const [isMobile, setIsMobile] = useState<boolean>(() => isMobileViewport());
@@ -172,10 +159,10 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
     [ctx, editMode],
   );
 
-  const layout: LayoutItem[] = items.map(({ i, x, y, w, h }) => {
-    const meta = WIDGET_REGISTRY[items.find(it => it.i === i)!.type];
-    return { i, x, y, w, h, minW: meta.minSize.w, minH: meta.minSize.h };
-  });
+  // No per-widget min size: the user is free to drag any widget to any size,
+  // however big or small. A floor of 1x1 (react-grid-layout's default) is all
+  // that's enforced; widgets adapt their content via container queries.
+  const layout: LayoutItem[] = items.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
 
   const onLayoutChange = (next: Layout) => {
     if (sameLayout(items, next)) return;
@@ -401,7 +388,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             '--w-text': (it.config?.textColor as string | undefined) ?? t.text,
           } as React.CSSProperties;
           return (
-            <div key={it.i} data-widget-id={it.i} style={{
+            <div key={it.i} data-widget-id={it.i} className="widget-cell" style={{
               position: 'relative', height: '100%',
               outline: editMode ? `2px dashed ${t.doneAccent}` : 'none',
               outlineOffset: '2px', borderRadius: '14px',
@@ -409,9 +396,6 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             }}>
               {editMode && (
                 <>
-                  <div className="widget-remove" style={{ position: 'absolute', top: '-13px', left: 0, zIndex: 6 }}>
-                    <WidgetSizeStepper t={t} w={it.w} h={it.h} maxW={COLS} onResize={(w, h) => setWidgetSize(it.i, w, h)} />
-                  </div>
                   <button className="widget-remove" onClick={() => removeWidget(it.i)} aria-label={`Remove ${meta.label}`}
                     style={{ position: 'absolute', top: '-10px', right: '-10px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: t.panel, border: `1px solid ${t.borderStrong}`, color: t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                     <X size={12} strokeWidth={2} />
