@@ -1709,7 +1709,7 @@ export default function Dashboard() {
               animation: 'payoffFade 5.5s ease forwards',
             }}>
               <Sparkles size={14} strokeWidth={1.8} color={t.doingAccent} />
-              Your morning is ready. See you tomorrow.
+              You’re all set. Open Bozz each morning and your day is right here. See you tomorrow.
               <style>{`@keyframes payoffFade {
                 0% { opacity: 0; transform: translate(-50%, -8px); }
                 10% { opacity: 1; transform: translate(-50%, 0); }
