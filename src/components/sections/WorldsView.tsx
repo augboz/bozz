@@ -446,7 +446,7 @@ function pill(color: string, border: string): React.CSSProperties {
 /** Connected-app widgets → the app they surface (shown on the "what's inside" chips). */
 const CONNECTED_APP: Partial<Record<WidgetType, string>> = {
   recentEmails: 'Email', miniCalendar: 'Calendar', todaySchedule: 'Calendar',
-  nowPlaying: 'Spotify', notion: 'Notion', weather: 'Weather', whatsapp: 'WhatsApp',
+  nowPlaying: 'Spotify', notion: 'Notion', weather: 'Weather',
 };
 
 /** A representative home layout for theme Worlds (which install no widgets). */
@@ -488,7 +488,7 @@ function WidgetGlyph({ type, accent, light }: { type: WidgetType; accent: string
       return <div style={col}>{bar('48%', accent, 6, 0)}{bar('82%', line, 4, 1)}{bar('34%', faint, 4, 2)}</div>;
     case 'habits':
       return <div style={col}>{[0, 1, 2].map(r => row(Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i <= r + 1 ? accent : faint }} />), r))}</div>;
-    case 'recentEmails': case 'whatsapp':
+    case 'recentEmails':
       return <div style={col}>{[0, 1].map(i => row(<>{dot(accent, 6)}<div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>{bar('58%')}{bar('92%', faint, 3)}</div></>, i))}</div>;
     case 'weather':
       return row(<><div style={{ width: 16, height: 16, borderRadius: '50%', background: accent, opacity: 0.8 }} /><div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>{bar('22px')}{bar('14px', faint, 3)}</div></>);

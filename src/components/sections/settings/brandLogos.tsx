@@ -10,7 +10,7 @@ import React from 'react';
 
 export type BrandId =
   | 'gmail' | 'outlook' | 'icloud' | 'imap' | 'gcal' | 'acal'
-  | 'spotify' | 'notion' | 'gfit' | 'ahealth' | 'whatsapp'
+  | 'spotify' | 'notion' | 'gfit' | 'ahealth'
   | 'strava' | 'zoom';
 
 const LOGOS: Record<BrandId, (s: number) => React.ReactNode> = {
@@ -106,17 +106,6 @@ const LOGOS: Record<BrandId, (s: number) => React.ReactNode> = {
       <path
         fill="#FA3C4C"
         d="M12 20.6l-1.55-1.42C5.4 14.6 2 11.5 2 7.65 2 5.5 3.7 3.8 5.85 3.8c1.54 0 3.02.72 3.95 1.86h.4C11.13 4.52 12.61 3.8 14.15 3.8 16.3 3.8 18 5.5 18 7.65c0 3.85-3.4 6.95-8.45 11.53z"
-      />
-    </svg>
-  ),
-
-  // WhatsApp — green bubble with a white handset.
-  whatsapp: (s) => (
-    <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#25D366" d="M12 2a10 10 0 0 0-8.52 15.2L2 22l4.94-1.3A10 10 0 1 0 12 2z" />
-      <path
-        fill="#fff"
-        d="M9.2 7.3c-.18-.45-.37-.46-.55-.47h-.47c-.16 0-.43.06-.66.31-.23.25-.86.84-.86 2.05 0 1.2.88 2.37 1 2.53.13.16 1.72 2.73 4.25 3.72 2.1.83 2.53.67 2.98.62.46-.04 1.46-.59 1.66-1.16.21-.57.21-1.06.15-1.16-.06-.1-.23-.16-.47-.29-.25-.12-1.45-.71-1.67-.79-.22-.08-.39-.12-.55.13-.16.25-.63.79-.77.95-.14.16-.28.18-.53.06-.25-.12-1.04-.38-1.97-1.21-.73-.65-1.22-1.45-1.36-1.7-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.55-1.33-.76-1.82z"
       />
     </svg>
   ),

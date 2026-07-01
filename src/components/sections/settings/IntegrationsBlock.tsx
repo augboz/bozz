@@ -49,7 +49,6 @@ import { BrandLogo, type BrandId } from './brandLogos';
 import { randomString } from '../../../lib/oauth/pkce';
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { CalendarConnection, EmailProvider, HealthConnection, ImapAccount, OAuthAccount, SpotifyAccount, Theme } from '../../../lib/types';
-import { isWAConfigured, startWASession, getWASessionStatus, deleteWASession } from '../../../lib/whatsapp';
 
 // ── Sync helper ───────────────────────────────────────────────────────────────
 // IntegrationsBlock writes directly to storage (not through Dashboard state),
@@ -75,9 +74,6 @@ const ENV = {
   gfitClientId:         import.meta.env.VITE_GFIT_CLIENT_ID         as string | undefined,
   stravaClientId:       import.meta.env.VITE_STRAVA_CLIENT_ID       as string | undefined,
   zoomClientId:         import.meta.env.VITE_ZOOM_CLIENT_ID         as string | undefined,
-  /** Base URL of the self-hosted WhatsApp bridge, e.g. https://wa.yourserver.com */
-  waBackendUrl:         import.meta.env.VITE_WA_BACKEND_URL         as string | undefined,
-  waBackendKey:         import.meta.env.VITE_WA_BACKEND_KEY         as string | undefined,
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -1647,122 +1643,6 @@ function AppleHealthCard({ t, connections, onChange }: {
   );
 }
 
-// ── WhatsApp ──────────────────────────────────────────────────────────────────
-
-function WhatsAppCard({ t, onConnectedChange }: { t: Theme; onConnectedChange?: (v: boolean) => void }) {
-  const [connected, setConnected] = useState(false);
-  const [phone, setPhone] = useState<string | null>(null);
-  const [qr, setQr] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-  const configured = isWAConfigured();
-
-  // Get current user id from Supabase session
-  const [userId, setUserId] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
-  }, []);
-
-  // On mount, check if already connected
-  useEffect(() => {
-    if (!userId || !configured) { setReady(true); return; }
-    getWASessionStatus(userId).then(s => {
-      if (s.connected) { setConnected(true); setPhone(s.phone ?? null); onConnectedChange?.(true); }
-      setReady(true);
-    }).catch(() => setReady(true));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, configured]);
-
-  // Poll for QR → connected transition
-  useEffect(() => {
-    if (!scanning || !userId) return;
-    const id = setInterval(async () => {
-      try {
-        const s = await getWASessionStatus(userId);
-        if (s.qr && s.qr !== qr) setQr(s.qr);
-        if (s.connected) {
-          clearInterval(id);
-          setConnected(true); setPhone(s.phone ?? null);
-          setQr(null); setScanning(false);
-          await saveAndSync('waAccount', { userId, phone: s.phone, name: s.name });
-          onConnectedChange?.(true);
-        }
-      } catch { /* bridge may be temporarily unreachable */ }
-    }, 3000);
-    return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanning, userId]);
-
-  const startConnect = async () => {
-    if (!userId) return;
-    setError(null); setScanning(true);
-    try {
-      const s = await startWASession(userId);
-      if (s.connected) {
-        setConnected(true); setPhone(s.phone ?? null); setScanning(false);
-        await saveAndSync('waAccount', { userId, phone: s.phone });
-        onConnectedChange?.(true);
-      } else if (s.qr) {
-        setQr(s.qr);
-      }
-    } catch (e) { setError(String(e).replace('Error: ', '')); setScanning(false); }
-  };
-
-  const disconnect = async () => {
-    if (userId) { try { await deleteWASession(userId); } catch { /* ignore */ } }
-    await deleteItem('waAccount');
-    setConnected(false); setPhone(null); setQr(null); setScanning(false);
-    onConnectedChange?.(false);
-  };
-
-  const cancel = () => { setScanning(false); setQr(null); setError(null); };
-
-  if (!ready) return null;
-
-  return (
-    <Card
-      t={t} brand="whatsapp" color="#25D366" letter="W" name="WhatsApp" connected={connected}
-      status={connected
-        ? `● ${phone ? `+${phone}` : 'Connected'}`
-        : scanning ? 'Scan the QR code with your phone' : 'Recent messages widget'}
-      action={connected
-        ? <DisconnectBtn t={t} onClick={disconnect} />
-        : scanning
-          ? <button onClick={cancel} style={{ background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px', padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', color: t.textMuted }}>Cancel</button>
-          : configured
-            ? <ConnectBtn t={t} onClick={startConnect} />
-            : undefined}
-    >
-      {/* QR code */}
-      {scanning && qr && (
-        <div style={{ marginTop: '0.75rem', paddingTop: '0.7rem', borderTop: `1px solid ${t.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
-          <img src={qr} alt="WhatsApp QR" style={{ width: 180, height: 180, borderRadius: '10px', border: `1px solid ${t.border}` }} />
-          <div style={{ fontSize: '0.73rem', color: t.textMuted, textAlign: 'center', lineHeight: 1.55 }}>
-            Open <strong style={{ color: t.text }}>WhatsApp</strong> on your phone →{' '}
-            <strong style={{ color: t.text }}>Linked devices</strong> → Link a device → scan above
-          </div>
-        </div>
-      )}
-      {scanning && !qr && (
-        <div style={{ marginTop: '0.5rem', fontSize: '0.73rem', color: t.textMuted, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
-          Generating QR code…
-        </div>
-      )}
-      {/* Not configured — dev note (web only; desktop always has local bridge) */}
-      {!configured && !isWeb() && <DevNote t={t} vars={['VITE_WA_BACKEND_URL']} />}
-      {!configured && isWeb() && (
-        <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6, background: t.input, borderRadius: '7px', padding: '0.5rem 0.7rem' }}>
-          WhatsApp requires the desktop app, or a deployed bridge.<br />
-          Add <code style={{ background: t.bgAlt, padding: '0.05rem 0.3rem', borderRadius: '3px', fontSize: '0.68rem' }}>VITE_WA_BACKEND_URL</code> to enable on web.
-        </div>
-      )}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
-    </Card>
-  );
-}
-
 // ── Section label ─────────────────────────────────────────────────────────────
 
 function SectionLabel({ t, label }: { t: Theme; label: string }) {
@@ -1787,7 +1667,7 @@ export default function IntegrationsBlock({
 }: IntegrationsProps) {
   const bank = colorBank ?? [];
   // Track connected state for storage-based services (loaded async)
-  const [localConn, setLocalConn] = useState({ spotify: false, notion: false, icloud: false, imap: false, whatsapp: false, strava: false, zoom: false });
+  const [localConn, setLocalConn] = useState({ spotify: false, notion: false, icloud: false, imap: false, strava: false, zoom: false });
 
   // Determine connected state for every service
   const isConnected = {
@@ -1801,7 +1681,6 @@ export default function IntegrationsBlock({
     notion:    localConn.notion,
     icloud:    localConn.icloud,
     imap:      localConn.imap,
-    whatsapp:  localConn.whatsapp,
     strava:    localConn.strava,
     zoom:      localConn.zoom,
   };
@@ -1827,7 +1706,6 @@ export default function IntegrationsBlock({
   const imapCard   = <div key="imap" data-onb="imap-card"><ImapCard t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, imap: v }))} /></div>;
   const spotifyCard = <div key="spotify" data-onb="connector-spotify"><SpotifyCard t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, spotify: v }))} /></div>;
   const notionCard    = <div key="notion" data-onb="connector-notion"><NotionCard    t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, notion: v }))} /></div>;
-  const whatsappCard  = <WhatsAppCard  key="whatsapp"  t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, whatsapp: v }))} />;
   const stravaCard = <StravaCard key="strava" t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, strava: v }))} />;
   const zoomCard   = <ZoomCard   key="zoom"   t={t} onConnectedChange={v => setLocalConn(c => ({ ...c, zoom: v }))} />;
   const gcalCard   = <div key="gcal" data-onb="connector-gcal"><GoogleCalendarCard  t={t} connections={calendarConnections} onChange={onCalendarConnectionsChange} bank={bank} /></div>;
@@ -1837,7 +1715,7 @@ export default function IntegrationsBlock({
 
   // Temporarily hidden integrations — not functional yet, so don't surface them
   // in the connected-apps UI. Remove an id from this set to bring it back.
-  const HIDDEN_INTEGRATIONS = new Set(['whatsapp', 'gfit', 'ahealth']);
+  const HIDDEN_INTEGRATIONS = new Set(['gfit', 'ahealth']);
 
   // `name`/`keywords` drive the Apps-page search filter.
   const allCards: Array<{ id: keyof typeof isConnected; name: string; keywords?: string; node: React.ReactNode }> = [
@@ -1853,7 +1731,6 @@ export default function IntegrationsBlock({
     { id: 'zoom',    name: 'Zoom',            keywords: 'meetings video calls conference',               node: zoomCard },
     { id: 'gfit',    name: 'Google Fit',      keywords: 'google health fitness',      node: gfitCard },
     { id: 'ahealth', name: 'Apple Health',    keywords: 'apple health fitness',       node: ahealthCard },
-    { id: 'whatsapp', name: 'WhatsApp',       keywords: 'messaging chat meta',        node: whatsappCard },
   ];
 
   const q = (searchQuery ?? '').trim().toLowerCase();

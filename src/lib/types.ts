@@ -370,7 +370,7 @@ export type WidgetType =
   | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd'
   | 'clock' | 'photo' | 'dailyPlanner' | 'todaySchedule' | 'today'
   | 'topicTodos' | 'topicLinks' | 'topicNote'
-  | 'whatsapp' | 'map' | 'linkedin';
+  | 'map' | 'linkedin';
 
 /** A placed widget on the home grid (combines instance + grid position). */
 export interface HomeWidgetItem {
