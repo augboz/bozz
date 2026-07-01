@@ -59,6 +59,7 @@ async function browserOAuthFlow(
     }
 
     let done = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     const onMessage = (e: MessageEvent) => {
       // Accept messages from our own origin or from the 127.0.0.1 loopback
@@ -70,6 +71,7 @@ async function browserOAuthFlow(
       done = true;
       window.removeEventListener('message', onMessage);
       clearInterval(closedPoll);
+      clearTimeout(timeoutId);
       resolve({ params: e.data.params as Record<string, string>, redirectUri });
     };
     window.addEventListener('message', onMessage);
@@ -78,12 +80,13 @@ async function browserOAuthFlow(
     const closedPoll = setInterval(() => {
       if (popup.closed && !done) {
         clearInterval(closedPoll);
+        clearTimeout(timeoutId);
         window.removeEventListener('message', onMessage);
         reject(new Error('OAuth popup was closed before completing sign-in.'));
       }
     }, 500);
 
-    setTimeout(() => {
+    timeoutId = setTimeout(() => {
       if (done) return;
       clearInterval(closedPoll);
       window.removeEventListener('message', onMessage);

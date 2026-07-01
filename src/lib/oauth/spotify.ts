@@ -31,16 +31,25 @@ export async function connectSpotify(clientId: string): Promise<SpotifyAccount> 
     let portReject: (e: Error) => void = () => {};
     const portPromise = new Promise<number>((resolve, reject) => {
       portReject = reject;
-      const timer = setTimeout(
-        () => reject(new Error('OAuth timed out waiting for port — is port 14985 already in use?')),
-        5000,
-      );
       let unlisten: (() => void) | null = null;
+      let settled = false;
+      const done = () => { settled = true; if (unlisten) unlisten(); };
+      const timer = setTimeout(() => {
+        // Tear down the oauth:port subscription on timeout too — otherwise a
+        // failed/abandoned connect leaves the listener dangling.
+        done();
+        reject(new Error('OAuth timed out waiting for port — is port 14985 already in use?'));
+      }, 5000);
       listen<number>('oauth:port', (e) => {
         clearTimeout(timer);
-        if (unlisten) unlisten();
+        done();
         resolve(e.payload);
-      }).then(fn => { unlisten = fn; });
+      }).then(fn => {
+        unlisten = fn;
+        // If we already settled before the subscription resolved, unlisten now
+        // so the late-arriving handle doesn't leak.
+        if (settled) fn();
+      });
     });
 
     const runPromise = invoke<Record<string, string>>('oauth_run', { port: SPOTIFY_PORT });
@@ -100,6 +109,7 @@ export async function connectSpotify(clientId: string): Promise<SpotifyAccount> 
       }
 
       let done = false;
+      let timeoutId: ReturnType<typeof setTimeout>;
 
       const onMessage = (e: MessageEvent) => {
         const loopbackPort = window.location.port || '80';
@@ -109,6 +119,7 @@ export async function connectSpotify(clientId: string): Promise<SpotifyAccount> 
         done = true;
         window.removeEventListener('message', onMessage);
         clearInterval(closedPoll);
+        clearTimeout(timeoutId);
         resolve(e.data.params as Record<string, string>);
       };
       window.addEventListener('message', onMessage);
@@ -116,12 +127,13 @@ export async function connectSpotify(clientId: string): Promise<SpotifyAccount> 
       const closedPoll = setInterval(() => {
         if (popup.closed && !done) {
           clearInterval(closedPoll);
+          clearTimeout(timeoutId);
           window.removeEventListener('message', onMessage);
           reject(new Error('OAuth popup was closed before completing sign-in.'));
         }
       }, 500);
 
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (done) return;
         clearInterval(closedPoll);
         window.removeEventListener('message', onMessage);

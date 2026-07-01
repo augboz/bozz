@@ -8,7 +8,7 @@
  * Requires GOCARDLESS_SECRET_ID + GOCARDLESS_SECRET_KEY in Vercel env vars.
  * Sign up free at bankaccountdata.gocardless.com
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Search, ArrowLeft, Loader } from 'lucide-react';
 import type { BudgetData, OneOffTransaction, Theme } from '../../../lib/types';
 
@@ -105,6 +105,12 @@ export default function BankConnectModal({ t, budget, onClose, onMerge }: Props)
   const [errorMsg, setErrorMsg] = useState('');
   const [setupMsg, setSetupMsg] = useState('');
 
+  // Bank-auth popup poll. Held in a ref so we can clear it if the modal unmounts
+  // while the popup is still open — otherwise the interval runs forever on a
+  // stale popup ref and can setState on an unmounted component.
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
   // Load institution list on mount
   useEffect(() => {
     (async () => {
@@ -192,10 +198,12 @@ export default function BankConnectModal({ t, budget, onClose, onMerge }: Props)
         return;
       }
 
-      // If popup is blocked or the user closed it, check periodically
-      const poll = setInterval(() => {
+      // If popup is blocked or the user closed it, check periodically.
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(() => {
         if (popup.closed) {
-          clearInterval(poll);
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
           // They may have completed — try fetching
           const req = localStorage.getItem('gc_pending_req');
           if (req) fetchTransactions(req, institution.name);

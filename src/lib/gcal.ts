@@ -95,7 +95,13 @@ export async function fetchGCalEvents(overrideColor?: string): Promise<CalendarE
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?${params}`,
       token,
     );
-    if (!evRes.ok) continue;
+    if (!evRes.ok) {
+      // Don't fail the whole sync for one bad calendar, but don't vanish
+      // silently either — a 403 after revoked access would otherwise just make
+      // that calendar's events disappear with no explanation.
+      console.warn(`[gcal] calendar ${cal.id} returned ${evRes.status}; skipping`);
+      continue;
+    }
 
     const { items: evItems = [] } = (await evRes.json()) as {
       items?: Array<{
