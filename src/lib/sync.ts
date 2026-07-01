@@ -17,12 +17,12 @@ import { getItem, setItem, deleteItem, listKeysByPrefix } from './storage';
 export const SYNCED_KEYS = [
   'appearance', 'topics', 'topicFolders', 'inbox',
   'homeLayout', 'homeBackground',
-  'calendarFeeds', 'calendarCache', 'calendarConnections', 'calendarNotes',
+  'calendarFeeds', 'calendarConnections', 'calendarNotes',
   'budget',
   'reviews', 'reviewSettings',
-  'oauthAccounts', 'imapAccounts', 'emailsCache',
+  'oauthAccounts', 'imapAccounts',
   'recentSearches',
-  'notionWidget', 'spotifyAccount', 'waAccount',
+  'spotifyAccount', 'waAccount',
   'dailyPlan',
   'habits',
   'clearStreak',
@@ -32,6 +32,14 @@ export const SYNCED_KEYS = [
   // Bozz Plus — priority-alert settings are synced (small); the alert watch
   // state (notifiedIds) and the entitlement license are deliberately local-only.
   'priorityAlerts',
+  // SECURITY — deliberately NOT synced (kept local-only), for the same reason
+  // OAuth tokens (__tok__*) aren't: they put secrets or private content at rest
+  // in the non-E2EE Supabase blob.
+  //   'notionWidget'  — its config embeds the raw Notion integration TOKEN.
+  //   'emailsCache'   — cached mailbox content (senders, subjects, snippets).
+  //   'calendarCache' — cached event titles/times.
+  // All three are re-derivable per device (re-fetched / reconnected), so nothing
+  // is lost by keeping them off the wire; only the secret/content exposure goes.
 ] as const;
 
 export type SyncedKey = typeof SYNCED_KEYS[number];

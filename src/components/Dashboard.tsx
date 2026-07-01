@@ -886,21 +886,26 @@ export default function Dashboard() {
     if (syncingRef.current || calendarFeeds.length === 0) return;
     syncingRef.current = true;
     setFeedsSyncing(true);
-    const feeds: CalendarCache['feeds'] = {};
-    // Load the iCal parser (ical.js) on demand, only when actually syncing a
-    // feed, so it stays out of the startup bundle.
-    const { fetchFeed } = await import('../lib/ical');
-    await Promise.all(calendarFeeds.map(async (feed, idx) => {
-      const color = FEED_COLORS[idx % FEED_COLORS.length];
-      try {
-        feeds[feed.id] = { fetchedAt: Date.now(), events: await fetchFeed(feed, color) };
-      } catch (e) {
-        feeds[feed.id] = { fetchedAt: Date.now(), events: [], error: String(e) };
-      }
-    }));
-    setCalendarCache({ lastSync: Date.now(), feeds });
-    syncingRef.current = false;
-    setFeedsSyncing(false);
+    try {
+      const feeds: CalendarCache['feeds'] = {};
+      // Load the iCal parser (ical.js) on demand, only when actually syncing a
+      // feed, so it stays out of the startup bundle.
+      const { fetchFeed } = await import('../lib/ical');
+      await Promise.all(calendarFeeds.map(async (feed, idx) => {
+        const color = FEED_COLORS[idx % FEED_COLORS.length];
+        try {
+          feeds[feed.id] = { fetchedAt: Date.now(), events: await fetchFeed(feed, color) };
+        } catch (e) {
+          feeds[feed.id] = { fetchedAt: Date.now(), events: [], error: String(e) };
+        }
+      }));
+      setCalendarCache({ lastSync: Date.now(), feeds });
+    } finally {
+      // Always release the guard — a throw from the dynamic import or setState
+      // must not wedge the ref true and block all future refreshes this session.
+      syncingRef.current = false;
+      setFeedsSyncing(false);
+    }
   }, [calendarFeeds]);
 
   // Refresh feeds on startup and whenever the feed list changes.
