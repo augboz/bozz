@@ -70,7 +70,7 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
           Add your timetable
         </h1>
         <div style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', maxWidth: '460px' }}>
-          Your real classes drop straight onto the calendar and into Today, so your morning is set up before you’ve typed a thing.
+          Type your weekly classes or fixed events. In a moment you’ll watch your morning build itself, no calendar links needed.
         </div>
       </div>
 
@@ -88,6 +88,7 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
             onAddNotes={onAddNotes}
             onClose={onSkip}
             compact
+            showExample
           />
         ) : (
           <>

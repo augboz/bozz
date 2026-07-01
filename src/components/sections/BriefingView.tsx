@@ -41,8 +41,9 @@ export default function BriefingView({ ctx }: { ctx: WidgetCtx }) {
       </div>
 
       {/* The brief, full-width. A min-height keeps the scroll area usable on a
-          short brief; max-width keeps line lengths readable on wide screens. */}
-      <div style={{ maxWidth: '760px', minHeight: '60vh', display: 'flex' }}>
+          short brief; max-width keeps line lengths readable on wide screens.
+          data-onb anchors the first-run "this is your morning" spotlight. */}
+      <div data-onb="briefing-today" style={{ maxWidth: '760px', minHeight: '60vh', display: 'flex' }}>
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           <TodayWidget ctx={briefingCtx} />
         </div>

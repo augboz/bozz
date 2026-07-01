@@ -120,6 +120,9 @@ export default function Dashboard() {
   // Replay mode: force the getting-started guide to show even after every step
   // is complete, so "Replay walkthroughs" in Settings can always bring it back.
   const [onbForced, setOnbForced] = useState(false);
+  // First-run guided walk: auto-started once, right after the welcome overlays
+  // close, to teach the core action (capturing) on the user's real morning.
+  const [firstRunTour, setFirstRunTour] = useState(false);
   const onbInit = useRef(false);
   // First-run flow — shown once to brand-new accounts before anything else.
   // 'theme' = pick dark/light, 'coldstart' = guided "what are you here for?"
@@ -348,7 +351,13 @@ export default function Dashboard() {
       // accounts, so run a ONE-TIME reset to Board for any account that predates
       // this guard, so the default actually takes effect. After the migration a
       // landing chosen in Settings -> "Home shows" sticks; unset falls back to Board.
-      if (!appr.homeLandingBoardMigrated) {
+      if (brandNewAccount) {
+        // Brand-new: land on the Briefing ("your morning in 90 seconds") — the
+        // north-star promise — not the customisable Board grid. Mark migrated so
+        // the choice sticks until they change it in Settings -> "Home shows".
+        appr.homeLanding = 'briefing';
+        appr.homeLandingBoardMigrated = true;
+      } else if (!appr.homeLandingBoardMigrated) {
         appr.homeLanding = 'board';
         appr.homeLandingBoardMigrated = true;
       } else if (appr.homeLanding == null) {
@@ -437,8 +446,22 @@ export default function Dashboard() {
   const finishWelcome = () => {
     setActiveSection('home');
     setWelcomePhase(null);
-    setOnbDismissed(true);
     void save('welcomeComplete', true);
+    // Instead of silently dismissing the tutor (the old behaviour, which is
+    // exactly why a new user landed on a grid with no idea what to do), auto-run
+    // ONE short guided walk on their real morning. It teaches the core action and
+    // then finalises dismissal itself (finishFirstRunTour). Keep the guide mounted
+    // so the spotlight persists even if the walk navigates.
+    setFirstRunTour(true);
+    setOnbKeepMounted(true);
+  };
+
+  // The first-run walk is over (finished or skipped) — now finalise dismissal so
+  // it never runs again, and drop back to a normal, un-spotlighted home.
+  const finishFirstRunTour = () => {
+    setFirstRunTour(false);
+    setOnbKeepMounted(false);
+    setOnbDismissed(true);
     void save('onboardingDismissed', true);
   };
 
@@ -1669,6 +1692,8 @@ export default function Dashboard() {
                 onWalkStart={() => setOnbKeepMounted(true)}
                 onWalkEnd={() => setOnbKeepMounted(false)}
                 onExitSidebarEdit={() => setSidebarEditing(false)}
+                autoStartFlow={firstRunTour ? 'firstRun' : undefined}
+                onFirstRunEnd={finishFirstRunTour}
               />
             </ErrorBoundary>
           )}

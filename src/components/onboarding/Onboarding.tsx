@@ -99,7 +99,7 @@ function SpotlightOverlay({ rects, tip, step, total, accent, onExit }: Spotlight
 
 // ── Step model ────────────────────────────────────────────────────────────────
 
-export type Flow = 'sidebar' | 'topicPage' | 'connect' | 'quicks';
+export type Flow = 'firstRun' | 'sidebar' | 'topicPage' | 'connect' | 'quicks';
 
 interface StepCtx {
   section: string;
@@ -120,6 +120,18 @@ interface WalkStep {
   advance: (ctx: StepCtx) => boolean;
   autoMs?: number; // generous fallback for optional / explanation-only steps
 }
+
+// The first-run walk: shown automatically to a brand-new account the moment it
+// lands on its populated morning. It teaches the ONE core action (capturing a
+// thought) on the user's real data, with a reveal beat before and a calm payoff
+// beat after. Deliberately short — this is not the four-part setup tour. Every
+// step is skippable via the overlay's Exit button.
+const FIRST_RUN_STEPS: WalkStep[] = [
+  { targets:['briefing-today'],   tip:'This is your morning, all in one place. Everything you add lands right here.', advance:() => false, autoMs:3800 },
+  { targets:['quick-add'],        tip:'Here is the one thing to learn: capturing. Click Quick add to try it now.', advance:c => c.domHas('quick-add-modal') },
+  { targets:['quick-add-modal'],  tip:'Type anything on your mind and press Enter. Capture now, sort it later.', advance:c => !c.domHas('quick-add-modal') },
+  { targets:[],                   tip:'That is it. Your morning is ready every time you open Bozz. See you tomorrow.', advance:() => false, autoMs:3600 },
+];
 
 const SIDEBAR_STEPS: WalkStep[] = [
   { targets:['edit-nav'],      tip:'A topic is an area of your life, like Uni, Work or the gym. Click Edit to start.', advance:c => c.sidebarEditing || c.domHas('nav-add-menu') },
@@ -150,6 +162,7 @@ const QUICKS_STEPS: WalkStep[] = [
 ];
 
 const FLOW_STEPS: Record<Flow, WalkStep[]> = {
+  firstRun: FIRST_RUN_STEPS,
   sidebar: SIDEBAR_STEPS, topicPage: TOPICPAGE_STEPS, connect: CONNECT_STEPS, quicks: QUICKS_STEPS,
 };
 
@@ -283,12 +296,19 @@ export interface OnboardingProps {
   onWalkEnd: () => void;
   /** Leave sidebar edit mode (used when a non-sidebar walkthrough starts). */
   onExitSidebarEdit: () => void;
+  /** When set, auto-run this flow once on mount (the brand-new-account first run).
+   *  Clear it again once onFirstRunEnd fires so the flow never restarts. */
+  autoStartFlow?: Flow;
+  /** Fired when an auto-started flow ends by ANY means (finished or exited early),
+   *  so the caller can finalise dismissal and reveal the payoff. */
+  onFirstRunEnd?: () => void;
 }
 
 export default function Onboarding({
   t, activeSection, currentTopicId, sidebarEditing,
   topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised,
   onDismiss, onWalkStart, onWalkEnd, onExitSidebarEdit,
+  autoStartFlow, onFirstRunEnd,
 }: OnboardingProps) {
   const [walkState, setWalkState] = useState<WalkState | null>(null);
 
@@ -299,7 +319,26 @@ export default function Onboarding({
     setWalkState({ flow, step: 0 });
     onWalkStart();
   };
-  const exitWalk = () => { setWalkState(null); onWalkEnd(); };
+  const exitWalk = () => {
+    // An auto-started flow (the first run) must tell the caller it's over on ANY
+    // exit — finished or skipped — so dismissal is finalised exactly once.
+    const wasAuto = walkState?.flow === autoStartFlow && autoStartFlow != null;
+    setWalkState(null);
+    onWalkEnd();
+    if (wasAuto) onFirstRunEnd?.();
+  };
+
+  // Auto-run the first-run flow once, the moment the caller asks for it (right
+  // after the welcome overlays close). Guarded so it never restarts after it ends.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoStartFlow || autoStarted.current) return;
+    autoStarted.current = true;
+    onExitSidebarEdit();
+    setWalkState({ flow: autoStartFlow, step: 0 });
+    onWalkStart();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartFlow]);
 
   const ctx = { section: activeSection, currentTopicId, sidebarEditing, topicCount, topicWidgetTypes, inboxCount, emailConnected, iconCustomised, stagesCustomised };
 
@@ -312,7 +351,7 @@ export default function Onboarding({
 
   return (
     <>
-      {activeSection === 'home' && !walkState && (
+      {activeSection === 'home' && !walkState && !autoStartFlow && (
         <div style={{
           border:`1px solid ${t.border}`, borderRadius:'20px',
           padding:'1.5rem 1.6rem', marginBottom:'1.5rem', background:t.panel ?? t.bg,
