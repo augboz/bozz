@@ -16,13 +16,13 @@ import BackgroundControls, { BgLayer, type PageBg } from '../shared/BackgroundCo
 import { deleteItem } from '../../lib/storage';
 
 const Grid = WidthProvider(GridLayout);
-const COLS = 12;
-const ROW_H = 32;
+const COLS = 24;
+const ROW_H = 16;
 
 const DEFAULT_TOPIC_LAYOUT: HomeWidgetItem[] = [
   // Compact by default — much smaller than the old full-width 12×16 todo. Users
   // can drag it bigger; new topic pages just don't open with a giant task list.
-  { i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 4, h: 6 },
+  { i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 8, h: 12 },
 ];
 
 interface Props {
@@ -504,7 +504,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
         layout={layout}
         cols={COLS}
         rowHeight={ROW_H}
-        margin={[16, 16]}
+        margin={[8, 8]}
         containerPadding={[0, 0]}
         isDraggable={editMode}
         isResizable={editMode}

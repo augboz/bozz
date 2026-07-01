@@ -309,6 +309,23 @@ export default function Dashboard() {
           }));
         }
       }
+      // Migrate v2 grid (12 cols, ROW_H 32) → finer grid (24 cols, ROW_H 16):
+      // double x/y/w/h so boards look identical but resize in half-size steps.
+      // One-time, guarded by a flag persisted on appearance.
+      if (!appr.gridFinerMigrated) {
+        const scale2x = (it: HomeWidgetItem): HomeWidgetItem => ({
+          ...it, x: it.x * 2, y: it.y * 2, w: it.w * 2, h: it.h * 2,
+        });
+        if (loadedHomeItems) loadedHomeItems = loadedHomeItems.map(scale2x);
+        if (loadedTopics) {
+          loadedTopics = loadedTopics.map(tp => ({
+            ...tp,
+            widgetLayout: tp.widgetLayout?.map(scale2x),
+          }));
+        }
+        appr.gridFinerMigrated = true;
+      }
+
       if (loadedHomeItems) setHomeItems(loadedHomeItems);
 
       // Brand-new accounts start with NO topics — the Home walkthroughs guide

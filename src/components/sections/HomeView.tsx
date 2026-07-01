@@ -15,8 +15,8 @@ import BackgroundControls, { BgLayer, type PageBg } from '../shared/BackgroundCo
 import { PhotoWidgetConfig } from '../widgets/PhotoWidget';
 
 const Grid = WidthProvider(GridLayout);
-const COLS = 12;
-const ROW_H = 32;
+const COLS = 24;
+const ROW_H = 16;
 
 interface HomeViewProps {
   items: HomeWidgetItem[];
@@ -375,7 +375,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         layout={layout}
         cols={COLS}
         rowHeight={ROW_H}
-        margin={[16, 16]}
+        margin={[8, 8]}
         containerPadding={[0, 0]}
         isDraggable={editMode}
         isResizable={editMode}

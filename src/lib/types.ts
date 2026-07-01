@@ -431,6 +431,13 @@ export interface AppearancePrefs {
    * set it true. A landing chosen after the migration sticks.
    */
   homeLandingBoardMigrated?: boolean;
+  /**
+   * One-time migration guard: the widget grid went from 12 cols / 32px rows to a
+   * finer 24 cols / 16px rows so resizing is twice as precise. When falsy we
+   * double every saved widget's x/y/w/h once (so boards look identical) and set
+   * it true.
+   */
+  gridFinerMigrated?: boolean;
   /** Corner radius preset for home widgets. */
   widgetShape: WidgetShape;
   /** Border style preset for home widgets. */
