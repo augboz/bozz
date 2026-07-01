@@ -33,6 +33,10 @@ interface CalendarViewProps {
   /** When set/changed (by a click on a specific event elsewhere), focus the
    *  calendar on that date in DAY mode and open its day panel. */
   focusRequest?: { date: number; mode?: CalendarViewMode };
+  /** Called once a focusRequest has been applied, so the owner can clear it —
+   *  otherwise the stale request re-fires on every remount and the calendar
+   *  never opens on its month default again. */
+  onFocusConsumed?: () => void;
 }
 
 const WEEK_OPTS = { weekStartsOn: 1 } as const;
@@ -846,6 +850,7 @@ export default function CalendarView({
   tbOffset = 0,
   colorBank = [] as string[],
   focusRequest,
+  onFocusConsumed,
 }: CalendarViewProps) {
   const [mode, setMode] = useState<CalendarViewMode>('month');
   const [cursor, setCursor] = useState<Date>(new Date());
@@ -860,6 +865,11 @@ export default function CalendarView({
     setCursor(d);
     setMode(focusRequest.mode ?? 'day');
     setSelected(d);
+    // Consume the request: without this, the stale focus re-fires on every
+    // remount and the calendar opens in day view (with the day panel) forever
+    // after the first event click, instead of the clean month default.
+    onFocusConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest]);
   const [createFor, setCreateFor] = useState<{ day: Date; startMin?: number } | null>(null);
   const [colorPickingFor, setColorPickingFor] = useState<string | null>(null);

@@ -1855,6 +1855,7 @@ export default function Dashboard() {
               colorBank={appearance.colorBank ?? []}
               tbOffset={tbOffset}
               focusRequest={calendarFocus ?? undefined}
+              onFocusConsumed={() => setCalendarFocus(null)}
             />
           )}
           {activeSection === 'dailyPlanner' && (
