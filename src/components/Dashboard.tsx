@@ -162,14 +162,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function loadData() {
+      // Back up the local store BEFORE any sync touches it, so each day's
+      // first-launch backup captures the pre-pull state. (It used to run after
+      // the pull, which let a bad pull poison that day's backup too.) Runs for
+      // signed-out users as well — backups are not tied to sync.
+      await initBackup();
       if (userId) {
         // If there's local data that was never pushed (e.g. push failed on sign-out,
         // or app was force-closed), push it first before pulling — otherwise the
         // pull would overwrite it with the older Supabase snapshot.
         if (await hasLocalData()) {
-          await pushSnapshot(userId);
+          const pushed = await pushSnapshot(userId);
+          // DATA SAFETY: if the push FAILED (offline, oversized payload, server
+          // error), do NOT pull — pulling would overwrite the only good copy of
+          // the user's data with a stale remote snapshot. This exact sequence
+          // (silent push failure + unconditional pull) reverted a user's account
+          // to days-old data on 2026-07-02. Sync resumes on the next successful
+          // push (every save() schedules one).
+          if (pushed) await pullSnapshot(userId);
+          else console.error('[sync] push failed — skipping pull to protect local data');
+        } else {
+          await pullSnapshot(userId);
         }
-        await pullSnapshot(userId);
       }
 
       const keys = [
@@ -369,7 +383,8 @@ export default function Dashboard() {
       if (welcomeChosen?.value == null && brandNewAccount) setWelcomePhase('theme');
 
       setLoading(false);
-      initBackup();
+      // (Daily backup now runs at the TOP of loadData, before sync can touch
+      // the store — see the initBackup() call above the push/pull block.)
     }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -40,6 +40,11 @@ export const SYNCED_KEYS = [
   //   'calendarCache' — cached event titles/times.
   // All three are re-derivable per device (re-fetched / reconnected), so nothing
   // is lost by keeping them off the wire; only the secret/content exposure goes.
+  //
+  // SIZE — 'photo__*' (Photo-widget images, base64) are also local-only. Two
+  // photos pushed the sync blob past 10MB, which made pushes fail silently while
+  // the unconditional startup pull kept "restoring" a stale remote snapshot —
+  // the 2026-07-02 data-loss incident. Photos stay on the device that added them.
 ] as const;
 
 export type SyncedKey = typeof SYNCED_KEYS[number];
@@ -74,7 +79,10 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
         // written by older builds may still contain leaked access/refresh
         // tokens and client secrets; tokens belong only in the local app data
         // file, never in the synced Supabase row.
-        .filter(([key]) => !key.startsWith('__tok__'))
+        // SIZE: photo__* is local-only now (see SYNCED_KEYS note) — skip any
+        // photos still sitting in rows written by older builds, so they don't
+        // resurrect and re-balloon the local store.
+        .filter(([key]) => !key.startsWith('__tok__') && !key.startsWith('photo__'))
         .map(async ([key, value]) => {
           try {
             await setItem(key, JSON.stringify(value));
@@ -115,16 +123,9 @@ export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
   // encrypted. They stay only in the local app data file; users reconnect
   // integrations per device.
 
-  // Sync per-widget photos (photo__* keys — one per Photo widget instance).
-  try {
-    const photoKeys = await listKeysByPrefix('photo__');
-    await Promise.all(photoKeys.map(async key => {
-      try {
-        const r = await getItem(key);
-        if (r?.value) out[key] = JSON.parse(r.value);
-      } catch { /* ignore */ }
-    }));
-  } catch { /* ignore */ }
+  // Per-widget photos (photo__* keys) are deliberately NOT synced — see the
+  // SIZE note on SYNCED_KEYS. Base64 images ballooned the blob past request
+  // limits and broke sync silently.
 
   return out;
 }
