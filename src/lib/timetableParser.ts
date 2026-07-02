@@ -12,6 +12,7 @@
  *   "Fri 10-12 Lab"
  *   "Mon/Wed 14:00-15:30 Linear Algebra"
  *   "Tue & Thu 9am-10am Chemistry, B12"
+ *   "Thu 2-3 Content review"   → 14:00-15:00 (bare 1-7 reads as PM; 8-12 as AM)
  *
  * Grammar (lenient, order-tolerant for the day token, which must come first):
  *   <weekday(s)>  <time>[-<time>]  <title>  [room/location]
@@ -165,6 +166,14 @@ export function parseClassLine(line: string): ParsedClass | null {
   if (endMin <= startMin) {
     if (endMin + 12 * 60 > startMin && endMin + 12 * 60 <= 24 * 60) endMin += 12 * 60;
     else endMin = startMin + 60;
+  }
+  // Afternoon inference: with no am/pm anywhere in the span, nobody means 2 AM
+  // by "Thu 2-3" — read a bare start of 1:00-7:59 as PM (13:00-19:59). 8-12
+  // stays morning ("Mon 9-11"), and any explicit am/pm always wins.
+  const hasMeridiem = /am|pm/i.test(startRaw) || (endRaw ? /am|pm/i.test(endRaw) : false);
+  if (!hasMeridiem && startMin >= 60 && startMin < 8 * 60) {
+    startMin += 12 * 60;
+    endMin = Math.min(24 * 60, endMin + 12 * 60);
   }
   startMin = Math.max(0, Math.min(24 * 60 - 1, startMin));
   endMin = Math.max(startMin + 5, Math.min(24 * 60, endMin));

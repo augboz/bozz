@@ -398,6 +398,14 @@ export default function Dashboard() {
     }).catch(() => {});
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The welcome overlays are position:fixed, so without this the page behind
+  // them still wheel-scrolls. Lock body scroll while any welcome step is up.
+  useEffect(() => {
+    if (welcomePhase) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [welcomePhase]);
+
   const chooseWelcomeMood = (mood: 'dark' | 'light') => {
     setAppearance(a => ({ ...a, mood }));
     // Advance to the guided cold-start step rather than finishing here, so a
@@ -1773,6 +1781,7 @@ export default function Dashboard() {
               colorBank={appearance.colorBank ?? []}
               tbOffset={tbOffset}
               focusRequest={calendarFocus ?? undefined}
+              onFocusConsumed={() => setCalendarFocus(null)}
             />
           )}
           {activeSection === 'dailyPlanner' && (

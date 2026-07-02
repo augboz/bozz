@@ -33,6 +33,10 @@ interface CalendarViewProps {
   /** When set/changed (by a click on a specific event elsewhere), focus the
    *  calendar on that date in DAY mode and open its day panel. */
   focusRequest?: { date: number; mode?: CalendarViewMode };
+  /** Called once a focusRequest has been applied, so the owner can clear it —
+   *  otherwise the stale request re-fires on every remount and the calendar
+   *  never opens on its month default again. */
+  onFocusConsumed?: () => void;
 }
 
 const WEEK_OPTS = { weekStartsOn: 1 } as const;
@@ -846,6 +850,7 @@ export default function CalendarView({
   tbOffset = 0,
   colorBank = [] as string[],
   focusRequest,
+  onFocusConsumed,
 }: CalendarViewProps) {
   const [mode, setMode] = useState<CalendarViewMode>('month');
   const [cursor, setCursor] = useState<Date>(new Date());
@@ -860,11 +865,25 @@ export default function CalendarView({
     setCursor(d);
     setMode(focusRequest.mode ?? 'day');
     setSelected(d);
+    // Consume the request: without this, the stale focus re-fires on every
+    // remount and the calendar opens in day view (with the day panel) forever
+    // after the first event click, instead of the clean month default.
+    onFocusConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest]);
   const [createFor, setCreateFor] = useState<{ day: Date; startMin?: number } | null>(null);
   const [colorPickingFor, setColorPickingFor] = useState<string | null>(null);
   const [addFeedOpen, setAddFeedOpen] = useState(false);
   const [typeTimetableOpen, setTypeTimetableOpen] = useState(false);
+  // Persisted dismissal of the "Add your timetable" front door, so a user who
+  // doesn't want it (or connects a calendar another way) isn't nagged every visit.
+  const [timetablePromptDismissed, setTimetablePromptDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem('bozzTimetablePromptDismissed') === '1'; } catch { return false; }
+  });
+  const dismissTimetablePrompt = () => {
+    setTimetablePromptDismissed(true);
+    try { localStorage.setItem('bozzTimetablePromptDismissed', '1'); } catch { /* ignore */ }
+  };
 
   // The "Add your timetable" front door is only useful when the parent wired the
   // callback. Show the empty-state card prominently until the user has any feed.
@@ -1070,8 +1089,9 @@ export default function CalendarView({
       {/* "Add your timetable" front door — shown prominently until the user has a
           feed AND no typed classes. Type is the primary action (no .ics needed);
           pasting a link is the secondary. Both fill the grid + Today in seconds. */}
-      {noFeeds && calendarNotes.length === 0 && !addFeedOpen && !typeTimetableOpen && (
+      {noFeeds && calendarNotes.length === 0 && !addFeedOpen && !typeTimetableOpen && !timetablePromptDismissed && (
         <div style={{
+          position: 'relative',
           display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
           background: t.bgAlt, border: `1px dashed ${t.borderStrong}`, borderRadius: '12px',
           padding: '1.1rem 1.25rem', marginBottom: '1.25rem',
@@ -1112,6 +1132,19 @@ export default function CalendarView({
               </button>
             )}
           </div>
+          <button
+            onClick={dismissTimetablePrompt}
+            aria-label="Dismiss"
+            title="Don’t show this again"
+            style={{
+              flexShrink: 0, alignSelf: 'flex-start',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: t.textDim, display: 'flex', alignItems: 'center', padding: '0.2rem',
+              marginTop: '-0.4rem', marginRight: '-0.4rem',
+            }}
+          >
+            <X size={16} strokeWidth={1.8} />
+          </button>
         </div>
       )}
 
