@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { CalendarPlus, Check } from 'lucide-react';
+import { CalendarPlus, Check, ArrowRight, Pencil } from 'lucide-react';
 import type { CalendarNote, Theme } from '../../../lib/types';
 import { parseTimetable, formatDays, formatTimeRange } from '../../../lib/timetableParser';
 import ColorBankPicker from '../../shared/ColorBankPicker';
@@ -42,8 +42,14 @@ export function buildTimetableNotes(text: string, color: string): Omit<CalendarN
   }));
 }
 
+/** The single worked example shown before the user types, so they see exactly
+ *  what to write and what it turns into. Role-neutral (Bozz's primary user is a
+ *  knowledge worker, not only a student). Kept parseable so the preview chip is real. */
+const DEFAULT_EXAMPLE = 'Mon 9-11 Team meeting Room 4';
+
 export default function TypeTimetableForm({
   t, colorBank, onAddNotes, onClose, autoFocus = true, compact = false,
+  exampleLine = DEFAULT_EXAMPLE, showExample = false,
 }: {
   t: Theme;
   colorBank: string[];
@@ -53,10 +59,18 @@ export default function TypeTimetableForm({
   autoFocus?: boolean;
   /** Slightly tighter spacing when embedded (onboarding overlay). */
   compact?: boolean;
+  /** The worked-example line demonstrated above the box (shown while it's empty). */
+  exampleLine?: string;
+  /** Show the "type it like this" worked example (the first-run onboarding uses it). */
+  showExample?: boolean;
 }) {
   const bank = colorBank.length > 0 ? colorBank : DEFAULT_CLASS_COLORS;
   const [text, setText] = useState('');
   const [color, setColor] = useState(bank[0] ?? DEFAULT_CLASS_COLORS[0]);
+
+  // Parse the worked example once so the demo chip below shows the REAL result
+  // the parser would produce, not a hand-drawn mock.
+  const example = useMemo(() => parseTimetable(exampleLine)[0] ?? null, [exampleLine]);
 
   // Live preview — reparse on every keystroke (cheap, all-offline).
   const parsed = useMemo(() => parseTimetable(text), [text]);
@@ -84,12 +98,57 @@ export default function TypeTimetableForm({
         display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
         fontSize: '0.78rem', color: t.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase',
       }}>
-        <CalendarPlus size={13} strokeWidth={1.6} /> Type your classes
+        <CalendarPlus size={13} strokeWidth={1.6} /> Type your week
       </div>
 
       <div style={{ fontSize: '0.78rem', color: t.textDim, lineHeight: 1.5, margin: '-0.2rem 0 0' }}>
-        One class per line. We work out the day, time and room for you.
+        One per line. We work out the day, time and place for you.
       </div>
+
+      {/* Worked example — shows the format succeeding BEFORE the user types, so
+          the one hard rule (start with a day) is taught by showing, not by an
+          error after they fail. Only while the box is empty; the live preview
+          takes over the moment they type. One-tap "Use this" fills the box so
+          they can edit it into their own class (opt-in — never auto-filled). */}
+      {showExample && example && text.trim() === '' && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: '0.5rem',
+          background: t.bgAlt, border: `1px dashed ${t.border}`, borderRadius: '9px',
+          padding: '0.6rem 0.7rem',
+        }}>
+          <div style={{ fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.textDim }}>
+            Type it like this
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <code style={{
+              fontSize: '0.8rem', color: t.text, background: t.input,
+              border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0.28rem 0.5rem',
+            }}>{exampleLine}</code>
+            <ArrowRight size={14} strokeWidth={1.8} color={t.textDim} style={{ flexShrink: 0 }} />
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              background: t.panel, border: `1px solid ${t.border}`,
+              borderLeft: `3px solid ${color}`, borderRadius: '6px', padding: '0.28rem 0.55rem',
+            }}>
+              <span style={{ fontSize: '0.8rem', color: t.text, fontWeight: 500 }}>{example.title}</span>
+              <span style={{ fontSize: '0.66rem', color: t.textMuted }}>{formatDays(example.weekdays)}</span>
+              <span style={{ fontSize: '0.66rem', color: t.textMuted }}>{formatTimeRange(example.startMin, example.endMin)}</span>
+              {example.location && <span style={{ fontSize: '0.64rem', color: t.textDim }}>{example.location}</span>}
+            </span>
+          </div>
+          <button
+            onClick={() => setText(exampleLine)}
+            style={{
+              alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+              background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px',
+              padding: '0.3rem 0.6rem', color: t.textMuted, cursor: 'pointer',
+              fontSize: '0.72rem', fontFamily: 'inherit',
+            }}
+          >
+            <Pencil size={12} strokeWidth={1.7} /> Use this example
+          </button>
+        </div>
+      )}
 
       <textarea
         autoFocus={autoFocus}
@@ -99,7 +158,7 @@ export default function TypeTimetableForm({
           // Cmd/Ctrl+Enter confirms; plain Enter makes a new line (multi-class).
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
         }}
-        placeholder={'Mon 9-11 BIO101 Room 3.21\nWed 2pm Stats\nFri 10-12 Lab\nMon/Wed 14:00-15:30 Linear Algebra'}
+        placeholder={'Mon 9-11 Team meeting Room 4\nWed 2-4 Gym\nThu 6-7 Football'}
         rows={compact ? 4 : 5}
         style={{
           width: '100%', boxSizing: 'border-box',
@@ -113,7 +172,7 @@ export default function TypeTimetableForm({
       {parsed.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
           <div style={{ fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.textDim }}>
-            {parsed.length} class{parsed.length === 1 ? '' : 'es'} found
+            {parsed.length} event{parsed.length === 1 ? '' : 's'} found
           </div>
           {parsed.map((p, i) => (
             <div key={i} style={{
@@ -138,13 +197,13 @@ export default function TypeTimetableForm({
 
       {text.trim() && parsed.length === 0 && (
         <div style={{ fontSize: '0.72rem', color: t.textDim, lineHeight: 1.5 }}>
-          Couldn’t read a class yet. Start each line with a day, e.g.{' '}
-          <code style={{ fontSize: '0.7rem' }}>Mon 9-11 Biology</code>.
+          Couldn’t read an event yet. Start each line with a day, e.g.{' '}
+          <code style={{ fontSize: '0.7rem' }}>Mon 9-11 Team meeting</code>.
         </div>
       )}
       {parsed.length > 0 && unparsedCount > 0 && (
         <div style={{ fontSize: '0.7rem', color: t.textDim }}>
-          {unparsedCount} line{unparsedCount === 1 ? '' : 's'} skipped. Each class needs a day + a time.
+          {unparsedCount} line{unparsedCount === 1 ? '' : 's'} skipped. Each one needs a day + a time.
         </div>
       )}
 
@@ -174,7 +233,7 @@ export default function TypeTimetableForm({
           }}
         >
           <Check size={14} strokeWidth={2} />
-          {parsed.length > 0 ? `Add ${parsed.length} class${parsed.length === 1 ? '' : 'es'}` : 'Add classes'}
+          {parsed.length > 0 ? `Add ${parsed.length} event${parsed.length === 1 ? '' : 's'}` : 'Add to your week'}
         </button>
         <button onClick={onClose} style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.3rem',

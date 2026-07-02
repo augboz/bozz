@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense, type ElementType, type CSSProperties } from 'react';
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus, Sparkles,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -120,6 +120,12 @@ export default function Dashboard() {
   // Replay mode: force the getting-started guide to show even after every step
   // is complete, so "Replay walkthroughs" in Settings can always bring it back.
   const [onbForced, setOnbForced] = useState(false);
+  // First-run guided walk: auto-started once, right after the welcome overlays
+  // close, to teach the core action (capturing) on the user's real morning.
+  const [firstRunTour, setFirstRunTour] = useState(false);
+  // The calm one-line sign-off shown on the real (un-dimmed) Briefing once the
+  // first-run walk finishes, instead of ending the walk on a dark screen.
+  const [firstRunPayoff, setFirstRunPayoff] = useState(false);
   const onbInit = useRef(false);
   // First-run flow — shown once to brand-new accounts before anything else.
   // 'theme' = pick dark/light, 'coldstart' = guided "what are you here for?"
@@ -362,7 +368,13 @@ export default function Dashboard() {
       // accounts, so run a ONE-TIME reset to Board for any account that predates
       // this guard, so the default actually takes effect. After the migration a
       // landing chosen in Settings -> "Home shows" sticks; unset falls back to Board.
-      if (!appr.homeLandingBoardMigrated) {
+      if (brandNewAccount) {
+        // Brand-new: land on the Briefing ("your morning in 90 seconds") — the
+        // north-star promise — not the customisable Board grid. Mark migrated so
+        // the choice sticks until they change it in Settings -> "Home shows".
+        appr.homeLanding = 'briefing';
+        appr.homeLandingBoardMigrated = true;
+      } else if (!appr.homeLandingBoardMigrated) {
         appr.homeLanding = 'board';
         appr.homeLandingBoardMigrated = true;
       } else if (appr.homeLanding == null) {
@@ -381,6 +393,21 @@ export default function Dashboard() {
       // here from the loaded data so it can never race with async state.
       const welcomeChosen = await getItem('welcomeComplete');
       if (welcomeChosen?.value == null && brandNewAccount) setWelcomePhase('theme');
+
+      // Resume an interrupted first-run walk: if the welcome finished but the
+      // guided walk never completed (app quit mid-walk), re-arm it so the user
+      // still learns the core action instead of losing onboarding forever. Desktop
+      // only (the walk needs the sidebar anchor); pre-feature users never set the
+      // flag, so they're never re-triggered.
+      if (welcomeChosen?.value != null && !isMobileViewport()) {
+        const pending = await getItem('firstRunTourPending');
+        try {
+          if (pending?.value != null && JSON.parse(pending.value) === true) {
+            setFirstRunTour(true);
+            setOnbKeepMounted(true);
+          }
+        } catch { /* ignore */ }
+      }
 
       setLoading(false);
       // (Daily backup now runs at the TOP of loadData, before sync can touch
@@ -460,9 +487,37 @@ export default function Dashboard() {
   const finishWelcome = () => {
     setActiveSection('home');
     setWelcomePhase(null);
-    setOnbDismissed(true);
     void save('welcomeComplete', true);
+    // The spotlight walk rings the desktop sidebar's Quick add control, which
+    // doesn't exist on the mobile layout — so on mobile just land on the Briefing
+    // (the coach chip nudges the next step) and finalise now.
+    if (isMobile) {
+      setOnbDismissed(true);
+      void save('onboardingDismissed', true);
+      return;
+    }
+    // Instead of silently dismissing the tutor (the old behaviour, which is
+    // exactly why a new user landed on a grid with no idea what to do), auto-run
+    // ONE short guided walk on their real morning. It teaches the core action and
+    // then finalises dismissal itself (finishFirstRunTour). Keep the guide mounted
+    // so the spotlight persists even if the walk navigates. The pending flag lets
+    // a quit-mid-walk resume next launch instead of losing onboarding forever.
+    setFirstRunTour(true);
+    setOnbKeepMounted(true);
+    void save('firstRunTourPending', true);
+  };
+
+  // The first-run walk is over (finished or skipped) — now finalise dismissal so
+  // it never runs again, lift the spotlight, and reveal the calm payoff line on
+  // the real morning.
+  const finishFirstRunTour = () => {
+    setFirstRunTour(false);
+    setOnbKeepMounted(false);
+    setOnbDismissed(true);
+    setFirstRunPayoff(true);
     void save('onboardingDismissed', true);
+    void save('firstRunTourPending', false);
+    window.setTimeout(() => setFirstRunPayoff(false), 5500);
   };
 
   // Timetable step: the validated feed lands via setCalendarFeeds (the existing
@@ -517,7 +572,9 @@ export default function Dashboard() {
   );
   // Walkthroughs are always re-runnable — the guide shows until the user
   // dismisses it (or replays from Settings); there's no "completed" state.
-  const showOnboarding = onbForced || !onbDismissed;
+  // `firstRunTour` forces it mounted regardless of the dismissed flag so the
+  // auto-started first-run walk (initial or resumed) always has a host to render.
+  const showOnboarding = onbForced || firstRunTour || !onbDismissed;
 
   useEffect(() => { applyAppearanceVars(appearance); }, [appearance]);
 
@@ -1661,6 +1718,29 @@ export default function Dashboard() {
 
 
         <main>
+          {/* First-run payoff: a calm, self-fading sign-off shown on the real,
+              un-dimmed morning once the guided walk finishes. */}
+          {firstRunPayoff && (
+            <div style={{
+              position: 'fixed', zIndex: 9993, top: '1.1rem', left: '50%', transform: 'translateX(-50%)',
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              background: 'var(--glass-bg, ' + t.panel + ')',
+              backdropFilter: 'var(--glass-blur, blur(10px))', WebkitBackdropFilter: 'var(--glass-blur, blur(10px))',
+              border: `1px solid ${t.doingBorder}`, borderRadius: '999px',
+              padding: '0.5rem 1rem', boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
+              color: t.text, fontSize: '0.85rem', fontWeight: 500,
+              animation: 'payoffFade 5.5s ease forwards',
+            }}>
+              <Sparkles size={14} strokeWidth={1.8} color={t.doingAccent} />
+              You’re all set. Open Bozz each morning and your day is right here. See you tomorrow.
+              <style>{`@keyframes payoffFade {
+                0% { opacity: 0; transform: translate(-50%, -8px); }
+                10% { opacity: 1; transform: translate(-50%, 0); }
+                85% { opacity: 1; transform: translate(-50%, 0); }
+                100% { opacity: 0; transform: translate(-50%, -8px); }
+              }`}</style>
+            </div>
+          )}
           {welcomePhase === 'theme' && <WelcomeThemePicker onChoose={chooseWelcomeMood} />}
           {welcomePhase === 'coldstart' && (
             <WelcomeColdStart onChoose={chooseColdStart} onSkip={skipColdStart} />
@@ -1692,6 +1772,8 @@ export default function Dashboard() {
                 onWalkStart={() => setOnbKeepMounted(true)}
                 onWalkEnd={() => setOnbKeepMounted(false)}
                 onExitSidebarEdit={() => setSidebarEditing(false)}
+                autoStartFlow={firstRunTour && !isMobile ? 'firstRun' : undefined}
+                onFirstRunEnd={finishFirstRunTour}
               />
             </ErrorBoundary>
           )}
