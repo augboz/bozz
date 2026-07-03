@@ -397,7 +397,14 @@ function extractDeadline(text: string): DeadlineResult {
 
 /** Strip the matched deadline phrase from a task text. */
 function stripDeadlinePhrase(text: string, strip: RegExp): string {
-  return text.replace(strip, '').replace(/\s{2,}/g, ' ').replace(/[,\s]+$/, '').trim();
+  const s = text.replace(strip, '').replace(/\s{2,}/g, ' ').replace(/[,\s]+$/, '').trim();
+  // The date is now a chip, so a TRAILING "deadline"/"due" that only pointed at
+  // it reads as litter: "internship friday deadline" → date chip + "internship
+  // deadline" → drop it. Only when a real date was extracted (this fn is only
+  // called then), so "pay what's due" (no date) is never touched. Leading
+  // "due"/"deadline" is left alone — there it's usually a real word ("due
+  // invoice", "due diligence"), not litter.
+  return s.replace(/[,\s]+\b(?:deadline|due(?:\s+date)?)\s*$/i, '').trim();
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────

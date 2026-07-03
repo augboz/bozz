@@ -37,6 +37,7 @@ interface HomeViewProps {
  *  framing every day, not just on first run. */
 function greeting(): string {
   const h = new Date().getHours();
+  if (h < 5) return 'up late. here is your day.';
   if (h < 12) return 'good morning. here is your day.';
   if (h < 18) return 'good afternoon. here is where things stand.';
   return 'good evening. here is what is left.';

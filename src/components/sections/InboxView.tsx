@@ -209,7 +209,7 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign, onCrea
 
   return (
     <div>
-      <SectionHeader title="Quicks" t={t} hint="capture anything · triage later" />
+      <SectionHeader title="Quicks" t={t} hint="capture anything · sort later" />
       {predictedItems.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap',
@@ -235,7 +235,7 @@ export default function InboxView({ t, inbox, setInbox, topics, onAssign, onCrea
             </span>
           </button>
           <span style={{ fontSize: '0.72rem', color: t.textDim }}>
-            files each into its predicted topic
+            each goes into its predicted topic
           </span>
         </div>
       )}

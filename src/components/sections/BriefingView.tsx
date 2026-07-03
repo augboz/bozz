@@ -17,6 +17,7 @@ import TodayWidget from '../widgets/TodayWidget';
 /** Time-of-day greeting, reinforcing the "your morning" framing. */
 function greeting(): string {
   const h = new Date().getHours();
+  if (h < 5) return 'up late. here is your day.';
   if (h < 12) return 'good morning. here is your day.';
   if (h < 18) return 'good afternoon. here is where things stand.';
   return 'good evening. here is what is left.';
@@ -35,16 +36,18 @@ export default function BriefingView({ ctx }: { ctx: WidgetCtx }) {
 
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
-      {/* Greeting */}
-      <div style={{ fontSize: '0.82rem', color: t.text, fontWeight: 500, marginBottom: '0.75rem' }}>
-        {greeting()}
-      </div>
+      {/* One centred reading column, like a morning letter. The flex parent this
+          replaces made the card shrink to its content (a block parent lets the
+          widget fill the column), and the whole thing sat in the page's left
+          corner with a field of dead space to its right on wide windows. */}
+      <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+        {/* Greeting */}
+        <div style={{ fontSize: '0.95rem', color: t.text, fontWeight: 500, marginBottom: '0.85rem' }}>
+          {greeting()}
+        </div>
 
-      {/* The brief, full-width. A min-height keeps the scroll area usable on a
-          short brief; max-width keeps line lengths readable on wide screens.
-          data-onb anchors the first-run "this is your morning" spotlight. */}
-      <div data-onb="briefing-today" style={{ maxWidth: '760px', minHeight: '60vh', display: 'flex' }}>
-        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        {/* data-onb anchors the first-run "this is your morning" spotlight. */}
+        <div data-onb="briefing-today" style={{ minHeight: '60vh' }}>
           <TodayWidget ctx={briefingCtx} />
         </div>
       </div>

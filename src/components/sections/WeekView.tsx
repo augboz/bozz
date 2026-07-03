@@ -202,6 +202,7 @@ function DayColumn({ day, t, setActiveSection, onOpenEvent }: {
 /** Time-of-day greeting, reinforcing the "your week" framing. */
 function greeting(): string {
   const h = new Date().getHours();
+  if (h < 5) return 'up late. here is your week.';
   if (h < 12) return 'good morning. here is your week.';
   if (h < 18) return 'good afternoon. here is the week ahead.';
   return 'good evening. here is what the week holds.';

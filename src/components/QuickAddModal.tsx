@@ -357,7 +357,7 @@ export default function QuickAddModal({
             <div style={{ flex: 1 }} />
             <button
               onClick={addLater}
-              title="Keep these in Quicks to triage later"
+              title="Keep these in Quicks to sort later"
               style={{
                 background: 'none', border: `1px solid ${t.border}`, borderRadius: '8px',
                 padding: '0.45rem 0.9rem', cursor: 'pointer', color: t.textMuted,
@@ -383,7 +383,7 @@ export default function QuickAddModal({
         <div style={{ fontSize: '0.6rem', color: t.textDim, marginTop: '0.55rem' }}>
           {phase === 'recording' ? 'tap the mic again to finish · esc to dismiss'
             : phase === 'review' ? 'add all → into topics · add later → Quicks · esc to discard'
-            : 'enter to save · mic to ramble · esc to dismiss'}
+            : 'enter to save · mic to talk · esc to dismiss'}
         </div>
       </div>
     </div>

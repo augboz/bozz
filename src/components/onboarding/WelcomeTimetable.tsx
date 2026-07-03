@@ -22,13 +22,15 @@ import type { CalendarFeed, CalendarNote, Theme } from '../../lib/types';
 import AddFeedForm from '../sections/calendar/AddFeedForm';
 import TypeTimetableForm from '../sections/calendar/TypeTimetableForm';
 
-export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSkip }: {
+export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSkip, exampleLine }: {
   t: Theme;
   colorBank: string[];
   onAdd: (feed: CalendarFeed) => void;
   /** Append the typed recurring classes to calendarNotes, then finish. */
   onAddNotes: (notes: Omit<CalendarNote, 'id'>[]) => void;
   onSkip: () => void;
+  /** Worked example matched to the cold-start pick (students see a class, not a meeting). */
+  exampleLine?: string;
 }) {
   const [showHelp, setShowHelp] = useState(false);
   // Type is the default — it's the unblock for students without an .ics link.
@@ -89,6 +91,7 @@ export default function WelcomeTimetable({ t, colorBank, onAdd, onAddNotes, onSk
             onClose={onSkip}
             compact
             showExample
+            {...(exampleLine ? { exampleLine } : {})}
           />
         ) : (
           <>

@@ -10,7 +10,7 @@
  * so there is one parser + one UI for typing a timetable everywhere.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { CalendarPlus, Check, ArrowRight, Pencil } from 'lucide-react';
 import type { CalendarNote, Theme } from '../../../lib/types';
 import { parseTimetable, formatDays, formatTimeRange } from '../../../lib/timetableParser';
@@ -67,6 +67,20 @@ export default function TypeTimetableForm({
   const bank = colorBank.length > 0 ? colorBank : DEFAULT_CLASS_COLORS;
   const [text, setText] = useState('');
   const [color, setColor] = useState(bank[0] ?? DEFAULT_CLASS_COLORS[0]);
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+
+  // "Use this example" pre-selects the inserted line so the next keystroke
+  // replaces it — the example teaches the format without becoming a fake event
+  // for anyone who types straight over it.
+  const useExample = () => {
+    setText(exampleLine);
+    // setTimeout, not rAF: rAF never fires while the window is hidden/minimised,
+    // which would leave the example unselected when the window comes back.
+    window.setTimeout(() => {
+      const box = boxRef.current;
+      if (box) { box.focus(); box.select(); }
+    }, 0);
+  };
 
   // Parse the worked example once so the demo chip below shows the REAL result
   // the parser would produce, not a hand-drawn mock.
@@ -137,7 +151,7 @@ export default function TypeTimetableForm({
             </span>
           </div>
           <button
-            onClick={() => setText(exampleLine)}
+            onClick={useExample}
             style={{
               alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
               background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '7px',
@@ -151,6 +165,7 @@ export default function TypeTimetableForm({
       )}
 
       <textarea
+        ref={boxRef}
         autoFocus={autoFocus}
         value={text}
         onChange={e => setText(e.target.value)}
@@ -158,7 +173,7 @@ export default function TypeTimetableForm({
           // Cmd/Ctrl+Enter confirms; plain Enter makes a new line (multi-class).
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
         }}
-        placeholder={'Mon 9-11 Team meeting Room 4\nWed 2-4 Gym\nThu 6-7 Football'}
+        placeholder={`${exampleLine}\nWed 2-4 Gym\nThu 6-7 Football`}
         rows={compact ? 4 : 5}
         style={{
           width: '100%', boxSizing: 'border-box',

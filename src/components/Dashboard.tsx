@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense, type ElementType, type CSSProperties } from 'react';
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
-  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus, Sparkles,
+  PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus, Sparkles, Search,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -127,6 +127,9 @@ export default function Dashboard() {
   // first-run walk finishes, instead of ending the walk on a dark screen.
   const [firstRunPayoff, setFirstRunPayoff] = useState(false);
   const onbInit = useRef(false);
+  // Worked example for the welcome timetable step, matched to the cold-start
+  // pick (undefined = the role-neutral default inside TypeTimetableForm).
+  const [welcomeExample, setWelcomeExample] = useState<string | undefined>(undefined);
   // First-run flow — shown once to brand-new accounts before anything else.
   // 'theme' = pick dark/light, 'coldstart' = guided "what are you here for?"
   // seeding, 'timetable' = paste your real calendar feed, then null = done. Every
@@ -463,6 +466,10 @@ export default function Dashboard() {
   // welcomePhase), so existing users are unaffected.
   const chooseColdStart = (options: import('../lib/coldStart').ColdStartOption[]) => {
     const chosen = options ?? [];
+    // Match the timetable step's worked example to who they said they are —
+    // "Uni" first-pickers see a class, everyone else keeps the role-neutral
+    // meeting (primary user is a knowledge worker; students are the second wave).
+    if (chosen[0]?.id === 'uni') setWelcomeExample('Mon 9-11 Biology Room 12');
     if (chosen.length === 0) { setWelcomePhase('timetable'); return; }
     void (async () => {
       const { seedColdStart } = await import('../lib/coldStart');
@@ -744,7 +751,12 @@ export default function Dashboard() {
 
   // Quick-capture window may write to any of these keys (voice routing
   // dispatches into tasks / budget / inbox). Reload them all when notified.
+  // Tauri-only: 'data:changed' is a cross-window IPC signal from the separate
+  // quick-capture window. In the web/PWA build there is no second window, and
+  // calling listen() there throws (it touches undefined Tauri internals), so
+  // guard it — the web build simply has nothing to listen for.
   useEffect(() => {
+    if (!isTauri()) return;
     const reloadAll = async () => {
       const reload = async <T,>(key: string, setter: (v: T) => void) => {
         const r = await getItem(key);
@@ -1534,6 +1546,28 @@ export default function Dashboard() {
               <Zap size={10} strokeWidth={1.8} style={{ flexShrink: 0 }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Quick add</span>
             </button>
+            {/* Search had no mouse-reachable entry at all (Ctrl+K / "/" only) —
+                an icon keeps the row quiet but makes it findable. */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              title="Search (Ctrl+K)"
+              aria-label="Search"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                background: 'transparent',
+                border: `1px solid ${sT.border}`,
+                color: sT.textMuted,
+                cursor: 'pointer', borderRadius: '6px',
+                padding: '0.28rem 0.45rem',
+                fontFamily: 'inherit',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
+            >
+              <Search size={11} strokeWidth={1.8} />
+            </button>
             <button
               onClick={() => setSidebarEditing(e => !e)}
               data-onb="edit-nav"
@@ -1617,22 +1651,39 @@ export default function Dashboard() {
               shows when expanded, so without this a collapsed user (and any web
               user, where there's no global Ctrl+B) has no visible way to capture. */}
           {sidebarCollapsed && (
-            <button
-              onClick={() => setQuickAddOpen(true)}
-              title={isTauri() ? 'Quick add (Ctrl+B)' : 'Quick add (Ctrl+B)'}
-              aria-label="Quick add"
-              data-onb="quick-add"
-              style={{
-                background: 'transparent', border: 'none',
-                color: sT.textDim, cursor: 'pointer', borderRadius: '6px',
-                padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, transition: 'background 0.12s, color 0.12s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textDim; }}
-            >
-              <Zap size={17} strokeWidth={1.6} />
-            </button>
+            <>
+              <button
+                onClick={() => setQuickAddOpen(true)}
+                title="Quick add (Ctrl+B)"
+                aria-label="Quick add"
+                data-onb="quick-add"
+                style={{
+                  background: 'transparent', border: 'none',
+                  color: sT.textDim, cursor: 'pointer', borderRadius: '6px',
+                  padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, transition: 'background 0.12s, color 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textDim; }}
+              >
+                <Zap size={17} strokeWidth={1.6} />
+              </button>
+              <button
+                onClick={() => setSearchOpen(true)}
+                title="Search (Ctrl+K)"
+                aria-label="Search"
+                style={{
+                  background: 'transparent', border: 'none',
+                  color: sT.textDim, cursor: 'pointer', borderRadius: '6px',
+                  padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, transition: 'background 0.12s, color 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textDim; }}
+              >
+                <Search size={17} strokeWidth={1.6} />
+              </button>
+            </>
           )}
           <button
             onClick={() => setActiveSection('settings')}
@@ -1752,6 +1803,7 @@ export default function Dashboard() {
               onAdd={addWelcomeFeed}
               onAddNotes={addWelcomeNotes}
               onSkip={finishWelcome}
+              exampleLine={welcomeExample}
             />
           )}
           <FirstHoverHints />
