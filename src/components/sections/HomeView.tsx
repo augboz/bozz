@@ -174,13 +174,18 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
   };
 
   const addWidget = (type: HomeWidgetItem['type']) => {
-    if (items.some(it => it.type === type)) return; // one per type
     const meta = WIDGET_REGISTRY[type];
-    const maxY = items.reduce((m, it) => Math.max(m, it.y + it.h), 0);
-    setItems(prev => [...prev, {
-      i: `${type}-${Date.now()}`, type,
-      x: 0, y: maxY, w: meta.defaultSize.w, h: meta.defaultSize.h,
-    }]);
+    // Compute placement inside the updater: with compaction off, an overlap
+    // created from a stale `items` closure (two adds in one tick) would stick
+    // instead of being auto-resolved by the grid.
+    setItems(prev => {
+      if (prev.some(it => it.type === type)) return prev; // one per type
+      const maxY = prev.reduce((m, it) => Math.max(m, it.y + it.h), 0);
+      return [...prev, {
+        i: `${type}-${Date.now()}`, type,
+        x: 0, y: maxY, w: meta.defaultSize.w, h: meta.defaultSize.h,
+      }];
+    });
   };
 
   const removeWidget = (i: string) => setItems(prev => prev.filter(it => it.i !== i));
@@ -369,7 +374,11 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         isResizable={editMode}
         resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
         onLayoutChange={onLayoutChange}
-        compactType="vertical"
+        // Freeform board: no auto-compaction, so a widget keeps whatever spot
+        // it was dropped in — including surrounded by empty space. Dragging
+        // onto an occupied spot still pushes the neighbour instead of
+        // overlapping it.
+        compactType={null}
         draggableCancel=".widget-remove"
       >
         {items.map(it => {

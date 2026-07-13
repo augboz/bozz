@@ -221,6 +221,13 @@ select:focus-visible,
   z-index: 10;
   cursor: grabbing;
 }
+/* Freeform board: compaction is off (see HomeView), so in edit mode the grid
+   must present the whole page as a drop canvas — min-height wins over the
+   content-fitted inline height react-grid-layout sets, giving the user empty
+   space to drop widgets into even with only a couple of widgets placed. */
+.home-grid-editing {
+  min-height: calc(100vh - 180px);
+}
 @media (prefers-reduced-motion: reduce) {
   .react-grid-item {
     transition: none !important;
