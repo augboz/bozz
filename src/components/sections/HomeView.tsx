@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
-import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
+import { GridLayout, useContainerWidth } from 'react-grid-layout';
+import type { Layout, LayoutItem, Compactor } from 'react-grid-layout';
 import { Pencil, Plus, X, Check, Settings2, LayoutGrid, Sparkles, BookOpen } from 'lucide-react';
 import type { HomeWidgetItem, Theme, ImapAccount, WidgetShape, WidgetBorder } from '../../lib/types';
 import type { WidgetCtx } from '../widgets/context';
@@ -13,9 +13,42 @@ import ColorBankPicker from '../shared/ColorBankPicker';
 import BackgroundControls, { BgLayer, type PageBg } from '../shared/BackgroundControls';
 import { PhotoWidgetConfig } from '../widgets/PhotoWidget';
 
-const Grid = WidthProvider(GridLayout);
 const COLS = 24;
 const ROW_H = 16;
+
+function overlaps(a: LayoutItem, b: LayoutItem): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+/** Base positions snapshotted when a drag/resize starts (see dragBase). */
+type BaseItem = Pick<HomeWidgetItem, 'i' | 'x' | 'y' | 'w' | 'h'>;
+
+// Freeform collision handling, run inside the grid's compactor on every
+// drag/resize frame AND on the drop. The engine itself never moves the
+// neighbours (allowOverlap) — instead this puts every widget that is NOT in
+// the user's hand at its own pre-drag spot, and any widget the held one
+// currently covers walks straight down to the first free row: visibly tucked
+// under the held widget while dragging, snug under it after the drop, and
+// back home the moment the drag moves off it.
+function healDisplaced(next: Layout, heldId: string, base: BaseItem[]): Layout {
+  const held = next.find(l => l.i === heldId);
+  if (!held) return next.map(l => ({ ...l }));
+  const settled: LayoutItem[] = [{ ...held }];
+  // Top-most first, so a covered stack restacks stably below the held widget.
+  const othersBase = base.filter(b => b.i !== heldId).sort((a, b) => a.y - b.y || a.x - b.x);
+  const nextById = new Map(next.map(l => [l.i, l]));
+  for (const ob of othersBase) {
+    const cur = nextById.get(ob.i);
+    if (!cur) continue;
+    const cand = { ...cur, x: ob.x, y: ob.y };
+    while (settled.some(s => overlaps(s, cand))) cand.y += 1;
+    settled.push(cand);
+  }
+  // Anything in the engine's layout that predates no base entry (shouldn't
+  // happen mid-drag, but never drop a widget) passes through untouched.
+  const settledIds = new Set(settled.map(s => s.i));
+  return [...settled, ...next.filter(l => !settledIds.has(l.i)).map(l => ({ ...l }))];
+}
 
 interface HomeViewProps {
   items: HomeWidgetItem[];
@@ -165,49 +198,59 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
   // that's enforced; widgets adapt their content via container queries.
   const layout: LayoutItem[] = items.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
 
-  // ── Displacement healing ───────────────────────────────────────────────
-  // With compaction off, react-grid-layout pushes a collided widget down one
-  // row per drag frame and nothing ever pulls it back, so dropping onto an
-  // occupied spot strands the other widget far below the drop ("shoots to
-  // the bottom of the page"). On commit, put every widget that was shoved
-  // aside back at its own spot — or, if the widget in hand now occupies it,
-  // at the first free row straight below, i.e. snug under the drop.
+  // ── Displacement healing (see healDisplaced above) ────────────────────
+  // The heal lives inside the grid's compactor, which the engine runs on
+  // every drag/resize frame AND on the final drop — so the neighbour is
+  // visibly tucked under the held widget while the user is still holding
+  // it, springs back home when the drag moves away, and the committed
+  // layout always matches what's on screen. (Updating the `layout` prop
+  // mid-drag doesn't work: the engine ignores prop changes while a drag is
+  // active.)
   const manipulatedId = useRef<string | null>(null);
-  const beginManip = (_: Layout, item: LayoutItem | null) => { if (item) manipulatedId.current = item.i; };
-  // Cleared on a timeout: RGL fires onLayoutChange synchronously after
-  // drag/resize stop, and the heal must still see which widget was held.
-  const endManip = () => { setTimeout(() => { manipulatedId.current = null; }, 0); };
-
-  const overlaps = (a: LayoutItem, b: LayoutItem) =>
-    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
-  const healDisplaced = (next: Layout, heldId: string): Layout => {
-    const prevById = new Map(items.map(it => [it.i, it]));
-    const displaced = next.filter(l => {
-      const p = prevById.get(l.i);
-      return l.i !== heldId && p && (p.x !== l.x || p.y !== l.y);
-    });
-    if (displaced.length === 0) return next;
-    const displacedIds = new Set(displaced.map(d => d.i));
-    const settled: LayoutItem[] = next.filter(l => !displacedIds.has(l.i)).map(l => ({ ...l }));
-    // Top-most original position first, so a pushed chain restacks stably.
-    for (const d of [...displaced].sort((a, b) => prevById.get(a.i)!.y - prevById.get(b.i)!.y)) {
-      const orig = prevById.get(d.i)!;
-      const healed = { ...d, x: orig.x, y: orig.y };
-      while (settled.some(s => overlaps(s, healed))) healed.y += 1;
-      settled.push(healed);
-    }
-    return settled;
+  // Positions as of the moment the drag/resize started. The engine's layout
+  // changes every frame, so "where was this widget before the user picked
+  // something up" must come from a snapshot, not from the live layout.
+  const dragBase = useRef<BaseItem[] | null>(null);
+  const beginManip = (_: Layout, item: LayoutItem | null) => {
+    if (!item) return;
+    manipulatedId.current = item.i;
+    dragBase.current = items.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
   };
+  // Cleared on a timeout: the engine compacts + fires onLayoutChange
+  // synchronously after drag/resize stop, and the heal must still run there.
+  const endManip = () => { setTimeout(() => { manipulatedId.current = null; dragBase.current = null; }, 0); };
+
+  // Stable identity (deps are refs): a new compactor object would make the
+  // grid re-synchronize mid-session for no reason.
+  const freeformCompactor = useMemo<Compactor>(() => ({
+    type: null,         // freeform: never auto-compact
+    // allowOverlap tells the ENGINE not to shove neighbours around during a
+    // drag (its no-compaction push walks them down a row per frame and
+    // strands them). The heal below is then the only thing that moves other
+    // widgets, and it runs inside compact() on every frame — so overlaps
+    // never actually persist: the covered widget is tucked under the held
+    // one live, and springs home when the drag moves away.
+    allowOverlap: true,
+    compact: (l: Layout) => {
+      const heldId = manipulatedId.current;
+      const base = dragBase.current;
+      if (!heldId || !base) return l.map(it => ({ ...it }));
+      return healDisplaced(l, heldId, base);
+    },
+  }), []);
 
   const onLayoutChange = (next: Layout) => {
-    const committed = manipulatedId.current ? healDisplaced(next, manipulatedId.current) : next;
-    if (sameLayout(items, committed)) return;
+    if (sameLayout(items, next)) return;
     setItems(prev => prev.map(it => {
-      const l = committed.find(x => x.i === it.i);
+      const l = next.find(x => x.i === it.i);
       return l ? { ...it, x: l.x, y: l.y, w: l.w, h: l.h } : it;
     }));
   };
+
+  // Measure the container width BEFORE first paint so widgets render at
+  // their real positions immediately — no default-width render that then
+  // reflows left ("widgets sliding in from the right").
+  const { width: gridWidth, containerRef: gridWidthRef, mounted: gridMeasured } = useContainerWidth({ measureBeforeMount: true });
 
   const addWidget = (type: HomeWidgetItem['type']) => {
     const meta = WIDGET_REGISTRY[type];
@@ -395,33 +438,28 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         <HomeEmptyState t={t} onAddFirst={startAdding} onApplyTemplate={applyTemplate} onReplay={onReplayWalkthroughs} />
       )}
 
-      <Grid
+      <div ref={gridWidthRef}>
+      {gridMeasured && (
+      <GridLayout
         className={`home-grid${editMode ? ' home-grid-editing' : ''}`}
-        // Measure the container width BEFORE first paint so widgets render at
-        // their real positions immediately — no default-width render that then
-        // reflows left ("widgets sliding in from the right").
-        measureBeforeMount
+        width={gridWidth}
         layout={layout}
-        cols={COLS}
-        rowHeight={ROW_H}
-        margin={[8, 8]}
-        containerPadding={[0, 0]}
-        isDraggable={editMode}
-        isResizable={editMode}
-        resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
+        gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [8, 8], containerPadding: [0, 0] }}
+        // threshold 0: the drag starts on the first pixel of movement, the
+        // same feel as the legacy build this board used before.
+        dragConfig={{ enabled: editMode, cancel: '.widget-remove', threshold: 0 }}
+        resizeConfig={{ enabled: editMode, handles: ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'] }}
+        // Freeform board: no auto-compaction, so a widget keeps whatever spot
+        // it was dropped in — including surrounded by empty space. A colliding
+        // drag pushes the neighbour, and the compactor's heal (every frame)
+        // keeps it tucked right under the held widget instead of letting it
+        // drift down the page.
+        compactor={freeformCompactor}
         onLayoutChange={onLayoutChange}
-        // Track which widget the user is holding so onLayoutChange can heal
-        // the ones react-grid-layout shoved aside (see healDisplaced above).
         onDragStart={beginManip}
         onDragStop={endManip}
         onResizeStart={beginManip}
         onResizeStop={endManip}
-        // Freeform board: no auto-compaction, so a widget keeps whatever spot
-        // it was dropped in — including surrounded by empty space. Dragging
-        // onto an occupied spot still pushes the neighbour instead of
-        // overlapping it.
-        compactType={null}
-        draggableCancel=".widget-remove"
       >
         {items.map(it => {
           const meta = WIDGET_REGISTRY[it.type];
@@ -464,7 +502,9 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
             </div>
           );
         })}
-      </Grid>
+      </GridLayout>
+      )}
+      </div>
 
       {showAdd && (
         <AddPanel key="add-panel" t={t} onAdd={addWidget} onClose={() => setShowAdd(false)} tbOffset={isTauri() ? TITLE_BAR_HEIGHT : 0} existingTypes={new Set(items.map(it => it.type))} />
