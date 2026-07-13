@@ -165,10 +165,46 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
   // that's enforced; widgets adapt their content via container queries.
   const layout: LayoutItem[] = items.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
 
+  // ── Displacement healing ───────────────────────────────────────────────
+  // With compaction off, react-grid-layout pushes a collided widget down one
+  // row per drag frame and nothing ever pulls it back, so dropping onto an
+  // occupied spot strands the other widget far below the drop ("shoots to
+  // the bottom of the page"). On commit, put every widget that was shoved
+  // aside back at its own spot — or, if the widget in hand now occupies it,
+  // at the first free row straight below, i.e. snug under the drop.
+  const manipulatedId = useRef<string | null>(null);
+  const beginManip = (_: Layout, item: LayoutItem | null) => { if (item) manipulatedId.current = item.i; };
+  // Cleared on a timeout: RGL fires onLayoutChange synchronously after
+  // drag/resize stop, and the heal must still see which widget was held.
+  const endManip = () => { setTimeout(() => { manipulatedId.current = null; }, 0); };
+
+  const overlaps = (a: LayoutItem, b: LayoutItem) =>
+    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  const healDisplaced = (next: Layout, heldId: string): Layout => {
+    const prevById = new Map(items.map(it => [it.i, it]));
+    const displaced = next.filter(l => {
+      const p = prevById.get(l.i);
+      return l.i !== heldId && p && (p.x !== l.x || p.y !== l.y);
+    });
+    if (displaced.length === 0) return next;
+    const displacedIds = new Set(displaced.map(d => d.i));
+    const settled: LayoutItem[] = next.filter(l => !displacedIds.has(l.i)).map(l => ({ ...l }));
+    // Top-most original position first, so a pushed chain restacks stably.
+    for (const d of [...displaced].sort((a, b) => prevById.get(a.i)!.y - prevById.get(b.i)!.y)) {
+      const orig = prevById.get(d.i)!;
+      const healed = { ...d, x: orig.x, y: orig.y };
+      while (settled.some(s => overlaps(s, healed))) healed.y += 1;
+      settled.push(healed);
+    }
+    return settled;
+  };
+
   const onLayoutChange = (next: Layout) => {
-    if (sameLayout(items, next)) return;
+    const committed = manipulatedId.current ? healDisplaced(next, manipulatedId.current) : next;
+    if (sameLayout(items, committed)) return;
     setItems(prev => prev.map(it => {
-      const l = next.find(x => x.i === it.i);
+      const l = committed.find(x => x.i === it.i);
       return l ? { ...it, x: l.x, y: l.y, w: l.w, h: l.h } : it;
     }));
   };
@@ -374,6 +410,12 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
         isResizable={editMode}
         resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
         onLayoutChange={onLayoutChange}
+        // Track which widget the user is holding so onLayoutChange can heal
+        // the ones react-grid-layout shoved aside (see healDisplaced above).
+        onDragStart={beginManip}
+        onDragStop={endManip}
+        onResizeStart={beginManip}
+        onResizeStop={endManip}
         // Freeform board: no auto-compaction, so a widget keeps whatever spot
         // it was dropped in — including surrounded by empty space. Dragging
         // onto an occupied spot still pushes the neighbour instead of
