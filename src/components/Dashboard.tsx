@@ -1529,7 +1529,10 @@ export default function Dashboard() {
               aria-label="Quick add"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                flexShrink: 0,
+                // Shrinkable (unlike its siblings) so the row degrades to an
+                // ellipsis instead of clipping the trailing buttons off the
+                // 220px sidebar.
+                flexShrink: 1, minWidth: 0,
                 background: 'transparent',
                 border: `1px solid ${sT.border}`,
                 color: sT.textMuted,
@@ -1547,27 +1550,31 @@ export default function Dashboard() {
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Quick add</span>
             </button>
             {/* Search had no mouse-reachable entry at all (Ctrl+K / "/" only) —
-                an icon keeps the row quiet but makes it findable. */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              title="Search (Ctrl+K)"
-              aria-label="Search"
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-                background: 'transparent',
-                border: `1px solid ${sT.border}`,
-                color: sT.textMuted,
-                cursor: 'pointer', borderRadius: '6px',
-                padding: '0.28rem 0.45rem',
-                fontFamily: 'inherit',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
-            >
-              <Search size={11} strokeWidth={1.8} />
-            </button>
+                an icon keeps the row quiet but makes it findable. Hidden while
+                editing: the row must fit the 220px sidebar, and in edit mode
+                the + (add topic/folder) button needs that space. */}
+            {!sidebarEditing && (
+              <button
+                onClick={() => setSearchOpen(true)}
+                title="Search (Ctrl+K)"
+                aria-label="Search"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  background: 'transparent',
+                  border: `1px solid ${sT.border}`,
+                  color: sT.textMuted,
+                  cursor: 'pointer', borderRadius: '6px',
+                  padding: '0.28rem 0.45rem',
+                  fontFamily: 'inherit',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; }}
+              >
+                <Search size={11} strokeWidth={1.8} />
+              </button>
+            )}
             <button
               onClick={() => setSidebarEditing(e => !e)}
               data-onb="edit-nav"
