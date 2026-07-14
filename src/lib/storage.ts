@@ -33,8 +33,35 @@ async function getTauriStore(): Promise<TauriStoreAPI> {
       const store = await mod.load('dashboard.json', { defaults: {}, autoSave: 500 });
       return store as unknown as TauriStoreAPI;
     })();
+    // A failed load must NOT stay cached: one bad moment (corrupt store file,
+    // transient lock, plugin hiccup) would otherwise disable every read AND
+    // write for the entire session — silently. Clear it so the next storage
+    // call retries the load from scratch.
+    _tauriStorePromise.catch(() => { _tauriStorePromise = null; });
   }
   return _tauriStorePromise;
+}
+
+// ── Save-health reporting ──────────────────────────────────────────────────
+// In July 2026 the store failed to persist for 11 days while the app looked
+// perfectly fine (the disk file was never written; everything lived in memory
+// and cloud sync). Writes must be LOUD when they break: after 3 consecutive
+// failures the UI is told to show a persistent warning, cleared on the next
+// successful write.
+let _consecutiveSaveFailures = 0;
+function reportSaveResult(ok: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (ok) {
+    if (_consecutiveSaveFailures >= 3) {
+      window.dispatchEvent(new CustomEvent('bozz:storage-ok'));
+    }
+    _consecutiveSaveFailures = 0;
+    return;
+  }
+  _consecutiveSaveFailures++;
+  if (_consecutiveSaveFailures === 3) {
+    window.dispatchEvent(new CustomEvent('bozz:storage-failing'));
+  }
 }
 
 // ── Web backend (IndexedDB) ────────────────────────────────────────────────
@@ -128,12 +155,21 @@ export async function setItem(key: string, value: string): Promise<void> {
     if (isTauri()) {
       const s = await getTauriStore();
       await s.set(key, value);
-      await s.save();
+      try {
+        await s.save();
+      } catch {
+        // One retry — transient file locks (antivirus scans, indexing) are
+        // common on Windows and shouldn't count as a broken persistence layer.
+        await new Promise(r => setTimeout(r, 250));
+        await s.save();
+      }
     } else {
       await idbSet(key, value);
     }
+    reportSaveResult(true);
   } catch (e) {
     console.error('Storage error:', e);
+    reportSaveResult(false);
   }
 }
 
@@ -161,12 +197,19 @@ export async function deleteItem(key: string): Promise<void> {
     if (isTauri()) {
       const s = await getTauriStore();
       await s.delete(key);
-      await s.save();
+      try {
+        await s.save();
+      } catch {
+        await new Promise(r => setTimeout(r, 250));
+        await s.save();
+      }
     } else {
       await idbDelete(key);
     }
+    reportSaveResult(true);
   } catch (e) {
     console.error('Storage error:', e);
+    reportSaveResult(false);
   }
 }
 
