@@ -12,6 +12,41 @@ function DashboardKeyed() {
   return <Dashboard key={session?.user.id ?? 'anon'} />;
 }
 
+/** Persistent warning shown while writes to the local store are failing.
+ *  Driven by the 'bozz:storage-failing' / 'bozz:storage-ok' events from
+ *  lib/storage (see the save-health notes there). In July 2026 the store
+ *  silently failed to persist for 11 days; this banner is why that can't
+ *  happen quietly again. Clears itself the moment a write succeeds. */
+function StorageHealthBanner() {
+  const [failing, setFailing] = useState(false);
+  useEffect(() => {
+    const bad = () => setFailing(true);
+    const ok = () => setFailing(false);
+    window.addEventListener('bozz:storage-failing', bad);
+    window.addEventListener('bozz:storage-ok', ok);
+    return () => {
+      window.removeEventListener('bozz:storage-failing', bad);
+      window.removeEventListener('bozz:storage-ok', ok);
+    };
+  }, []);
+  if (!failing) return null;
+  return (
+    <div role="alert" style={{
+      position: 'fixed', top: '42px', left: '50%', transform: 'translateX(-50%)',
+      zIndex: 100000, maxWidth: '540px',
+      background: '#3a1214', border: '1px solid #a33',
+      borderRadius: '10px', color: '#ffd9d9',
+      padding: '0.55rem 1rem', fontSize: '0.8rem', lineHeight: 1.45,
+      fontFamily: 'inherit', boxShadow: '0 6px 24px rgba(0,0,0,0.45)',
+    }}>
+      <strong>Bozz can't save to this computer.</strong>{' '}
+      Your changes are currently only reaching the cloud. Restart Bozz; if this
+      warning returns, something on this machine is blocking writes to the
+      app-data folder.
+    </div>
+  );
+}
+
 /** Handles OAuth redirects in browser/web mode.
  *  Spotify (and other providers) redirect back to the app root with ?code=&state=
  *  (or ?error=). This component posts those params to the opener popup and closes itself. */
@@ -98,6 +133,7 @@ export default function App() {
         <DashboardKeyed />
       </AuthGate>
       {update && <UpdatePrompt update={update} onClose={() => setUpdate(null)} />}
+      <StorageHealthBanner />
     </>
   );
 }

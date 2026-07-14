@@ -134,6 +134,35 @@ export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
 export async function pushSnapshot(userId: string): Promise<boolean> {
   try {
     const snapshot = await readLocalSnapshot();
+
+    // CLOBBER GUARD — never push a near-empty snapshot over a remote row
+    // that has real content. A corrupt store file or interrupted save can
+    // boot the app with empty local storage; pushing that state destroys the
+    // user's cloud copy (the 2026-07-13 "my account lost everything"
+    // incident). Skipping one push is always cheaper than losing the row.
+    const topics = snapshot['topics'];
+    const homeItems = (snapshot['homeLayout'] as { items?: unknown[] } | undefined)?.items;
+    const localLooksEmpty =
+      (!Array.isArray(topics) || topics.length === 0) &&
+      (!Array.isArray(homeItems) || homeItems.length === 0);
+    if (localLooksEmpty) {
+      const { data: remote } = await supabase
+        .from('user_data')
+        .select('data')
+        .eq('user_id', userId)
+        .maybeSingle();
+      const rd = (remote?.data ?? {}) as Record<string, unknown>;
+      const remoteTopics = rd['topics'];
+      const remoteHome = (rd['homeLayout'] as { items?: unknown[] } | undefined)?.items;
+      if (
+        (Array.isArray(remoteTopics) && remoteTopics.length > 0) ||
+        (Array.isArray(remoteHome) && remoteHome.length > 0)
+      ) {
+        console.error('[sync] refusing to push an empty snapshot over non-empty remote data');
+        return false;
+      }
+    }
+
     const { error } = await supabase
       .from('user_data')
       .upsert(

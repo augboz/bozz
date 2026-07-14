@@ -430,10 +430,68 @@ fn decode_imap_bytes(bytes: &[u8]) -> String {
         .unwrap_or_else(|_| String::from_utf8_lossy(bytes).into_owned())
 }
 
+/// True if the file at `path` contains parseable JSON.
+fn is_valid_json_file(path: &std::path::Path) -> bool {
+    match std::fs::read(path) {
+        Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).is_ok(),
+        Err(_) => false,
+    }
+}
+
+/// Startup self-heal for the main store file.
+///
+/// tauri-plugin-store saves with a plain truncate-and-write (`fs::write`), so
+/// a crash or kill mid-save can leave dashboard.json truncated or zero-filled
+/// (2026-07-13 incident: a 27MB store file of NUL bytes). A corrupt store
+/// fails the plugin's load and the app boots empty — which users read as
+/// "my account lost everything", and which can push an empty snapshot over
+/// good cloud data. Quarantine the corrupt file and restore the newest valid
+/// backup BEFORE the store plugin ever loads it.
+fn heal_store(app_data: &std::path::Path) -> Option<String> {
+    let store_path = app_data.join("dashboard.json");
+    if !store_path.exists() || is_valid_json_file(&store_path) {
+        return None;
+    }
+    // Quarantine, never delete: keep the corrupt bytes for forensics.
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let quarantine = app_data.join(format!("dashboard.json.corrupt-{stamp}"));
+    if std::fs::rename(&store_path, &quarantine).is_err() {
+        return Some("store file is corrupt and quarantine failed; leaving as is".into());
+    }
+    // Newest valid backup wins (names sort chronologically: YYYY-MM-DD.json).
+    let backup_dir = app_data.join("backups");
+    let mut backups: Vec<std::path::PathBuf> = std::fs::read_dir(&backup_dir)
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|x| x == "json"))
+                .collect()
+        })
+        .unwrap_or_default();
+    backups.sort();
+    while let Some(candidate) = backups.pop() {
+        if is_valid_json_file(&candidate) && std::fs::copy(&candidate, &store_path).is_ok() {
+            return Some(format!(
+                "store file was corrupt; quarantined and restored from {}",
+                candidate.display()
+            ));
+        }
+    }
+    Some("store file was corrupt; quarantined, but no valid backup found — starting fresh".into())
+}
+
 #[tauri::command]
 // Returns true if a backup was created, false if skipped (no store file yet).
+// Only a VERIFIED (parseable) store file is backed up, via a temp file +
+// atomic rename — so a store caught mid-save can never overwrite a good
+// day's backup with garbage (2026-07-13 incident: the daily backup was 27MB
+// of NUL bytes, copied from a store file that was being written).
 async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<bool, String> {
     use std::fs;
+    use std::io::Write;
 
     let app_data = app_handle
         .path()
@@ -445,11 +503,22 @@ async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<boo
         return Ok(false);
     }
 
+    let bytes = fs::read(&store_path).map_err(|e| e.to_string())?;
+    if serde_json::from_slice::<serde_json::Value>(&bytes).is_err() {
+        return Err("store file is not valid JSON; backup skipped".into());
+    }
+
     let backup_dir = app_data.join("backups");
     fs::create_dir_all(&backup_dir).map_err(|e| e.to_string())?;
 
     let backup_path = backup_dir.join(format!("{date}.json"));
-    fs::copy(&store_path, &backup_path).map_err(|e| e.to_string())?;
+    let tmp_path = backup_dir.join(format!("{date}.json.tmp"));
+    {
+        let mut f = fs::File::create(&tmp_path).map_err(|e| e.to_string())?;
+        f.write_all(&bytes).map_err(|e| e.to_string())?;
+        f.sync_all().map_err(|e| e.to_string())?;
+    }
+    fs::rename(&tmp_path, &backup_path).map_err(|e| e.to_string())?;
 
     let mut backups: Vec<_> = fs::read_dir(&backup_dir)
         .map_err(|e| e.to_string())?
@@ -458,11 +527,56 @@ async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<boo
         .collect();
 
     backups.sort_by_key(|e| e.path());
-    while backups.len() > 7 {
+    while backups.len() > 14 {
         let _ = fs::remove_file(backups.remove(0).path());
     }
 
     Ok(true)
+}
+
+#[cfg(test)]
+mod store_heal_tests {
+    use super::heal_store;
+
+    fn tmp_dir(name: &str) -> std::path::PathBuf {
+        let d = std::env::temp_dir().join(format!("bozz-heal-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(d.join("backups")).unwrap();
+        d
+    }
+
+    #[test]
+    fn valid_store_untouched() {
+        let d = tmp_dir("valid");
+        std::fs::write(d.join("dashboard.json"), b"{\"a\":1}").unwrap();
+        assert!(heal_store(&d).is_none());
+        assert_eq!(std::fs::read(d.join("dashboard.json")).unwrap(), b"{\"a\":1}");
+    }
+
+    #[test]
+    fn missing_store_is_noop() {
+        let d = tmp_dir("missing");
+        assert!(heal_store(&d).is_none());
+    }
+
+    #[test]
+    fn corrupt_store_restored_from_newest_valid_backup() {
+        let d = tmp_dir("corrupt");
+        // Zero-filled store, like the 2026-07-13 incident file.
+        std::fs::write(d.join("dashboard.json"), vec![0u8; 1024]).unwrap();
+        std::fs::write(d.join("backups/2026-07-01.json"), b"{\"old\":true}").unwrap();
+        // Newest backup is itself garbage — must be skipped.
+        std::fs::write(d.join("backups/2026-07-13.json"), vec![0u8; 64]).unwrap();
+        std::fs::write(d.join("backups/2026-07-12.json"), b"{\"new\":true}").unwrap();
+        let msg = heal_store(&d).expect("heal should report a restore");
+        assert!(msg.contains("2026-07-12"), "restored from wrong backup: {msg}");
+        assert_eq!(std::fs::read(d.join("dashboard.json")).unwrap(), b"{\"new\":true}");
+        let quarantined = std::fs::read_dir(&d)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .any(|e| e.file_name().to_string_lossy().starts_with("dashboard.json.corrupt-"));
+        assert!(quarantined, "corrupt store should be quarantined, not deleted");
+    }
 }
 
 /// Show the small floating quick-capture window, creating it on first use.
@@ -510,6 +624,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
+            // Self-heal a corrupt store file BEFORE the frontend loads it —
+            // see heal_store. Without this, one interrupted save means the
+            // app boots empty forever after.
+            if let Ok(app_data) = app.path().app_data_dir() {
+                if let Some(msg) = heal_store(&app_data) {
+                    eprintln!("[bozz] {msg}");
+                }
+            }
+
             let show = MenuItem::with_id(app, "show", "Show Bozz", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
