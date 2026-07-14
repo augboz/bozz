@@ -310,6 +310,117 @@ fn imap_fetch(
     Ok(results)
 }
 
+/// XOAUTH2 SASL authenticator for OAuth-based IMAP. The `imap` crate base64-encodes
+/// whatever bytes we return; XOAUTH2 carries the whole credential in the initial
+/// client response, so the server challenge is ignored.
+struct XOAuth2 {
+    user: String,
+    access_token: String,
+}
+
+impl imap::Authenticator for XOAuth2 {
+    type Response = String;
+    fn process(&self, _challenge: &[u8]) -> Self::Response {
+        // Format: "user=<addr>^Aauth=Bearer <token>^A^A"  (^A = Ctrl-A = 0x01)
+        format!(
+            "user={}\u{0001}auth=Bearer {}\u{0001}\u{0001}",
+            self.user, self.access_token
+        )
+    }
+}
+
+/// Fetch the most recent inbox messages over IMAP/TLS using an OAuth access token
+/// (XOAUTH2) instead of a password. This is how Bozz reads Outlook.com / Microsoft
+/// 365 mail: Microsoft is retiring basic auth, so password IMAP no longer works —
+/// but IMAP over OAuth does. Desktop-only (needs raw TLS sockets). Blocking I/O.
+#[tauri::command]
+fn imap_fetch_xoauth2(
+    host: String,
+    port: u16,
+    username: String,
+    access_token: String,
+) -> Result<Vec<serde_json::Value>, String> {
+    use native_tls::TlsConnector;
+
+    let tls = TlsConnector::new().map_err(|e| format!("TLS build failed: {e}"))?;
+
+    let client = imap::connect((host.as_str(), port), &host, &tls)
+        .map_err(|e| format!("IMAP connect failed: {e}"))?;
+
+    let auth = XOAuth2 { user: username, access_token };
+    let mut session = client
+        .authenticate("XOAUTH2", &auth)
+        .map_err(|(e, _)| format!("Outlook sign-in failed (XOAUTH2): {e}"))?;
+
+    let mailbox = session.select("INBOX").map_err(|e| e.to_string())?;
+    let total = mailbox.exists;
+
+    if total == 0 {
+        let _ = session.logout();
+        return Ok(vec![]);
+    }
+
+    let start = total.saturating_sub(29).max(1);
+    let seq = format!("{start}:{total}");
+
+    let messages = session
+        .fetch(&seq, "(FLAGS ENVELOPE INTERNALDATE)")
+        .map_err(|e| e.to_string())?;
+
+    let mut results: Vec<serde_json::Value> = Vec::new();
+
+    for msg in messages.iter().rev() {
+        let flags = msg.flags();
+        let unread = !flags.iter().any(|f| *f == imap::types::Flag::Seen);
+
+        let date_ms: i64 = msg
+            .internal_date()
+            .map(|d| d.timestamp_millis())
+            .unwrap_or(0);
+
+        let (subject, from_name, from_email) = if let Some(env) = msg.envelope() {
+            let subject = decode_imap_bytes(env.subject.as_deref().unwrap_or(b"(no subject)"));
+
+            let (from_name, from_email) = env
+                .from
+                .as_ref()
+                .and_then(|addrs| addrs.first())
+                .map(|addr| {
+                    let name = decode_imap_bytes(addr.name.as_deref().unwrap_or(b""));
+                    let mbox = std::str::from_utf8(addr.mailbox.as_deref().unwrap_or(b""))
+                        .unwrap_or("")
+                        .to_string();
+                    let host_part = std::str::from_utf8(addr.host.as_deref().unwrap_or(b""))
+                        .unwrap_or("")
+                        .to_string();
+                    let email = if mbox.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{mbox}@{host_part}")
+                    };
+                    (name, email)
+                })
+                .unwrap_or_default();
+
+            (subject, from_name, from_email)
+        } else {
+            (String::from("(no subject)"), String::new(), String::new())
+        };
+
+        results.push(serde_json::json!({
+            "id": format!("imap:{}", msg.message),
+            "subject": subject,
+            "fromName": from_name,
+            "fromEmail": from_email,
+            "dateMs": date_ms,
+            "unread": unread,
+        }));
+    }
+
+    let _ = session.logout();
+    Ok(results)
+}
+
 /// Decode an IMAP byte slice: tries UTF-8, falls back to lossy UTF-8.
 /// Does NOT decode RFC 2047 encoded-words (=?charset?…?=) — most modern
 /// servers send plain UTF-8 in envelope data.
@@ -463,7 +574,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             create_backup, secret_set, secret_get, secret_delete,
-            oauth_run, open_oauth_window, start_oauth_server, imap_fetch
+            oauth_run, open_oauth_window, start_oauth_server, imap_fetch, imap_fetch_xoauth2
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

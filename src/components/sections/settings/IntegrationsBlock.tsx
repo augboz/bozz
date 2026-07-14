@@ -21,7 +21,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, RefreshCw, ChevronDown } from 'lucide-react';
-import { isWeb } from '../../../lib/platform';
+import { isWeb, isTauri } from '../../../lib/platform';
 import { platformFetch } from '../../../lib/http';
 import { apiFetch } from '../../../lib/apiClient';
 // Tauri-only APIs — imported lazily inside functions so they don't crash on web
@@ -43,6 +43,7 @@ import { getItem, setItem, deleteItem } from '../../../lib/storage';
 import { schedulePush } from '../../../lib/sync';
 import { supabase } from '../../../lib/supabase';
 import { connectSpotify } from '../../../lib/oauth/spotify';
+import { OUTLOOK_CLIENT_ID, OUTLOOK_USES_BORROWED_ID } from '../../../lib/oauth/outlook';
 import { secretDelete, secretSet, tokenKey } from '../../../lib/oauth/keyring';
 import ColorBankPicker from '../../shared/ColorBankPicker';
 import { BrandLogo, type BrandId } from './brandLogos';
@@ -83,7 +84,7 @@ export interface IntegrationsProps {
   colorBank?: string[];
   oauthAccounts: OAuthAccount[];
   emailSyncErrors: Array<{ account: string; error: string }>;
-  onConnectAccount:    (provider: EmailProvider, clientId: string) => Promise<void>;
+  onConnectAccount:    (provider: EmailProvider, clientId: string, email?: string) => Promise<void>;
   onDisconnectAccount: (provider: EmailProvider, email: string) => Promise<void>;
   calendarConnections: CalendarConnection[];
   onCalendarConnectionsChange: (next: CalendarConnection[]) => void;
@@ -435,21 +436,21 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
   t: Theme;
   accounts: OAuthAccount[];
   syncErrors: Array<{ account: string; error: string }>;
-  onConnect: (cid: string) => Promise<void>;
+  onConnect: (cid: string, email: string) => Promise<void>;
   onDisconnect: (email: string) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
   const connected = accounts.filter(a => a.provider === 'outlook');
-  const configured = Boolean(ENV.outlookClientId);
-
-  // Hide entirely until a client ID is configured
-  if (!configured && connected.length === 0) return null;
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  // IMAP needs a native TLS socket, which only the desktop build has.
+  const desktop = isTauri();
 
   const connect = async () => {
-    if (!ENV.outlookClientId) return;
+    if (!emailValid || !desktop) return;
     setBusy(true); setError(null);
-    try { await onConnect(ENV.outlookClientId); }
+    try { await onConnect(OUTLOOK_CLIENT_ID, email.trim()); setEmail(''); }
     catch (e) { setError(String(e)); }
     setBusy(false);
   };
@@ -458,9 +459,6 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
     <Card
       t={t} brand="outlook" color="#0078D4" letter="M" name="Outlook / Hotmail" connected={connected.length > 0}
       status={connected.length ? `${connected.length} account${connected.length > 1 ? 's' : ''} connected` : 'Sync your inbox'}
-      action={configured
-        ? <ConnectBtn t={t} busy={busy} onClick={connect} label={connected.length ? 'Add account' : 'Connect'} errored={Boolean(error)} />
-        : undefined}
       details={connected.map(a => {
         const err = syncErrors.find(e => e.account === a.email)?.error;
         return (
@@ -473,26 +471,54 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
         );
       })}
     >
-      {!configured && (
+      {!desktop ? (
         <div style={{
           marginTop: '0.7rem', fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6,
           background: t.input, borderRadius: '7px', padding: '0.5rem 0.7rem',
         }}>
-          Register a free app at{' '}
-          <button
-            onClick={() => tauriOpenUrl('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade')}
-            style={{ background: 'none', border: 'none', padding: 0, color: t.text, cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit', textDecoration: 'underline' }}
-          >
-            portal.azure.com
-          </button>
-          {' '}→ New registration → Supported account types: <strong style={{ color: t.text }}>Any Azure AD directory + personal accounts</strong> → Redirect URI: <strong style={{ color: t.text }}>Public client / native</strong> = <code style={{ background: t.bgAlt, padding: '0.05rem 0.3rem', borderRadius: '3px', fontSize: '0.68rem' }}>http://localhost</code>. Then Authentication → Allow public client flows: Yes. Copy the Application (client) ID and add to{' '}
-          <code style={{ background: t.bgAlt, padding: '0.05rem 0.3rem', borderRadius: '3px', fontSize: '0.68rem' }}>.env.local</code> and restart:
-          <div style={{ marginTop: '0.2rem', fontFamily: 'monospace', fontSize: '0.7rem', color: t.text }}>
-            VITE_OUTLOOK_CLIENT_ID=…
+          Outlook email works in the desktop app only. Open Bozz on your Mac or PC to connect.
+        </div>
+      ) : (
+        <div style={{ marginTop: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@outlook.com"
+              autoCapitalize="off" autoCorrect="off" spellCheck={false}
+              onKeyDown={e => { if (e.key === 'Enter' && emailValid && !busy) connect(); }}
+              style={{
+                flex: 1, minWidth: 0, background: t.input, border: `1px solid ${t.border}`,
+                borderRadius: '7px', padding: '0.42rem 0.6rem', color: t.text,
+                fontSize: '0.8rem', fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            <button
+              onClick={connect}
+              disabled={!emailValid || busy}
+              style={{
+                flexShrink: 0, background: emailValid && !busy ? t.doneAccent : t.input,
+                border: `1px solid ${emailValid && !busy ? t.doneAccent : t.border}`,
+                color: emailValid && !busy ? '#fff' : t.textDim,
+                borderRadius: '7px', padding: '0.42rem 0.85rem',
+                fontSize: '0.78rem', fontWeight: 500, fontFamily: 'inherit',
+                cursor: emailValid && !busy ? 'pointer' : 'default',
+              }}
+            >
+              {busy ? 'Connecting…' : connected.length ? 'Add account' : 'Connect'}
+            </button>
+          </div>
+          <div style={{
+            fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6,
+            background: t.input, borderRadius: '7px', padding: '0.5rem 0.7rem',
+          }}>
+            You'll sign in on Microsoft's own website, so your password never touches Bozz.
+            {OUTLOOK_USES_BORROWED_ID && (
+              <> The approval screen shows <strong style={{ color: t.text }}>Mozilla Thunderbird</strong> — that's the trusted open-source mail connector Bozz uses to reach Outlook without a Microsoft developer account. It's safe to approve.</>
+            )}
           </div>
         </div>
       )}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Failed to connect. Please try again.</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Couldn't connect. Check the address and try again.</div>}
     </Card>
   );
 }
@@ -1698,7 +1724,7 @@ export default function IntegrationsBlock({
   const outlookCard = (
     <OutlookCard
       key="outlook" t={t} accounts={oauthAccounts} syncErrors={emailSyncErrors}
-      onConnect={cid => onConnectAccount('outlook', cid)}
+      onConnect={(cid, email) => onConnectAccount('outlook', cid, email)}
       onDisconnect={email => onDisconnectAccount('outlook', email)}
     />
   );

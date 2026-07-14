@@ -685,8 +685,10 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [loading, syncEmails]);
 
-  const connectAccount = async (provider: EmailProvider, clientId: string) => {
-    const account = await connectProvider(PROVIDER_CFG[provider], clientId);
+  const connectAccount = async (provider: EmailProvider, clientId: string, email?: string) => {
+    // Outlook passes its address up front (it's the IMAP username; the OAuth flow
+    // has no Graph scope to look it up). Gmail leaves email undefined → identify().
+    const account = await connectProvider(PROVIDER_CFG[provider], clientId, '', email);
     const next = [
       ...oauthAccounts.filter(a => !(a.provider === provider && a.email === account.email)),
       account,

@@ -101,6 +101,7 @@ export async function connectProvider(
   cfg: ProviderConfig,
   clientId: string,
   clientSecret = '',    // kept for non-Google public clients (e.g. Outlook); Google uses server proxy
+  knownEmail?: string,  // when the address is collected up front (Outlook IMAP username) instead of via identify()
 ): Promise<OAuthAccount> {
   const verifier = randomString(64);
   const challenge = await pkceChallenge(verifier);
@@ -225,7 +226,10 @@ export async function connectProvider(
   const tokens = (await tokenRes.json()) as TokenResponse;
   if (!tokens.refresh_token) throw new Error('Provider did not return a refresh token. Ensure offline access scope is requested.');
 
-  const email = await cfg.identify(tokens.access_token);
+  // Prefer an address collected up front (Outlook: it's the IMAP username, and
+  // the borrowed client ID has no Graph scope to look it up). Otherwise ask the
+  // provider to identify the account from the token.
+  const email = (knownEmail ?? '').trim().toLowerCase() || await cfg.identify(tokens.access_token);
   const expiresAt = Date.now() + (tokens.expires_in - 30) * 1000;
 
   await secretSet(tokenKey(cfg.provider, email, 'access'), tokens.access_token);
