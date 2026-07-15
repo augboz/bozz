@@ -18,6 +18,15 @@ export interface ProviderConfig {
   usesClientSecret: boolean;
   /** Extra params on the auth URL (e.g. access_type=offline for Google). */
   extraAuthParams?: Record<string, string>;
+  /**
+   * Fixed redirect URI demanded by the client registration (desktop only).
+   * Borrowed client IDs (Outlook via Thunderbird's registration) accept ONLY
+   * their registered URI — e.g. exactly "https://localhost" — so the loopback
+   * TCP server can't be used: nothing can listen there. When set, the consent
+   * runs in the app-controlled OAuth window instead, whose on_navigation hook
+   * intercepts the redirect BEFORE any network request and cancels it.
+   */
+  desktopRedirectUri?: string;
   /** Fetches the user's email address with a fresh access token. */
   identify: (accessToken: string) => Promise<string>;
 }
@@ -140,9 +149,16 @@ export async function connectProvider(
       300_000,
     );
 
-    const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
-      .catch(() => 14987);
-    redirectUri = `http://127.0.0.1:${tcpPort}`;
+    if (cfg.desktopRedirectUri) {
+      // Fixed registered redirect (borrowed client ID — see ProviderConfig).
+      // The URI never resolves anywhere; the in-app OAuth window intercepts
+      // the navigation to it and hands us the code.
+      redirectUri = cfg.desktopRedirectUri;
+    } else {
+      const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
+        .catch(() => 14987);
+      redirectUri = `http://127.0.0.1:${tcpPort}`;
+    }
 
     const authParams = new URLSearchParams({
       client_id: clientId,
@@ -156,8 +172,22 @@ export async function connectProvider(
     });
 
     try {
-      await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
-      params = await paramsPromise;
+      if (cfg.desktopRedirectUri) {
+        await invoke('open_oauth_window', {
+          url: `${cfg.authUrl}?${authParams.toString()}`,
+          redirectPrefix: redirectUri,
+        });
+        params = await paramsPromise;
+        // The consent window stays open on the cancelled redirect — close it.
+        try {
+          const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+          const w = await WebviewWindow.getByLabel('oauth');
+          await w?.close();
+        } catch { /* best-effort cleanup */ }
+      } else {
+        await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
+        params = await paramsPromise;
+      }
     } finally {
       clearTimeout(timeout);
       unlisten();

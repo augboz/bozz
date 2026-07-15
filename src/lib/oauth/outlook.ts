@@ -46,6 +46,11 @@ export const outlookConfig: ProviderConfig = {
   // only consented for mail-protocol access, so we authenticate to IMAP directly.
   scopes: ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access'],
   usesClientSecret: false,
+  // Thunderbird's client registration accepts EXACTLY this redirect URI
+  // (https, no port, no path — see OAuth2Providers.sys.mjs in Thunderbird's
+  // source). Anything else is rejected by Microsoft with invalid_request
+  // before the sign-in page even loads.
+  desktopRedirectUri: 'https://localhost',
   // The email address can't come from Graph /me here (no Graph scope); the
   // connect UI collects it and passes it to connectProvider as knownEmail, so
   // this identify() is never actually reached. Kept to satisfy the interface.
