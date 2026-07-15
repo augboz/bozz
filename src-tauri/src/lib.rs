@@ -96,34 +96,70 @@ fn open_oauth_window(
     url: String,
     redirect_prefix: String,
 ) -> Result<(), String> {
-    let handle = app.clone();
-    let prefix = redirect_prefix.clone();
+    let parsed = url.parse::<url::Url>().map_err(|e| e.to_string())?;
 
     // Close any previous OAuth window that was left open.
     if let Some(prev) = app.get_webview_window("oauth") {
         let _ = prev.close();
     }
 
-    WebviewWindowBuilder::new(
-        &app,
-        "oauth",
-        WebviewUrl::External(url.parse::<url::Url>().map_err(|e| e.to_string())?),
-    )
-    .title("Sign in")
-    .inner_size(520.0, 700.0)
-    .center()
-    .always_on_top(true)
-    // Use an Edge-compatible UA so Google doesn't detect WebView2.
-    .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0")
-    .on_navigation(move |nav_url| {
-        if nav_url.as_str().starts_with(prefix.as_str()) {
-            let _ = handle.emit("oauth:callback", nav_url.to_string());
-            false // cancel — we have what we need
-        } else {
-            true // allow all other navigation (Google's login pages, etc.)
+    // Build the window ON THE MAIN THREAD (commands run off it), and WITHOUT
+    // an on_navigation handler: on this wry/WebView2 combination a fresh
+    // external-URL window built with on_navigation comes up with a dead
+    // webview — it never navigates (zero navigation events), paints solid
+    // white and won't close. (A window built the same way with WebviewUrl::App
+    // works, so it's specifically this combination.) Instead, a poller thread
+    // watches the window's URL and catches the redirect — which works even
+    // though https://localhost never actually resolves: the attempted URL is
+    // visible before the connection fails.
+    let app_handle = app.clone();
+    app.run_on_main_thread(move || {
+        let built = WebviewWindowBuilder::new(
+            &app_handle,
+            "oauth",
+            WebviewUrl::External(parsed),
+        )
+        .title("Sign in")
+        .inner_size(520.0, 700.0)
+        .center()
+        .always_on_top(true)
+        // Deliberately NO custom user_agent. An Edge-spoof UA can make
+        // login.microsoftonline.com take an Edge-only path (Windows-account
+        // SSO handoff) that can't work inside WebView2. The default WebView2
+        // UA gets the ordinary sign-in form, same as MSAL's embedded flows.
+        .build();
+        match built {
+            Ok(win) => {
+                // In dev builds pop the devtools so a misbehaving login page
+                // is inspectable.
+                #[cfg(debug_assertions)]
+                win.open_devtools();
+                let handle = app_handle.clone();
+                let prefix = redirect_prefix.clone();
+                std::thread::spawn(move || {
+                    let mut last = String::new();
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_millis(250));
+                        // Window closed (by us or the user) → stop watching.
+                        let Some(w) = handle.get_webview_window("oauth") else { break };
+                        let Ok(u) = w.url() else { continue };
+                        let s = u.to_string();
+                        if s != last {
+                            // Log origin+path only: the query carries the auth code.
+                            eprintln!("[oauth-window] url: {}", s.split('?').next().unwrap_or(""));
+                            last = s.clone();
+                        }
+                        if s.starts_with(prefix.as_str()) {
+                            let _ = handle.emit("oauth:callback", s);
+                            let _ = w.close();
+                            break;
+                        }
+                    }
+                });
+            }
+            Err(e) => eprintln!("[oauth-window] build failed: {e}"),
         }
     })
-    .build()
     .map_err(|e| e.to_string())?;
 
     Ok(())
@@ -491,13 +527,15 @@ fn open_quick_capture(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.show();
-                let _ = w.set_focus();
-                let _ = w.unminimize();
-            }
-        }))
+        // TEST-ONLY (Outlook isolated profile): single-instance disabled so this
+        // dev build can run alongside the installed Bozz. REVERT before merge.
+        // .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        //     if let Some(w) = app.get_webview_window("main") {
+        //         let _ = w.show();
+        //         let _ = w.set_focus();
+        //         let _ = w.unminimize();
+        //     }
+        // }))
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
@@ -553,11 +591,16 @@ pub fn run() {
                 };
                 let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyB);
                 let handle = app.handle().clone();
-                app.global_shortcut().on_shortcut(qc, move |_app, _sc, event| {
+                // Don't hard-crash if Ctrl+B can't be registered — another Bozz
+                // instance (or any app) may already own it system-wide. The in-app
+                // Quick add button still works; only the global hotkey is skipped.
+                if let Err(e) = app.global_shortcut().on_shortcut(qc, move |_app, _sc, event| {
                     if event.state() == ShortcutState::Pressed {
                         open_quick_capture(&handle);
                     }
-                })?;
+                }) {
+                    eprintln!("[global-shortcut] Ctrl+B unavailable (already registered?): {e}");
+                }
             }
 
             Ok(())

@@ -19,14 +19,16 @@ export interface ProviderConfig {
   /** Extra params on the auth URL (e.g. access_type=offline for Google). */
   extraAuthParams?: Record<string, string>;
   /**
-   * Fixed redirect URI demanded by the client registration (desktop only).
-   * Borrowed client IDs (Outlook via Thunderbird's registration) accept ONLY
-   * their registered URI — e.g. exactly "https://localhost" — so the loopback
-   * TCP server can't be used: nothing can listen there. When set, the consent
-   * runs in the app-controlled OAuth window instead, whose on_navigation hook
-   * intercepts the redirect BEFORE any network request and cancels it.
+   * OAuth 2.0 device-authorization endpoint. When set, connectProvider uses
+   * the DEVICE-CODE flow instead of a redirect flow: the user signs in at
+   * the provider's verification page (system browser) with a short code, and
+   * we poll the token endpoint. No redirect URI and no embedded sign-in
+   * window — which matters twice for Outlook: the borrowed Thunderbird
+   * client ID only accepts the un-listenable redirect "https://localhost",
+   * and embedded external-URL webview windows don't render at all on some
+   * Windows machines (blank "Sign in" popup).
    */
-  desktopRedirectUri?: string;
+  deviceCodeUrl?: string;
   /** Fetches the user's email address with a fresh access token. */
   identify: (accessToken: string) => Promise<string>;
 }
@@ -105,13 +107,92 @@ async function browserOAuthFlow(
   });
 }
 
-/** Run a full PKCE OAuth flow and persist tokens. Returns the new account. */
+/** Persist a fresh token pair and build the account record (shared tail of every flow). */
+async function persistTokens(
+  cfg: ProviderConfig,
+  clientId: string,
+  tokens: TokenResponse,
+  knownEmail?: string,
+): Promise<OAuthAccount> {
+  if (!tokens.refresh_token) throw new Error('Provider did not return a refresh token. Ensure offline access scope is requested.');
+  const email = (knownEmail ?? '').trim().toLowerCase() || await cfg.identify(tokens.access_token);
+  const expiresAt = Date.now() + (tokens.expires_in - 30) * 1000;
+  await secretSet(tokenKey(cfg.provider, email, 'access'), tokens.access_token);
+  await secretSet(tokenKey(cfg.provider, email, 'refresh'), tokens.refresh_token);
+  return {
+    provider: cfg.provider,
+    email,
+    clientId,
+    clientSecret: '',   // never stored — secret lives server-side
+    expiresAt,
+    lastSync: null,
+  };
+}
+
+interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval?: number;
+}
+
+/**
+ * OAuth 2.0 device-authorization flow (RFC 8628). The connect card listens
+ * for the events below to show the user the code + where to enter it.
+ */
+async function deviceCodeFlow(
+  cfg: ProviderConfig,
+  clientId: string,
+  knownEmail?: string,
+): Promise<OAuthAccount> {
+  const announce = (detail: unknown) =>
+    window.dispatchEvent(new CustomEvent('bozz:device-code', { detail }));
+  try {
+    const dcRes = await platformFetch(cfg.deviceCodeUrl!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: clientId, scope: cfg.scopes.join(' ') }).toString(),
+    });
+    if (!dcRes.ok) throw new Error(`Device-code request failed: HTTP ${dcRes.status} ${await dcRes.text()}`);
+    const dc = (await dcRes.json()) as DeviceCodeResponse;
+    announce({ provider: cfg.provider, userCode: dc.user_code, verificationUri: dc.verification_uri });
+
+    let intervalMs = (dc.interval ?? 5) * 1000;
+    const deadline = Date.now() + Math.min(dc.expires_in ?? 900, 900) * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, intervalMs));
+      const res = await platformFetch(cfg.tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+          client_id: clientId,
+          device_code: dc.device_code,
+        }).toString(),
+      });
+      const json = (await res.json()) as TokenResponse & { error?: string; error_description?: string };
+      if (res.ok) return await persistTokens(cfg, clientId, json, knownEmail);
+      if (json.error === 'authorization_pending') continue;
+      if (json.error === 'slow_down') { intervalMs += 5000; continue; }
+      throw new Error(json.error_description ?? json.error ?? `Token poll failed: HTTP ${res.status}`);
+    }
+    throw new Error('Sign-in timed out — the code expired before it was entered. Try connecting again.');
+  } finally {
+    window.dispatchEvent(new CustomEvent('bozz:device-code-done', { detail: { provider: cfg.provider } }));
+  }
+}
+
+/** Run a full OAuth flow and persist tokens. Returns the new account. */
 export async function connectProvider(
   cfg: ProviderConfig,
   clientId: string,
   clientSecret = '',    // kept for non-Google public clients (e.g. Outlook); Google uses server proxy
   knownEmail?: string,  // when the address is collected up front (Outlook IMAP username) instead of via identify()
 ): Promise<OAuthAccount> {
+  // Device-code providers (Outlook) never touch redirect URIs or popups.
+  if (cfg.deviceCodeUrl) return deviceCodeFlow(cfg, clientId, knownEmail);
+
   const verifier = randomString(64);
   const challenge = await pkceChallenge(verifier);
   const state = randomString(24);
@@ -149,16 +230,9 @@ export async function connectProvider(
       300_000,
     );
 
-    if (cfg.desktopRedirectUri) {
-      // Fixed registered redirect (borrowed client ID — see ProviderConfig).
-      // The URI never resolves anywhere; the in-app OAuth window intercepts
-      // the navigation to it and hands us the code.
-      redirectUri = cfg.desktopRedirectUri;
-    } else {
-      const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
-        .catch(() => 14987);
-      redirectUri = `http://127.0.0.1:${tcpPort}`;
-    }
+    const tcpPort = await invoke<number>('start_oauth_server', { port: 14987 })
+      .catch(() => 14987);
+    redirectUri = `http://127.0.0.1:${tcpPort}`;
 
     const authParams = new URLSearchParams({
       client_id: clientId,
@@ -172,22 +246,8 @@ export async function connectProvider(
     });
 
     try {
-      if (cfg.desktopRedirectUri) {
-        await invoke('open_oauth_window', {
-          url: `${cfg.authUrl}?${authParams.toString()}`,
-          redirectPrefix: redirectUri,
-        });
-        params = await paramsPromise;
-        // The consent window stays open on the cancelled redirect — close it.
-        try {
-          const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-          const w = await WebviewWindow.getByLabel('oauth');
-          await w?.close();
-        } catch { /* best-effort cleanup */ }
-      } else {
-        await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
-        params = await paramsPromise;
-      }
+      await openUrl(`${cfg.authUrl}?${authParams.toString()}`);
+      params = await paramsPromise;
     } finally {
       clearTimeout(timeout);
       unlisten();
@@ -254,25 +314,7 @@ export async function connectProvider(
   }
   if (!tokenRes.ok) throw new Error(`Token swap failed: HTTP ${tokenRes.status} ${await tokenRes.text()}`);
   const tokens = (await tokenRes.json()) as TokenResponse;
-  if (!tokens.refresh_token) throw new Error('Provider did not return a refresh token. Ensure offline access scope is requested.');
-
-  // Prefer an address collected up front (Outlook: it's the IMAP username, and
-  // the borrowed client ID has no Graph scope to look it up). Otherwise ask the
-  // provider to identify the account from the token.
-  const email = (knownEmail ?? '').trim().toLowerCase() || await cfg.identify(tokens.access_token);
-  const expiresAt = Date.now() + (tokens.expires_in - 30) * 1000;
-
-  await secretSet(tokenKey(cfg.provider, email, 'access'), tokens.access_token);
-  await secretSet(tokenKey(cfg.provider, email, 'refresh'), tokens.refresh_token);
-
-  return {
-    provider: cfg.provider,
-    email,
-    clientId,
-    clientSecret: '',   // never stored — secret lives server-side
-    expiresAt,
-    lastSync: null,
-  };
+  return persistTokens(cfg, clientId, tokens, knownEmail);
 }
 
 /** Refresh and persist a new access token. Returns the new accessToken + expiresAt. */

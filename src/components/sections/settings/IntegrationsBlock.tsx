@@ -442,10 +442,32 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  // Device-code sign-in state: while connecting, the OAuth layer announces the
+  // code the user must enter at Microsoft's verification page.
+  const [deviceCode, setDeviceCode] = useState<{ userCode: string; verificationUri: string } | null>(null);
   const connected = accounts.filter(a => a.provider === 'outlook');
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   // IMAP needs a native TLS socket, which only the desktop build has.
   const desktop = isTauri();
+
+  useEffect(() => {
+    const onCode = (e: Event) => {
+      const d = (e as CustomEvent).detail as { provider?: string; userCode?: string; verificationUri?: string };
+      if (d?.provider === 'outlook' && d.userCode && d.verificationUri) {
+        setDeviceCode({ userCode: d.userCode, verificationUri: d.verificationUri });
+      }
+    };
+    const onDone = (e: Event) => {
+      const d = (e as CustomEvent).detail as { provider?: string };
+      if (d?.provider === 'outlook') setDeviceCode(null);
+    };
+    window.addEventListener('bozz:device-code', onCode);
+    window.addEventListener('bozz:device-code-done', onDone);
+    return () => {
+      window.removeEventListener('bozz:device-code', onCode);
+      window.removeEventListener('bozz:device-code-done', onDone);
+    };
+  }, []);
 
   const connect = async () => {
     if (!emailValid || !desktop) return;
@@ -507,15 +529,56 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
               {busy ? 'Connecting…' : connected.length ? 'Add account' : 'Connect'}
             </button>
           </div>
-          <div style={{
-            fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6,
-            background: t.input, borderRadius: '7px', padding: '0.5rem 0.7rem',
-          }}>
-            You'll sign in on Microsoft's own website, so your password never touches Bozz.
-            {OUTLOOK_USES_BORROWED_ID && (
-              <> The approval screen shows <strong style={{ color: t.text }}>Mozilla Thunderbird</strong> — that's the trusted open-source mail connector Bozz uses to reach Outlook without a Microsoft developer account. It's safe to approve.</>
-            )}
-          </div>
+          {deviceCode ? (
+            <div style={{
+              fontSize: '0.78rem', color: t.text, lineHeight: 1.7,
+              background: t.input, border: `1px solid ${t.doneAccent}`,
+              borderRadius: '7px', padding: '0.6rem 0.75rem',
+            }}>
+              <div>
+                1. Open{' '}
+                <a
+                  href={deviceCode.verificationUri} target="_blank" rel="noreferrer"
+                  style={{ color: t.doneAccent, fontWeight: 600 }}
+                >
+                  {deviceCode.verificationUri.replace('https://', '')}
+                </a>{' '}
+                in your browser
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <span>2. Enter this code:</span>
+                <strong style={{
+                  fontFamily: 'ui-monospace, monospace', fontSize: '1rem',
+                  letterSpacing: '0.12em', color: t.doneAccent, userSelect: 'all',
+                }}>
+                  {deviceCode.userCode}
+                </strong>
+                <button
+                  onClick={() => { void navigator.clipboard?.writeText(deviceCode.userCode); }}
+                  style={{
+                    background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '6px',
+                    color: t.textDim, fontSize: '0.68rem', padding: '0.15rem 0.5rem',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
+              <div style={{ color: t.textDim, fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                3. Sign in as {email.trim() || 'your Outlook account'} — Bozz connects by itself once Microsoft confirms.
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              fontSize: '0.72rem', color: t.textDim, lineHeight: 1.6,
+              background: t.input, borderRadius: '7px', padding: '0.5rem 0.7rem',
+            }}>
+              You'll sign in on Microsoft's own website, so your password never touches Bozz.
+              {OUTLOOK_USES_BORROWED_ID && (
+                <> The approval screen shows <strong style={{ color: t.text }}>Mozilla Thunderbird</strong> — that's the trusted open-source mail connector Bozz uses to reach Outlook without a Microsoft developer account. It's safe to approve.</>
+              )}
+            </div>
+          )}
         </div>
       )}
       {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Couldn't connect. Check the address and try again.</div>}

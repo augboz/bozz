@@ -46,11 +46,13 @@ export const outlookConfig: ProviderConfig = {
   // only consented for mail-protocol access, so we authenticate to IMAP directly.
   scopes: ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access'],
   usesClientSecret: false,
-  // Thunderbird's client registration accepts EXACTLY this redirect URI
-  // (https, no port, no path — see OAuth2Providers.sys.mjs in Thunderbird's
-  // source). Anything else is rejected by Microsoft with invalid_request
-  // before the sign-in page even loads.
-  desktopRedirectUri: 'https://localhost',
+  // DEVICE-CODE flow (RFC 8628): the user signs in at microsoft.com/devicelogin
+  // with a short code shown in the card; no redirect URI, no popup window.
+  // This sidesteps two hard blockers at once: Thunderbird's registration only
+  // accepts the un-listenable redirect "https://localhost", and embedded
+  // external-URL sign-in windows render blank on some Windows machines.
+  // (Verified: Microsoft issues device codes for this client ID.)
+  deviceCodeUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/devicecode',
   // The email address can't come from Graph /me here (no Graph scope); the
   // connect UI collects it and passes it to connectProvider as knownEmail, so
   // this identify() is never actually reached. Kept to satisfy the interface.
