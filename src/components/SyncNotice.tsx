@@ -75,14 +75,19 @@ export default function SyncNotice() {
 
   const title = isStore
     ? 'Your data did not load'
-    : 'Cloud sync paused to protect your data';
+    : notice.block.reason === 'push-failed'
+      ? 'Cloud upload did not go through'
+      : 'Cloud sync paused to protect your data';
 
   const isThin = notice.kind === 'sync' && notice.block.reason === 'thin-local';
+  const isPushFail = notice.kind === 'sync' && notice.block.reason === 'push-failed';
   const body = isStore
     ? 'Bozz could not read its local file, so it is showing an empty app. Saving and syncing are switched off so nothing overwrites your real data. Close Bozz and open it again. If it stays empty, restore the newest file from the backups folder.'
     : isThin
       ? `This device has less data than your cloud copy (${notice.kind === 'sync' ? notice.block.detail : ''}), so Bozz did not upload it. If you just deleted things on purpose, push anyway. Otherwise restart Bozz to bring the cloud copy down.`
-      : 'This device could not read its own data, so it will not upload anything. Restart Bozz before making changes here.';
+      : isPushFail
+        ? 'Bozz could not upload your latest changes (network or server problem). They are safe on this device and will be retried on your next change or restart.'
+        : 'This device could not read its own data, so it will not upload anything. Restart Bozz before making changes here.';
 
   return (
     <div

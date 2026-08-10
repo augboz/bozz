@@ -189,7 +189,9 @@ export default function Dashboard() {
         // or app was force-closed), push it first before pulling — otherwise the
         // pull would overwrite it with the older Supabase snapshot.
         } else if (await hasLocalData()) {
-          const pushed = await pushSnapshot(userId);
+          // silentMerge: state is built right after this block, so a merged
+          // boot push doesn't need the remount event.
+          const pushed = await pushSnapshot(userId, { silentMerge: true });
           // DATA SAFETY: if the push FAILED (offline, oversized payload, server
           // error), do NOT pull — pulling would overwrite the only good copy of
           // the user's data with a stale remote snapshot. This exact sequence
@@ -2125,7 +2127,7 @@ export default function Dashboard() {
                 // Only clear local storage if push succeeds — if it fails the data
                 // stays locally and gets pushed again on next sign-in (recovery path).
                 let pushOk = !userId; // no userId = nothing to push, treat as ok
-                try { if (userId) pushOk = await pushSnapshot(userId); } catch { /* ignore */ }
+                try { if (userId) pushOk = await pushSnapshot(userId, { silentMerge: true }); } catch { /* ignore */ }
                 if (pushOk) {
                   try { await clearLocalSnapshot(); } catch { /* ignore */ }
                 }

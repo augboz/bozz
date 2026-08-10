@@ -41,12 +41,24 @@ function DashboardKeyed() {
     const onFocus = () => { void check(); };
     const onVisible = () => { if (document.visibilityState === 'visible') void check(); };
     const interval = setInterval(() => { void check(); }, 3 * 60_000);
+    // A mid-session push discovered remote-only records and unioned them into
+    // local storage (see pushSnapshot) — the mounted UI has never seen them,
+    // so reload state through the pull-only path.
+    const onMerged = async () => {
+      try {
+        const { requestPullOnlyReload } = await import('./lib/sync');
+        requestPullOnlyReload();
+        setSyncGen(g => g + 1);
+      } catch { /* next boot shows the union anyway */ }
+    };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('bozz:remote-merged', onMerged);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('bozz:remote-merged', onMerged);
     };
   }, [uid]);
   return <Dashboard key={`${uid ?? 'anon'}:${syncGen}`} />;
