@@ -18,7 +18,7 @@
  * gets an email; clicking the link sets the session and the app opens.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, isSupabaseConfigured, type Session } from '../lib/supabase';
 import { themes } from '../lib/themes';
 import { DEFAULT_APPEARANCE } from '../lib/appearance';
@@ -72,6 +72,9 @@ export default function AuthGate({ children }: Props) {
   const [password,   setPassword]   = useState('');
   const [status,     setStatus]     = useState<{ text: string; ok: boolean } | null>(null);
   const [busy,       setBusy]       = useState(false);
+  /** Removes the live 'oauth:callback' listener, so retries never stack up. */
+  const oauthCleanup = useRef<(() => void) | null>(null);
+  useEffect(() => () => { oauthCleanup.current?.(); }, []);
 
   // Restore session on mount + listen for auth events (incl. OAuth callback).
   useEffect(() => {
@@ -144,6 +147,15 @@ export default function AuthGate({ children }: Props) {
         const { listen }  = await import('@tauri-apps/api/event');
         const { openUrl } = await import('@tauri-apps/plugin-opener');
 
+        // Tear down a previous attempt first. Every click used to add ANOTHER
+        // 'oauth:callback' listener, and one callback then ran all of them: the
+        // first exchanged the code (session created, PKCE verifier consumed and
+        // deleted), and the rest failed with "code verifier not found in
+        // storage" — overwriting the success with an alarming error even though
+        // sign-in had worked. Reported on 2026-08-10.
+        oauthCleanup.current?.();
+        oauthCleanup.current = null;
+
         const tcpPort  = await invoke<number>('start_oauth_server', { port: 14985 }).catch(() => 14985);
         const redirectTo = `http://127.0.0.1:${tcpPort}`;
 
@@ -151,19 +163,32 @@ export default function AuthGate({ children }: Props) {
           provider: 'google',
           options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
         });
-        if (error) { setStatus({ text: error.message, ok: false }); setBusy(false); return; }
+        if (error) { setStatus({ text: friendlyError(error), ok: false }); setBusy(false); return; }
         if (!data?.url) { setStatus({ text: 'No auth URL returned.', ok: false }); setBusy(false); return; }
 
+        // Second belt: even one listener can fire twice (the loopback server and
+        // a retried redirect both emit). Exchange at most once per attempt.
+        let consumed = false;
         const unlisten = await listen<string>('oauth:callback', async (e) => {
-          unlisten();
+          if (consumed) return;
+          consumed = true;
+          oauthCleanup.current?.();
+          oauthCleanup.current = null;
           try {
             const code = new URL(e.payload).searchParams.get('code');
             if (!code) { setStatus({ text: 'No auth code in callback.', ok: false }); setBusy(false); return; }
             const { error: exchErr } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchErr) setStatus({ text: exchErr.message, ok: false });
-          } catch (err) { setStatus({ text: String(err), ok: false }); }
+            if (exchErr) {
+              // A failed exchange doesn't always mean a failed sign-in — a
+              // duplicate callback reports failure over a session that already
+              // landed. Trust the session, not the exchange call.
+              const { data: check } = await supabase.auth.getSession();
+              if (!check.session) setStatus({ text: friendlyError(exchErr), ok: false });
+            }
+          } catch (err) { setStatus({ text: friendlyError(err), ok: false }); }
           setBusy(false);
         });
+        oauthCleanup.current = () => { try { unlisten(); } catch { /* already gone */ } };
 
         await openUrl(data.url);
         setStatus({ text: 'Browser opened. Sign in with Google, then return here.', ok: true });

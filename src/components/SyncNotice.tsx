@@ -70,24 +70,41 @@ export default function SyncNotice() {
     }
   };
 
+  // Dead session: drop it so AuthGate shows the sign-in screen. Deliberately
+  // does NOT clear local data (that's clearLocalSnapshot's job on a real
+  // sign-out) — this device's records must survive to be merged back up.
+  const reconnect = async () => {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { cancelPendingPush } = await import('../lib/sync');
+      cancelPendingPush();
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch { /* AuthGate falls back to the login screen anyway */ }
+  };
+
   const t = themes[DEFAULT_APPEARANCE.mood];
   const isStore = notice.kind === 'store';
 
   const title = isStore
     ? 'Your data did not load'
-    : notice.block.reason === 'push-failed'
-      ? 'Cloud upload did not go through'
-      : 'Cloud sync paused to protect your data';
+    : notice.block.reason === 'signed-out'
+      ? 'Signed out on this device'
+      : notice.block.reason === 'push-failed'
+        ? 'Cloud upload did not go through'
+        : 'Cloud sync paused to protect your data';
 
   const isThin = notice.kind === 'sync' && notice.block.reason === 'thin-local';
+  const isSignedOut = notice.kind === 'sync' && notice.block.reason === 'signed-out';
   const isPushFail = notice.kind === 'sync' && notice.block.reason === 'push-failed';
   const body = isStore
     ? 'Bozz could not read its local file, so it is showing an empty app. Saving and syncing are switched off so nothing overwrites your real data. Close Bozz and open it again. If it stays empty, restore the newest file from the backups folder.'
     : isThin
       ? `This device has less data than your cloud copy (${notice.kind === 'sync' ? notice.block.detail : ''}), so Bozz did not upload it. If you just deleted things on purpose, push anyway. Otherwise restart Bozz to bring the cloud copy down.`
-      : isPushFail
-        ? 'Bozz could not upload your latest changes (network or server problem). They are safe on this device and will be retried on your next change or restart.'
-        : 'This device could not read its own data, so it will not upload anything. Restart Bozz before making changes here.';
+      : isSignedOut
+        ? 'Your sign-in on this device has expired, so nothing can sync to or from the cloud. Your data here is safe. Sign out and sign back in with Google to reconnect.'
+        : isPushFail
+          ? 'Bozz could not upload your latest changes. They are safe on this device and will be retried on your next change or restart.'
+          : 'This device could not read its own data, so it will not upload anything. Restart Bozz before making changes here.';
 
   return (
     <div
@@ -122,7 +139,36 @@ export default function SyncNotice() {
         <div style={{ fontSize: '0.76rem', color: t.textMuted, lineHeight: 1.55 }}>
           {body}
         </div>
+        {/* The underlying error, verbatim. A generic "network or server problem"
+            hid an expired session for hours on 2026-08-10 — whatever the app
+            actually got back is worth showing. */}
+        {(isPushFail || isSignedOut) && notice.kind === 'sync' && (
+          <div style={{
+            marginTop: '0.5rem', padding: '0.4rem 0.55rem',
+            background: t.alertBg, border: `1px solid ${t.alertBorder}`,
+            borderRadius: '8px',
+            fontSize: '0.68rem', lineHeight: 1.45, color: t.textMuted,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            wordBreak: 'break-word',
+          }}>
+            {notice.block.detail}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.7rem' }}>
+          {isSignedOut && (
+            <button
+              onClick={() => { void reconnect(); }}
+              style={{
+                padding: '0.4rem 0.9rem',
+                borderRadius: '999px', border: `1px solid ${t.alertBorder}`,
+                background: t.alertBg, color: t.alert,
+                fontFamily: 'inherit', fontSize: '0.74rem', fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Sign in again
+            </button>
+          )}
           {isThin && (
             <button
               onClick={() => { void forcePush(); }}
