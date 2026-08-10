@@ -65,7 +65,7 @@ interface RemoteRow {
 
 // ── Sync safety ────────────────────────────────────────────────────────────
 
-export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy';
+export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy' | 'push-failed';
 
 export interface SyncBlock {
   reason: SyncBlockReason;
@@ -134,6 +134,49 @@ function countRecords(snapshot: Record<string, unknown>): number {
   const home = (snapshot['homeLayout'] as { items?: unknown[] } | undefined)?.items;
   if (Array.isArray(home)) n += home.length;
   return n;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v);
+}
+
+/**
+ * Id-aware union of this device's data with the remote copy.
+ *
+ * Arrays of id-bearing records (topics, topic items, reviews, notes, habits,
+ * folders…) are unioned by id: records on both sides take this device's
+ * version (recursing, so a topic keeps its own items union), records that
+ * exist only remotely are appended instead of erased. Plain objects union
+ * their keys the same way. Scalars and id-less arrays take this device's
+ * value. This is what makes two laptops with disjoint topics converge to the
+ * superset instead of the last pusher deleting the other's work.
+ */
+export function deepUnionMerge(local: unknown, remote: unknown): unknown {
+  if (remote === undefined || remote === null) return local;
+  if (local === undefined || local === null) return remote;
+
+  if (Array.isArray(local) && Array.isArray(remote)) {
+    const idOf = (x: unknown): unknown => (isPlainObject(x) ? x.id : undefined);
+    const keyed = [...local, ...remote].every(x => idOf(x) !== undefined);
+    // Id-less arrays (recent searches, color banks…) aren't mergeable records;
+    // this device's list wins unless it has nothing.
+    if (!keyed) return local.length ? local : remote;
+    const out = [...local];
+    for (const item of remote) {
+      const i = out.findIndex(x => idOf(x) === idOf(item));
+      if (i === -1) out.push(item);
+      else out[i] = deepUnionMerge(out[i], item);
+    }
+    return out;
+  }
+
+  if (isPlainObject(local) && isPlainObject(remote)) {
+    const out: Record<string, unknown> = { ...local };
+    for (const k of Object.keys(remote)) out[k] = deepUnionMerge(local[k], remote[k]);
+    return out;
+  }
+
+  return local; // scalar conflict: the device the user is on wins
 }
 
 /** Fraction of the remote's records below which a push is treated as data loss. */
@@ -280,18 +323,26 @@ export async function readLocalSnapshot(): Promise<Record<string, unknown>> {
 /**
  * Upload the current local snapshot to Supabase. Returns true on success.
  *
+ * If another device wrote the row since this device last synced (or this is
+ * the first push of the session, e.g. at boot), the upload is a deep UNION of
+ * local and remote rather than a blob replacement — see deepUnionMerge. The
+ * union is persisted locally first, so the remote-only records survive even a
+ * failed upload.
+ *
  * Refuses to push when this device can't be trusted as the authoritative copy:
  * a dev build, a failed store load, or a snapshot far thinner than what's
- * already in the cloud. A refusal is reported (console + `bozz:sync-blocked`)
- * rather than swallowed, and is distinct from a transport failure — both return
- * false, so callers keep skipping the pull either way and local data survives.
+ * already in the cloud. Every refusal and failure is reported (console +
+ * `bozz:sync-blocked`) rather than swallowed; callers skip the pull on false
+ * and local data survives.
  *
- * `force` bypasses the thinning tripwire for the case where the user really did
- * delete most of their data and means it.
+ * `force` bypasses BOTH the merge and the thinning tripwire: a wholesale
+ * replace for when the user really did delete things and means it.
+ * `silentMerge` suppresses the `bozz:remote-merged` UI-reload event for call
+ * sites that manage their own state lifecycle (boot, sign-out).
  */
 export async function pushSnapshot(
   userId: string,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; silentMerge?: boolean } = {},
 ): Promise<boolean> {
   if (!syncEnabled()) {
     return blockPush('dev-build', 'dev builds do not sync (set VITE_ALLOW_DEV_SYNC=true to opt in)');
@@ -301,20 +352,53 @@ export async function pushSnapshot(
       return blockPush('store-unhealthy', 'the local store failed to load, so its contents are not trustworthy');
     }
 
-    const snapshot = await readLocalSnapshot();
+    let snapshot = await readLocalSnapshot();
+    let mergedWithRemote = false;
 
     if (!opts.force) {
       const { data: remote, error: readError } = await supabase
         .from('user_data')
-        .select('data')
+        .select('data, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
       if (readError) {
         console.error('[sync] pre-push read error:', readError);
-        return false; // can't verify we're safe, so don't overwrite
+        return blockPush('push-failed', 'could not read the cloud copy before uploading');
       }
-      const remoteData = (remote as { data?: Record<string, unknown> } | null)?.data;
+      const remoteRow = remote as { data?: Record<string, unknown>; updated_at?: string } | null;
+      const remoteData = remoteRow?.data;
       if (remoteData) {
+        // MERGE, DON'T REPLACE. Sync used to upload this device's whole blob,
+        // which deleted anything that existed only on another device — each
+        // laptop's boot erased the other laptop's topics (2026-08-10). If the
+        // row has been written since we last synced (or we've never synced this
+        // session, e.g. the boot push), union the remote into our snapshot:
+        // records existing only remotely survive, records on both sides take
+        // this device's version. Deletions made here while another device was
+        // also writing can resurrect — the cost of never losing a topic.
+        const remoteMs = Date.parse(remoteRow?.updated_at ?? '') || 0;
+        if (lastSeenStampMs === null || remoteMs !== lastSeenStampMs) {
+          const filteredRemote = Object.fromEntries(
+            Object.entries(remoteData).filter(([key]) =>
+              !NEVER_PULL_PREFIXES.some(p => key.startsWith(p)) &&
+              !(NEVER_PULL_KEYS as readonly string[]).includes(key)),
+          );
+          snapshot = deepUnionMerge(snapshot, filteredRemote) as Record<string, unknown>;
+          mergedWithRemote = true;
+          // Persist the union locally BEFORE uploading, so even if the upsert
+          // fails the remote-only records now live on this device too.
+          await Promise.all(
+            Object.entries(snapshot).map(async ([key, value]) => {
+              try {
+                await setItem(key, JSON.stringify(value));
+              } catch (e) {
+                console.error(`[sync] writing merged ${key}:`, e);
+              }
+            }),
+          );
+        }
+        // After a union this can't trip (the union is a superset of remote);
+        // it still guards the no-merge path and pathological snapshots.
         const reason = thinPushReason(snapshot, remoteData);
         if (reason) return blockPush('thin-local', reason);
       }
@@ -329,14 +413,20 @@ export async function pushSnapshot(
       );
     if (error) {
       console.error('[sync] push error:', error);
-      return false;
+      return blockPush('push-failed', 'uploading failed — changes are safe on this device and will retry');
     }
     lastSeenStampMs = Date.parse(stamp);
     lastBlock = null;
+    // A mid-session merge means local storage now holds records the mounted UI
+    // has never seen; tell DashboardKeyed to reload state (skipped for the boot
+    // and sign-out call sites, which handle their own state lifecycle).
+    if (mergedWithRemote && !opts.silentMerge && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('bozz:remote-merged'));
+    }
     return true;
   } catch (e) {
     console.error('[sync] push failed:', e);
-    return false;
+    return blockPush('push-failed', 'uploading failed — changes are safe on this device and will retry');
   }
 }
 
