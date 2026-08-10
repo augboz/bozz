@@ -10,7 +10,46 @@ import { isTauri } from './lib/platform';
 
 function DashboardKeyed() {
   const session = useSession();
-  return <Dashboard key={session?.user.id ?? 'anon'} />;
+  // Cross-device freshness. Dashboard reads cloud state only when it mounts,
+  // and Bozz lives in the tray, so an open window used to show days-old data
+  // while another device kept writing (the "different topics on each laptop"
+  // report, 2026-08-10). Whenever the window returns to the foreground (and on
+  // a slow timer), ask the row whether anyone else wrote it; if so, remount
+  // Dashboard with a pull-only reload. Skipped while a local push is pending —
+  // in that case THIS device is the writer and its push is about to land.
+  const [syncGen, setSyncGen] = useState(0);
+  const uid = session?.user.id;
+  useEffect(() => {
+    if (!uid) return;
+    let lastCheck = 0;
+    let busy = false;
+    const check = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (busy || now - lastCheck < 30_000) return;
+      lastCheck = now;
+      busy = true;
+      try {
+        const { hasPendingPush, remoteChanged, requestPullOnlyReload } = await import('./lib/sync');
+        if (!hasPendingPush() && await remoteChanged(uid)) {
+          requestPullOnlyReload();
+          setSyncGen(g => g + 1);
+        }
+      } catch { /* offline — the next foreground check retries */ }
+      finally { busy = false; }
+    };
+    const onFocus = () => { void check(); };
+    const onVisible = () => { if (document.visibilityState === 'visible') void check(); };
+    const interval = setInterval(() => { void check(); }, 3 * 60_000);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [uid]);
+  return <Dashboard key={`${uid ?? 'anon'}:${syncGen}`} />;
 }
 
 /** Persistent warning shown while writes to the local store are failing.

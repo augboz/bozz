@@ -15,7 +15,7 @@ import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
 import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
 import { iconForTopic } from './sections/settings/TopicsBlock';
 import { useSession } from './AuthGate';
-import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush, hasLocalData, getLastSyncBlock } from '../lib/sync';
+import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush, hasLocalData, getLastSyncBlock, consumePullOnlyReload, hasPendingPush } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
@@ -177,10 +177,18 @@ export default function Dashboard() {
       // signed-out users as well — backups are not tied to sync.
       await initBackup();
       if (userId) {
+        // Foreground refresh remount (see DashboardKeyed): another device wrote
+        // the row and nothing is pending locally, so pull — the push-first
+        // recovery flow below would re-upload this device's stale state right
+        // over the newer row it came here to fetch. hasPendingPush re-checked
+        // because a save could land in the instant between the freshness check
+        // and this mount.
+        if (consumePullOnlyReload() && !hasPendingPush()) {
+          await pullSnapshot(userId);
         // If there's local data that was never pushed (e.g. push failed on sign-out,
         // or app was force-closed), push it first before pulling — otherwise the
         // pull would overwrite it with the older Supabase snapshot.
-        if (await hasLocalData()) {
+        } else if (await hasLocalData()) {
           const pushed = await pushSnapshot(userId);
           // DATA SAFETY: if the push FAILED (offline, oversized payload, server
           // error), do NOT pull — pulling would overwrite the only good copy of
