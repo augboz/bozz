@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import QuickCapture from './components/QuickCapture';
 import AuthGate, { useSession } from './components/AuthGate';
 import UpdatePrompt from './components/UpdatePrompt';
+import SyncNotice from './components/SyncNotice';
 import { isTauri } from './lib/platform';
 
 function DashboardKeyed() {
@@ -134,6 +135,7 @@ export default function App() {
       </AuthGate>
       {update && <UpdatePrompt update={update} onClose={() => setUpdate(null)} />}
       <StorageHealthBanner />
+      <SyncNotice />
     </>
   );
 }

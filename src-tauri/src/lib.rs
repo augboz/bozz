@@ -468,6 +468,26 @@ mod store_heal_tests {
     }
 }
 
+/// Size of `dashboard.json` on disk, in bytes; 0 when it doesn't exist yet.
+///
+/// The frontend uses this to tell a genuine first run (no file) apart from a
+/// failed store load (a real file the plugin couldn't read): the store plugin
+/// reporting zero keys while a substantial file exists means the load failed,
+/// and writing would truncate it. Complements `heal_store`, which only catches
+/// files that fail JSON parsing outright.
+#[tauri::command]
+async fn store_file_size(app_handle: tauri::AppHandle) -> Result<u64, String> {
+    let app_data = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+
+    match std::fs::metadata(app_data.join("dashboard.json")) {
+        Ok(m) => Ok(m.len()),
+        Err(_) => Ok(0),
+    }
+}
+
 /// Show the small floating quick-capture window, creating it on first use.
 fn open_quick_capture(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("quickcapture") {
@@ -585,7 +605,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            create_backup, secret_set, secret_get, secret_delete,
+            create_backup, store_file_size, secret_set, secret_get, secret_delete,
             oauth_run, open_oauth_window, start_oauth_server, imap_fetch
         ])
         .run(tauri::generate_context!())
