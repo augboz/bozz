@@ -119,17 +119,9 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
     setPageBgState(bg);
     if (bg) await setItem('homeBackground', JSON.stringify(bg));
     else await deleteItem('homeBackground');
-    // homeBackground is written outside Dashboard's save() helper, so it has
-    // to schedule its own cloud push or the change never leaves this device.
-    try {
-      const { supabase } = await import('../../lib/supabase');
-      const { data } = await supabase.auth.getSession();
-      const uid = data.session?.user.id;
-      if (uid) {
-        const { schedulePush } = await import('../../lib/sync');
-        schedulePush(uid);
-      }
-    } catch { /* offline / not signed in — local save already done */ }
+    // homeBackground is local-only since 2026-08-10 (its base64 image was 99%
+    // of the sync payload — see SYNCED_KEYS in lib/sync.ts), so no cloud push:
+    // backgrounds stay per-device, like Photo-widget images.
   }, []);
 
   // Close config panel when clicking outside it

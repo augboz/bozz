@@ -501,6 +501,24 @@ async fn create_backup(app_handle: tauri::AppHandle, date: String) -> Result<boo
     Ok(true)
 }
 
+/// Size of `dashboard.json` on disk, in bytes; 0 when it doesn't exist yet.
+///
+/// The frontend uses this to tell a genuine first run (no file) apart from a
+/// failed store load (a real file the plugin couldn't read). Without that
+/// distinction an empty in-memory store gets written straight over a full one.
+#[tauri::command]
+async fn store_file_size(app_handle: tauri::AppHandle) -> Result<u64, String> {
+    let app_data = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+
+    match std::fs::metadata(app_data.join("dashboard.json")) {
+        Ok(m) => Ok(m.len()),
+        Err(_) => Ok(0),
+    }
+}
+
 /// Show the small floating quick-capture window, creating it on first use.
 fn open_quick_capture(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("quickcapture") {
@@ -589,17 +607,18 @@ pub fn run() {
                 use tauri_plugin_global_shortcut::{
                     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
                 };
-                let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyB);
+                let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::Space);
                 let handle = app.handle().clone();
-                // Don't hard-crash if Ctrl+B can't be registered — another Bozz
-                // instance (or any app) may already own it system-wide. The in-app
-                // Quick add button still works; only the global hotkey is skipped.
+                // Don't hard-crash if Ctrl+Space can't be registered — another Bozz
+                // instance (or any app, e.g. an IME language toggle) may already own
+                // it system-wide. The in-app Quick add button still works; only the
+                // global hotkey is skipped.
                 if let Err(e) = app.global_shortcut().on_shortcut(qc, move |_app, _sc, event| {
                     if event.state() == ShortcutState::Pressed {
                         open_quick_capture(&handle);
                     }
                 }) {
-                    eprintln!("[global-shortcut] Ctrl+B unavailable (already registered?): {e}");
+                    eprintln!("[global-shortcut] Ctrl+Space unavailable (already registered?): {e}");
                 }
             }
 
@@ -616,7 +635,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            create_backup, secret_set, secret_get, secret_delete,
+            create_backup, store_file_size, secret_set, secret_get, secret_delete,
             oauth_run, open_oauth_window, start_oauth_server, imap_fetch, imap_fetch_xoauth2
         ])
         .run(tauri::generate_context!())

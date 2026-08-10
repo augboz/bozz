@@ -178,7 +178,7 @@ const CONNECT_STEPS: WalkStep[] = [
 ];
 
 const QUICKS_STEPS: WalkStep[] = [
-  { targets:['quick-add'],       tip:'Quicks capture any thought fast. Click Quick add, or press Ctrl+B from anywhere.', advance:c => c.domHas('quick-add-modal') },
+  { targets:['quick-add'],       tip:'Quicks capture any thought fast. Click Quick add, or press Ctrl+Space from anywhere.', advance:c => c.domHas('quick-add-modal') },
   { targets:['quick-add-modal'], tip:'Type anything and add it. Take your time.', advance:c => !c.domHas('quick-add-modal') },
   { targets:['nav-quicks'],      tip:'Open Quicks to see what you captured.', advance:c => c.section === 'inbox' },
   { targets:['inbox-row'],       tip:'Edit it, pick a topic, add a date, then send it. Capture now, sort later.', advance:c => !c.domHas('inbox-row') },

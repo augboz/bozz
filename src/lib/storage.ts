@@ -105,6 +105,61 @@ async function idbListKeys(prefix?: string): Promise<string[]> {
   });
 }
 
+// ── Store health ───────────────────────────────────────────────────────────
+
+/**
+ * Guard against a failed store load masquerading as an empty store.
+ *
+ * tauri-plugin-store reads `dashboard.json` once at load and then serves every
+ * read from memory. If that load fails (unparseable or oversized file), every
+ * getItem() returns null and the very first setItem() serialises the empty
+ * in-memory state straight over the file. That is how a 22MB store with six
+ * topics became 1.5KB between 2026-07-15 and 2026-07-28, and it is upstream of
+ * the sync clobber: an app that believes it has no data pushes that emptiness
+ * to Supabase and the other device pulls it.
+ *
+ * So: if the plugin reports zero keys but a substantial file exists on disk,
+ * the load failed. Refuse every write until the app is restarted, and say so.
+ * A genuine first run has no file at all, so it reads as healthy.
+ */
+const EMPTY_STORE_MAX_BYTES = 4096;
+
+let _healthPromise: Promise<boolean> | null = null;
+
+async function computeStoreHealth(): Promise<boolean> {
+  if (!isTauri()) return true;
+  try {
+    const s = await getTauriStore();
+    const withKeys = s as unknown as { keys?: () => Promise<string[]> };
+    if (typeof withKeys.keys !== 'function') return true;
+    const keys = await withKeys.keys();
+    if (keys.length > 0) return true;
+
+    const { invoke } = await import('@tauri-apps/api/core');
+    const bytes = await invoke<number>('store_file_size');
+    if (bytes > EMPTY_STORE_MAX_BYTES) {
+      console.error(
+        `[storage] store loaded 0 keys but dashboard.json is ${bytes} bytes — ` +
+        'treating this as a failed load and blocking all writes.',
+      );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bozz:store-unhealthy', { detail: { bytes } }));
+      }
+      return false;
+    }
+    return true;
+  } catch {
+    // Never let the health check itself lock the user out of their own app.
+    return true;
+  }
+}
+
+/** True when it is safe to write to the local store. Cached for the session. */
+export function isStoreHealthy(): Promise<boolean> {
+  if (!_healthPromise) _healthPromise = computeStoreHealth();
+  return _healthPromise;
+}
+
 // ── Public API (same shape on both platforms) ──────────────────────────────
 
 export async function getItem(key: string): Promise<{ value: string } | null> {
@@ -126,6 +181,8 @@ export async function getItem(key: string): Promise<{ value: string } | null> {
 export async function setItem(key: string, value: string): Promise<void> {
   try {
     if (isTauri()) {
+      // A write on top of a failed load is how the store gets truncated.
+      if (!(await isStoreHealthy())) return;
       const s = await getTauriStore();
       await s.set(key, value);
       await s.save();
@@ -159,6 +216,7 @@ export async function listKeysByPrefix(prefix: string): Promise<string[]> {
 export async function deleteItem(key: string): Promise<void> {
   try {
     if (isTauri()) {
+      if (!(await isStoreHealthy())) return;
       const s = await getTauriStore();
       await s.delete(key);
       await s.save();

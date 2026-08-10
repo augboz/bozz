@@ -12,7 +12,7 @@ import { useFocusTrap, dialogProps } from '../hooks/useFocusTrap';
 import { nextId } from '../lib/ids';
 
 /**
- * In-app quick-add modal — the browser equivalent of the desktop Ctrl+B
+ * In-app quick-add modal — the browser equivalent of the desktop Ctrl+Space
  * QuickCapture window, reworked into a "ramble" surface (à la Todoist Ramble).
  *
  * Three phases:

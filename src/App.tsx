@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import QuickCapture from './components/QuickCapture';
 import AuthGate, { useSession } from './components/AuthGate';
 import UpdatePrompt from './components/UpdatePrompt';
+import SyncNotice from './components/SyncNotice';
 import { isTauri } from './lib/platform';
 
 function DashboardKeyed() {
@@ -45,6 +46,11 @@ export default function App() {
 
   useEffect(() => {
     if (!isTauri()) return;
+    // TEST-ONLY (isolated Outlook test build): skip the auto-updater so the older
+    // test build doesn't try to update to the released version and relaunch the
+    // installed app. REVERT before merge.
+    return;
+    // eslint-disable-next-line no-unreachable
     let cancelled = false;
     let lastCheck = 0;
     // Don't hammer GitHub: ignore focus-driven re-checks within 30 min of the
@@ -98,6 +104,7 @@ export default function App() {
         <DashboardKeyed />
       </AuthGate>
       {update && <UpdatePrompt update={update} onClose={() => setUpdate(null)} />}
+      <SyncNotice />
     </>
   );
 }

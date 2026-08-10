@@ -15,7 +15,7 @@ import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
 import BottomTabBar, { BOTTOM_TAB_HEIGHT, type NavTab } from './BottomTabBar';
 import { iconForTopic } from './sections/settings/TopicsBlock';
 import { useSession } from './AuthGate';
-import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush, hasLocalData } from '../lib/sync';
+import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPendingPush, hasLocalData, getLastSyncBlock } from '../lib/sync';
 import { supabase } from '../lib/supabase';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { listen } from '@tauri-apps/api/event';
@@ -188,8 +188,16 @@ export default function Dashboard() {
           // (silent push failure + unconditional pull) reverted a user's account
           // to days-old data on 2026-07-02. Sync resumes on the next successful
           // push (every save() schedules one).
-          if (pushed) await pullSnapshot(userId);
-          else console.error('[sync] push failed — skipping pull to protect local data');
+          if (pushed) {
+            await pullSnapshot(userId);
+          } else if (getLastSyncBlock()?.reason === 'thin-local') {
+            // Not a failure: the push was refused *because* the cloud copy is
+            // richer than ours. This is the device that needs the pull, so the
+            // protect-local rule above would strand it empty forever.
+            await pullSnapshot(userId);
+          } else {
+            console.error('[sync] push failed — skipping pull to protect local data');
+          }
         } else {
           await pullSnapshot(userId);
         }
@@ -793,14 +801,14 @@ export default function Dashboard() {
     window.setTimeout(() => setVoiceStatus(null), 2200);
   }, []);
 
-  // Ctrl/Cmd+K opens global search. Ctrl/Cmd+B opens Quicks.
+  // Ctrl/Cmd+K opens global search. Ctrl/Cmd+Space opens Quicks.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'f')) {
         e.preventDefault();
         setSearchOpen(o => !o);
       }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
         e.preventDefault();
         // Desktop opens the native always-on-top capture window; in the
         // browser we show the in-app quick-add modal instead.
@@ -1658,12 +1666,12 @@ export default function Dashboard() {
           />
           {/* Collapsed-sidebar capture entry. The full "Quick add" button only
               shows when expanded, so without this a collapsed user (and any web
-              user, where there's no global Ctrl+B) has no visible way to capture. */}
+              user, where there's no global Ctrl+Space) has no visible way to capture. */}
           {sidebarCollapsed && (
             <>
               <button
                 onClick={() => setQuickAddOpen(true)}
-                title="Quick add (Ctrl+B)"
+                title="Quick add (Ctrl+Space)"
                 aria-label="Quick add"
                 data-onb="quick-add"
                 style={{
@@ -1731,7 +1739,7 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveSection('inbox')}
             data-onb="nav-quicks"
-            title={isTauri() ? 'Quicks (Ctrl+B)' : 'Quicks'}
+            title={isTauri() ? 'Quicks (Ctrl+Space)' : 'Quicks'}
             aria-label="Quicks"
             style={{
               background: activeSection === 'inbox' ? sT.panel : 'transparent',

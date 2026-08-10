@@ -19,7 +19,7 @@ const HINTS: Record<string, string> = {
   'add-widget':       'Add a widget: tasks, calendar, notes, music and more.',
   'topic-add-widget': 'Add a widget: tasks, calendar, notes, music and more.',
   'nav-add-menu':     'Add a topic: an area of your life like Uni, Work or your CV.',
-  'quick-add':        'Capture any thought fast (or press Ctrl+B), sort it later.',
+  'quick-add':        'Capture any thought fast (or press Ctrl+Space), sort it later.',
   'topic-bg-photo':   'Set a background photo for this page.',
 };
 

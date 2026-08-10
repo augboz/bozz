@@ -581,7 +581,7 @@ function OutlookCard({ t, accounts, syncErrors, onConnect, onDisconnect }: {
           )}
         </div>
       )}
-      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: t.alert }}>Couldn't connect. Check the address and try again.</div>}
+      {error && <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: t.alert, wordBreak: 'break-word', lineHeight: 1.5 }}>{error}</div>}
     </Card>
   );
 }
