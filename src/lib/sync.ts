@@ -65,7 +65,34 @@ interface RemoteRow {
 
 // ── Sync safety ────────────────────────────────────────────────────────────
 
-export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy' | 'push-failed';
+export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy' | 'push-failed' | 'signed-out';
+
+/**
+ * Classify a failed Supabase call: is this device actually signed in?
+ *
+ * A dead session and a dead network both surface as a failed request, but they
+ * need opposite responses from the user ("sign in again" vs "wait"). Reporting
+ * an expired session as a network problem sent the 2026-08-10 debugging down
+ * the wrong path, so ask the auth client which one it is.
+ */
+async function classifyFailure(): Promise<SyncBlockReason> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session ? 'push-failed' : 'signed-out';
+  } catch {
+    return 'push-failed';
+  }
+}
+
+/** Compact, human-readable form of a Supabase/Postgrest error for the banner. */
+function describeError(e: unknown): string {
+  if (!e) return 'unknown error';
+  const err = e as { message?: string; code?: string; status?: number; details?: string };
+  const parts = [err.message ?? String(e)];
+  if (err.code) parts.push(`code ${err.code}`);
+  if (err.status) parts.push(`HTTP ${err.status}`);
+  return parts.join(' · ').slice(0, 200);
+}
 
 export interface SyncBlock {
   reason: SyncBlockReason;
@@ -363,7 +390,7 @@ export async function pushSnapshot(
         .maybeSingle();
       if (readError) {
         console.error('[sync] pre-push read error:', readError);
-        return blockPush('push-failed', 'could not read the cloud copy before uploading');
+        return blockPush(await classifyFailure(), `reading the cloud copy failed: ${describeError(readError)}`);
       }
       const remoteRow = remote as { data?: Record<string, unknown>; updated_at?: string } | null;
       const remoteData = remoteRow?.data;
@@ -413,7 +440,7 @@ export async function pushSnapshot(
       );
     if (error) {
       console.error('[sync] push error:', error);
-      return blockPush('push-failed', 'uploading failed — changes are safe on this device and will retry');
+      return blockPush(await classifyFailure(), `uploading failed: ${describeError(error)}`);
     }
     lastSeenStampMs = Date.parse(stamp);
     lastBlock = null;
@@ -426,7 +453,7 @@ export async function pushSnapshot(
     return true;
   } catch (e) {
     console.error('[sync] push failed:', e);
-    return blockPush('push-failed', 'uploading failed — changes are safe on this device and will retry');
+    return blockPush(await classifyFailure(), `uploading failed: ${describeError(e)}`);
   }
 }
 
