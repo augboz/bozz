@@ -19,7 +19,7 @@
  */
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { supabase, isSupabaseConfigured, type Session } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, isSessionUsable, type Session } from '../lib/supabase';
 import { themes } from '../lib/themes';
 import { DEFAULT_APPEARANCE } from '../lib/appearance';
 import TitleBar, { TITLE_BAR_HEIGHT } from './TitleBar';
@@ -81,11 +81,26 @@ export default function AuthGate({ children }: Props) {
     let cancelled = false;
     withTimeout(supabase.auth.getSession(), 6000)
       .then(({ data }) => {
-        if (!cancelled) { setSession(data.session); setLoading(false); }
+        if (cancelled) return;
+        // A malformed persisted token (see isSessionUsable) can't be repaired
+        // by retrying — drop it now so the user gets a clean login screen
+        // instead of an app that "loads" into a session which fails the
+        // instant anything tries to use it.
+        if (data.session && !isSessionUsable(data.session)) {
+          void supabase.auth.signOut({ scope: 'local' });
+          setSession(null);
+        } else {
+          setSession(data.session);
+        }
+        setLoading(false);
       })
       .catch(() => { if (!cancelled) setLoading(false); });
 
     const { data: sub } = supabase.auth.onAuthStateChange((evt, s) => {
+      if (s && !isSessionUsable(s)) {
+        void supabase.auth.signOut({ scope: 'local' });
+        return; // the resulting SIGNED_OUT event updates state below
+      }
       setSession(s);
       // When the user explicitly signs out, force the login screen even in dev mode.
       if (evt === 'SIGNED_OUT') setSignedOut(true);

@@ -10,7 +10,7 @@
  * before the app reads them.
  */
 
-import { supabase } from './supabase';
+import { supabase, isSessionUsable } from './supabase';
 import { getItem, setItem, deleteItem, listKeysByPrefix, isStoreHealthy } from './storage';
 
 /** All keys that are synced. Add new ones here when new state appears. */
@@ -73,12 +73,21 @@ export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy' | '
  * A dead session and a dead network both surface as a failed request, but they
  * need opposite responses from the user ("sign in again" vs "wait"). Reporting
  * an expired session as a network problem sent the 2026-08-10 debugging down
- * the wrong path, so ask the auth client which one it is.
+ * the wrong path, so ask the auth client which one it is — and also check the
+ * session's tokens are well-formed, not just present: a malformed access_token
+ * (found the same day — a race in the OAuth callback handler, now fixed, could
+ * persist one) fails the exact same request every retry, since the token never
+ * changes, so it's actively signed out here rather than left to fail forever.
  */
 async function classifyFailure(): Promise<SyncBlockReason> {
   try {
     const { data } = await supabase.auth.getSession();
-    return data.session ? 'push-failed' : 'signed-out';
+    if (!data.session) return 'signed-out';
+    if (!isSessionUsable(data.session)) {
+      await supabase.auth.signOut({ scope: 'local' });
+      return 'signed-out';
+    }
+    return 'push-failed';
   } catch {
     return 'push-failed';
   }

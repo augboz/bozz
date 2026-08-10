@@ -30,4 +30,26 @@ export const supabase = createClient(
 
 export const isSupabaseConfigured = (): boolean => Boolean(url && key);
 
+// A JWT is three base64url segments — letters, digits, '-', '_', '.' only.
+const JWT_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+/**
+ * True if a session's tokens are well-formed enough to build an HTTP request
+ * from. A corrupted access_token (non-ASCII bytes, truncation, concatenation)
+ * can't be caught by retrying — the token doesn't change between attempts —
+ * so callers should use this to detect the case and force a clean re-login
+ * instead of retrying forever.
+ *
+ * Found 2026-08-10: a race in the (now-fixed) OAuth callback handler could
+ * write a malformed access_token to persisted storage. The write-side bug is
+ * gone, but a token it already wrote survives an app update, and the browser's
+ * fetch Headers API throws "String contains non ISO-8859-1 code point" the
+ * moment anything tries to build an Authorization header from it — surfacing
+ * everywhere as a generic-looking upload failure.
+ */
+export function isSessionUsable(session: Session | null): boolean {
+  if (!session) return false;
+  return JWT_SHAPE.test(session.access_token) && typeof session.refresh_token === 'string';
+}
+
 export type { Session };
