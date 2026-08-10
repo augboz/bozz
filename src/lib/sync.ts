@@ -163,6 +163,37 @@ function thinPushReason(
   return null;
 }
 
+// ── Cross-device freshness ─────────────────────────────────────────────────
+// Sync state is only read from the cloud when Dashboard mounts, but Bozz lives
+// in the system tray: windows stay open for days, so without this a device
+// never notices what another device wrote (the 2026-08-10 "different topics on
+// each laptop" report). We remember the row stamp this device last synced with
+// (ms precision — PostgREST formats timestamps differently than toISOString,
+// so string comparison would false-positive on our own pushes) and expose a
+// cheap "did anyone else write?" probe for the foreground-refresh check in
+// App.tsx.
+
+/** Row stamp last seen by this device: ms epoch, 0 = "no row existed", null = never synced. */
+let lastSeenStampMs: number | null = null;
+
+/** True if the cloud row has been written since this device last pushed/pulled. */
+export async function remoteChanged(userId: string): Promise<boolean> {
+  if (!syncEnabled()) return false;
+  if (lastSeenStampMs === null) return false; // boot flow hasn't synced yet
+  try {
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error || !data) return false;
+    const stamp = Date.parse((data as { updated_at: string }).updated_at);
+    return Number.isFinite(stamp) && stamp !== lastSeenStampMs;
+  } catch {
+    return false; // offline — the next foreground check retries
+  }
+}
+
 /**
  * Pull the user's row from Supabase and write every key into local storage.
  * Returns true if the pull found a row and wrote anything.
@@ -182,8 +213,9 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
       console.error('[sync] pull error:', error);
       return false;
     }
-    if (!data) return false; // first sign-in for this account
+    if (!data) { lastSeenStampMs = 0; return false; } // first sign-in for this account
     const row = data as RemoteRow;
+    lastSeenStampMs = Date.parse(row.updated_at) || 0;
     // Write all keys to local storage in parallel for faster sign-in.
     await Promise.all(
       Object.entries(row.data ?? {})
@@ -288,16 +320,18 @@ export async function pushSnapshot(
       }
     }
 
+    const stamp = new Date().toISOString();
     const { error } = await supabase
       .from('user_data')
       .upsert(
-        { user_id: userId, data: snapshot, updated_at: new Date().toISOString() },
+        { user_id: userId, data: snapshot, updated_at: stamp },
         { onConflict: 'user_id' },
       );
     if (error) {
       console.error('[sync] push error:', error);
       return false;
     }
+    lastSeenStampMs = Date.parse(stamp);
     lastBlock = null;
     return true;
   } catch (e) {
@@ -335,6 +369,27 @@ export async function clearLocalSnapshot(): Promise<void> {
   } catch { /* ignore */ }
   await Promise.all(deletes);
 }
+
+// ── Foreground refresh handshake ───────────────────────────────────────────
+// DashboardKeyed (App.tsx) detects that another device wrote the row and
+// remounts Dashboard to reload state. That remount must PULL rather than run
+// the normal push-first boot flow — push-first would re-upload this device's
+// stale state right over the newer row it came to fetch. One-shot flag so a
+// genuine app restart never inherits it.
+let pullOnlyReload = false;
+
+/** Arm the next Dashboard mount to pull instead of push-first. */
+export function requestPullOnlyReload(): void { pullOnlyReload = true; }
+
+/** Consume the one-shot pull-only flag (see requestPullOnlyReload). */
+export function consumePullOnlyReload(): boolean {
+  const v = pullOnlyReload;
+  pullOnlyReload = false;
+  return v;
+}
+
+/** True while a debounced push is waiting to fire — local changes are in flight. */
+export function hasPendingPush(): boolean { return pushTimer !== null; }
 
 // ── Debounced push helper ────────────────────────────────────────────────
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
