@@ -33,8 +33,35 @@ async function getTauriStore(): Promise<TauriStoreAPI> {
       const store = await mod.load('dashboard.json', { defaults: {}, autoSave: 500 });
       return store as unknown as TauriStoreAPI;
     })();
+    // A failed load must NOT stay cached: one bad moment (corrupt store file,
+    // transient lock, plugin hiccup) would otherwise disable every read AND
+    // write for the entire session — silently. Clear it so the next storage
+    // call retries the load from scratch.
+    _tauriStorePromise.catch(() => { _tauriStorePromise = null; });
   }
   return _tauriStorePromise;
+}
+
+// ── Save-health reporting ──────────────────────────────────────────────────
+// In July 2026 the store failed to persist for 11 days while the app looked
+// perfectly fine (the disk file was never written; everything lived in memory
+// and cloud sync). Writes must be LOUD when they break: after 3 consecutive
+// failures the UI is told to show a persistent warning, cleared on the next
+// successful write.
+let _consecutiveSaveFailures = 0;
+function reportSaveResult(ok: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (ok) {
+    if (_consecutiveSaveFailures >= 3) {
+      window.dispatchEvent(new CustomEvent('bozz:storage-ok'));
+    }
+    _consecutiveSaveFailures = 0;
+    return;
+  }
+  _consecutiveSaveFailures++;
+  if (_consecutiveSaveFailures === 3) {
+    window.dispatchEvent(new CustomEvent('bozz:storage-failing'));
+  }
 }
 
 // ── Web backend (IndexedDB) ────────────────────────────────────────────────
@@ -111,16 +138,18 @@ async function idbListKeys(prefix?: string): Promise<string[]> {
  * Guard against a failed store load masquerading as an empty store.
  *
  * tauri-plugin-store reads `dashboard.json` once at load and then serves every
- * read from memory. If that load fails (unparseable or oversized file), every
- * getItem() returns null and the very first setItem() serialises the empty
- * in-memory state straight over the file. That is how a 22MB store with six
- * topics became 1.5KB between 2026-07-15 and 2026-07-28, and it is upstream of
+ * read from memory. If that load quietly yields nothing (unparseable or
+ * unreadable file), every getItem() returns null and the very first setItem()
+ * serialises the empty in-memory state straight over the file — that is how a
+ * 22MB store with six topics became 1.5KB in July 2026, and it is upstream of
  * the sync clobber: an app that believes it has no data pushes that emptiness
- * to Supabase and the other device pulls it.
+ * to Supabase and every other device pulls it.
  *
  * So: if the plugin reports zero keys but a substantial file exists on disk,
- * the load failed. Refuse every write until the app is restarted, and say so.
- * A genuine first run has no file at all, so it reads as healthy.
+ * the load failed. Refuse every write until the app is restarted, and say so
+ * (`bozz:store-unhealthy`). A genuine first run has no file at all, so it
+ * reads as healthy. Complements heal_store (Rust), which only catches files
+ * that fail JSON parsing outright.
  */
 const EMPTY_STORE_MAX_BYTES = 4096;
 
@@ -185,12 +214,21 @@ export async function setItem(key: string, value: string): Promise<void> {
       if (!(await isStoreHealthy())) return;
       const s = await getTauriStore();
       await s.set(key, value);
-      await s.save();
+      try {
+        await s.save();
+      } catch {
+        // One retry — transient file locks (antivirus scans, indexing) are
+        // common on Windows and shouldn't count as a broken persistence layer.
+        await new Promise(r => setTimeout(r, 250));
+        await s.save();
+      }
     } else {
       await idbSet(key, value);
     }
+    reportSaveResult(true);
   } catch (e) {
     console.error('Storage error:', e);
+    reportSaveResult(false);
   }
 }
 
@@ -219,12 +257,19 @@ export async function deleteItem(key: string): Promise<void> {
       if (!(await isStoreHealthy())) return;
       const s = await getTauriStore();
       await s.delete(key);
-      await s.save();
+      try {
+        await s.save();
+      } catch {
+        await new Promise(r => setTimeout(r, 250));
+        await s.save();
+      }
     } else {
       await idbDelete(key);
     }
+    reportSaveResult(true);
   } catch (e) {
     console.error('Storage error:', e);
+    reportSaveResult(false);
   }
 }
 

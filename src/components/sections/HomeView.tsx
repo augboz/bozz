@@ -119,8 +119,8 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
     setPageBgState(bg);
     if (bg) await setItem('homeBackground', JSON.stringify(bg));
     else await deleteItem('homeBackground');
-    // homeBackground is local-only since 2026-08-10 (its base64 image was 99%
-    // of the sync payload — see SYNCED_KEYS in lib/sync.ts), so no cloud push:
+    // homeBackground is local-only since v0.1.61 (its base64 image was 99% of
+    // the sync payload — see SYNCED_KEYS in lib/sync.ts), so no cloud push:
     // backgrounds stay per-device, like Photo-widget images.
   }, []);
 

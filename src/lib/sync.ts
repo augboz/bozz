@@ -127,6 +127,12 @@ function countRecords(snapshot: Record<string, unknown>): number {
       }
     }
   }
+  // Home widgets count too: an account can be board-only (zero topics) and
+  // still be a fully set-up account. This makes the thin-push check a strict
+  // superset of the v0.1.60 empty-over-nonempty guard, which compared exactly
+  // topics + homeLayout.items.
+  const home = (snapshot['homeLayout'] as { items?: unknown[] } | undefined)?.items;
+  if (Array.isArray(home)) n += home.length;
   return n;
 }
 
