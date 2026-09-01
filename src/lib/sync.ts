@@ -79,8 +79,15 @@ export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy' | '
  * persist one) fails the exact same request every retry, since the token never
  * changes, so it's actively signed out here rather than left to fail forever.
  */
-async function classifyFailure(): Promise<SyncBlockReason> {
+async function classifyFailure(err?: unknown): Promise<SyncBlockReason> {
   try {
+    // Credentials that can't even be put in a header: not retryable at all,
+    // since the stored value is identical on every attempt. Drop them so the
+    // user gets a "Sign in again" button instead of an endless retry.
+    if (isCorruptAuthError(err)) {
+      await supabase.auth.signOut({ scope: 'local' });
+      return 'signed-out';
+    }
     const { data } = await supabase.auth.getSession();
     const session = data.session;
     if (!session) return 'signed-out';
@@ -108,6 +115,26 @@ async function classifyFailure(): Promise<SyncBlockReason> {
   } catch {
     return 'push-failed';
   }
+}
+
+/**
+ * True for the corrupted-credentials failure, however it reaches us: thrown by
+ * our own header guard, or raw from the platform's fetch on builds/paths that
+ * bypass it (the message is the browser's, hence the string match).
+ */
+function isCorruptAuthError(e: unknown): boolean {
+  if (!e) return false;
+  const err = e as { name?: string; message?: string };
+  if (err.name === 'CorruptAuthHeaderError') return true;
+  // Engines word this differently — WebView2/Chromium says "String contains non
+  // ISO-8859-1 code point", Node says "Cannot convert argument to a ByteString
+  // ... greater than 255" — so match all of them rather than the one we happened
+  // to see in a bug report.
+  const msg = String(err.message ?? e);
+  return msg.includes('ISO-8859-1')
+    || msg.includes('ByteString')
+    || msg.includes('greater than 255')
+    || msg.includes('stored sign-in is corrupted');
 }
 
 /** Compact, human-readable form of a Supabase/Postgrest error for the banner. */
@@ -337,6 +364,11 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
     return true;
   } catch (e) {
     console.error('[sync] pull failed:', e);
+    // A pull-only path (foreground refresh, thin-local recovery) must self-heal
+    // corrupted credentials too, or a device that never pushes stays wedged.
+    if (isCorruptAuthError(e)) {
+      blockPush(await classifyFailure(e), `reading the cloud copy failed: ${describeError(e)}`);
+    }
     return false;
   }
 }
@@ -416,7 +448,7 @@ export async function pushSnapshot(
         .maybeSingle();
       if (readError) {
         console.error('[sync] pre-push read error:', readError);
-        return blockPush(await classifyFailure(), `reading the cloud copy failed: ${describeError(readError)}`);
+        return blockPush(await classifyFailure(readError), `reading the cloud copy failed: ${describeError(readError)}`);
       }
       const remoteRow = remote as { data?: Record<string, unknown>; updated_at?: string } | null;
       const remoteData = remoteRow?.data;
@@ -466,7 +498,7 @@ export async function pushSnapshot(
       );
     if (error) {
       console.error('[sync] push error:', error);
-      return blockPush(await classifyFailure(), `uploading failed: ${describeError(error)}`);
+      return blockPush(await classifyFailure(error), `uploading failed: ${describeError(error)}`);
     }
     lastSeenStampMs = Date.parse(stamp);
     lastBlock = null;
@@ -479,7 +511,7 @@ export async function pushSnapshot(
     return true;
   } catch (e) {
     console.error('[sync] push failed:', e);
-    return blockPush(await classifyFailure(), `uploading failed: ${describeError(e)}`);
+    return blockPush(await classifyFailure(e), `uploading failed: ${describeError(e)}`);
   }
 }
 
