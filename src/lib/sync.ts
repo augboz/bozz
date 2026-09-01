@@ -82,10 +82,27 @@ export type SyncBlockReason = 'dev-build' | 'thin-local' | 'store-unhealthy' | '
 async function classifyFailure(): Promise<SyncBlockReason> {
   try {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) return 'signed-out';
-    if (!isSessionUsable(data.session)) {
+    const session = data.session;
+    if (!session) return 'signed-out';
+    if (!isSessionUsable(session)) {
       await supabase.auth.signOut({ scope: 'local' });
       return 'signed-out';
+    }
+    // Well-formed but expired. A weeks-old session still looks perfectly valid
+    // here and fails every single request, which reads as "sync is broken" with
+    // no hint that signing in again is the fix. Try one refresh and let the
+    // server decide.
+    const expiresAtMs = session.expires_at ? session.expires_at * 1000 : 0;
+    if (expiresAtMs && expiresAtMs <= Date.now()) {
+      const { error } = await supabase.auth.refreshSession();
+      // Only an auth-level rejection means the session is truly dead. A network
+      // error here must NOT sign the user out — that would log people out
+      // whenever they open the app offline.
+      const status = (error as { status?: number } | null)?.status;
+      if (error && (status === 400 || status === 401 || status === 403)) {
+        await supabase.auth.signOut({ scope: 'local' });
+        return 'signed-out';
+      }
     }
     return 'push-failed';
   } catch {

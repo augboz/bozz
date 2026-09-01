@@ -811,19 +811,24 @@ export default function Dashboard() {
     window.setTimeout(() => setVoiceStatus(null), 2200);
   }, []);
 
-  // Ctrl/Cmd+K opens global search. Ctrl/Cmd+Space opens Quicks.
+  // Ctrl/Cmd+K opens global search. Ctrl+Q opens quick add.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'f')) {
         e.preventDefault();
         setSearchOpen(o => !o);
       }
-      if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
-        e.preventDefault();
-        // Desktop opens the native always-on-top capture window; in the
-        // browser we show the in-app quick-add modal instead.
-        if (isTauri()) setActiveSection('inbox');
-        else setQuickAddOpen(true);
+      // Ctrl only, never Cmd: on macOS Cmd+Q is quit, and hijacking it would
+      // be far worse than the shortcut not firing.
+      if (e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'q') {
+        // On desktop the OS-level shortcut (see lib.rs) already opens the
+        // always-on-top capture window, so doing anything here would fire a
+        // second action off one keypress. Browser has no global shortcut, so
+        // it gets the in-app modal.
+        if (!isTauri()) {
+          e.preventDefault();
+          setQuickAddOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
@@ -1676,12 +1681,12 @@ export default function Dashboard() {
           />
           {/* Collapsed-sidebar capture entry. The full "Quick add" button only
               shows when expanded, so without this a collapsed user (and any web
-              user, where there's no global Ctrl+Space) has no visible way to capture. */}
+              user, where there's no global Ctrl+Q) has no visible way to capture. */}
           {sidebarCollapsed && (
             <>
               <button
                 onClick={() => setQuickAddOpen(true)}
-                title="Quick add (Ctrl+Space)"
+                title="Quick add (Ctrl+Q)"
                 aria-label="Quick add"
                 data-onb="quick-add"
                 style={{
@@ -1749,7 +1754,7 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveSection('inbox')}
             data-onb="nav-quicks"
-            title={isTauri() ? 'Quicks (Ctrl+Space)' : 'Quicks'}
+            title="Quicks"
             aria-label="Quicks"
             style={{
               background: activeSection === 'inbox' ? sT.panel : 'transparent',

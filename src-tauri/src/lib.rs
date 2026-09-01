@@ -726,15 +726,18 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Global Ctrl+Shift+N → quick capture, even when unfocused.
+            // Global Ctrl+Q → quick capture, even when unfocused. (Was Ctrl+B
+            // until v0.1.66; it collided with bold in every text field and
+            // fired app-wide, which made it more annoying than useful.)
+            // CONTROL, not SUPER: on macOS Cmd+Q is quit.
             #[cfg(desktop)]
             {
                 use tauri_plugin_global_shortcut::{
                     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
                 };
-                let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::Space);
+                let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyQ);
                 let handle = app.handle().clone();
-                // Don't hard-crash if Ctrl+Space can't be registered — another Bozz
+                // Don't hard-crash if Ctrl+Q can't be registered — another Bozz
                 // instance (or any app, e.g. an IME language toggle) may already own
                 // it system-wide. The in-app Quick add button still works; only the
                 // global hotkey is skipped.
@@ -743,7 +746,7 @@ pub fn run() {
                         open_quick_capture(&handle);
                     }
                 }) {
-                    eprintln!("[global-shortcut] Ctrl+Space unavailable (already registered?): {e}");
+                    eprintln!("[global-shortcut] Ctrl+Q unavailable (already registered?): {e}");
                 }
             }
 
