@@ -49,7 +49,15 @@ const JWT_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
  */
 export function isSessionUsable(session: Session | null): boolean {
   if (!session) return false;
-  return JWT_SHAPE.test(session.access_token) && typeof session.refresh_token === 'string';
+  if (!JWT_SHAPE.test(session.access_token)) return false;
+  // The refresh token is opaque (no fixed shape), so only rule out what can
+  // never be valid: a non-string, or bytes that can't survive being sent.
+  const refresh = session.refresh_token;
+  if (typeof refresh !== 'string' || refresh.length === 0) return false;
+  for (let i = 0; i < refresh.length; i++) {
+    if (refresh.charCodeAt(i) > 255) return false;
+  }
+  return true;
 }
 
 export type { Session };
