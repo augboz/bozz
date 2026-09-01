@@ -577,13 +577,16 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Global Ctrl+Shift+N → quick capture, even when unfocused.
+            // Global Ctrl+Q → quick capture, even when unfocused. (Was Ctrl+B
+            // until v0.1.66; it collided with bold in every text field and
+            // fired app-wide, which made it more annoying than useful.)
+            // CONTROL, not SUPER: on macOS Cmd+Q is quit.
             #[cfg(desktop)]
             {
                 use tauri_plugin_global_shortcut::{
                     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
                 };
-                let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyB);
+                let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyQ);
                 let handle = app.handle().clone();
                 app.global_shortcut().on_shortcut(qc, move |_app, _sc, event| {
                     if event.state() == ShortcutState::Pressed {

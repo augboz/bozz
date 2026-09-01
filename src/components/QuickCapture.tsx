@@ -40,7 +40,7 @@ async function applyRoute(route: VoiceRoute): Promise<void> {
 }
 
 /**
- * Small always-on-top window opened by Ctrl+B. Accepts text (saved to
+ * Small always-on-top window opened by Ctrl+Q. Accepts text (saved to
  * Inbox by default) or voice (auto-routed to the matching section).
  */
 export default function QuickCapture() {
