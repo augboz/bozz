@@ -737,10 +737,13 @@ pub fn run() {
                 };
                 let qc = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyQ);
                 let handle = app.handle().clone();
-                // Don't hard-crash if Ctrl+Q can't be registered — another Bozz
-                // instance (or any app, e.g. an IME language toggle) may already own
-                // it system-wide. The in-app Quick add button still works; only the
-                // global hotkey is skipped.
+                // Never fail startup over a hotkey. Registration fails if any
+                // other app already owns the combination system-wide (or if a
+                // second Bozz instance is running), and `?` here would abort
+                // setup — leaving an app that won't launch and therefore can't
+                // auto-update itself out of the problem. The Quick add button
+                // and the in-app shortcut still work; only the global hotkey is
+                // skipped.
                 if let Err(e) = app.global_shortcut().on_shortcut(qc, move |_app, _sc, event| {
                     if event.state() == ShortcutState::Pressed {
                         open_quick_capture(&handle);
