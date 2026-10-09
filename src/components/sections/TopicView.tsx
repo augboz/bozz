@@ -358,6 +358,9 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
       // New Links widgets start empty (their own links live in per-widget config),
       // so a second Links widget doesn't inherit the first one's links.
       ...(type === 'topicLinks' ? { config: { links: [] } } : {}),
+      // Same for notes: each new Note widget holds its own text, so a page can
+      // have several different notes (older ones keep using topic.pinnedNote).
+      ...(type === 'topicNote' ? { config: { note: '' } } : {}),
     }]);
   };
 

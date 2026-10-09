@@ -1,6 +1,10 @@
 /**
- * TopicNoteWidget — pinned note for the current topic page.
- * Reads ctx.currentTopicId and ctx.onTopicChange.
+ * TopicNoteWidget: a freeform note on the current topic page.
+ *
+ * A page can hold several. Each widget added from the Add panel keeps its own
+ * text in its widget config (`config.note`). A widget with no `note` key is a
+ * pre-existing one and keeps reading and writing topic.pinnedNote, so notes
+ * written before multiple notes existed stay where they were.
  */
 import { useState } from 'react';
 import { Pencil, Check } from 'lucide-react';
@@ -10,7 +14,7 @@ import type { WidgetCtx } from './context';
 const ACCENT = '#d9c47d';
 
 export default function TopicNoteWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, topics, currentTopicId, onTopicChange } = ctx;
+  const { t, topics, currentTopicId, onTopicChange, widgetConfig, onWidgetConfig } = ctx;
   const topic = topics.find(tp => tp.id === currentTopicId);
 
   const [editing, setEditing] = useState(false);
@@ -28,13 +32,17 @@ export default function TopicNoteWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const accent = topic.color ?? ACCENT;
 
+  const ownsNote = typeof widgetConfig?.note === 'string';
+  const note = ownsNote ? (widgetConfig.note as string) : (topic.pinnedNote ?? '');
+
   const startEdit = () => {
-    setDraft(topic.pinnedNote ?? '');
+    setDraft(note);
     setEditing(true);
   };
 
   const save = () => {
-    onTopicChange({ ...topic, pinnedNote: draft.trim() || undefined });
+    if (ownsNote) onWidgetConfig({ ...widgetConfig, note: draft.trim() });
+    else onTopicChange({ ...topic, pinnedNote: draft.trim() || undefined });
     setEditing(false);
   };
 
@@ -82,9 +90,9 @@ export default function TopicNoteWidget({ ctx }: { ctx: WidgetCtx }) {
             </button>
           </div>
         </div>
-      ) : topic.pinnedNote ? (
+      ) : note ? (
         <p style={{ margin: 0, fontSize: '0.82rem', color: t.text, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
-          {topic.pinnedNote}
+          {note}
         </p>
       ) : (
         <button

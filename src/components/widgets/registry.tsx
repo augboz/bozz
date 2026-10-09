@@ -78,7 +78,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
   today: readyMulti('today', 'Today', "Today's events and tasks. Configure which sections to show", { w: 12, h: 24 }, { w: 8, h: 6 }, TodayWidget),
   topicTodos: ready('topicTodos', 'Topic tasks', 'Items and stages for this topic', { w: 8, h: 12 }, { w: 6, h: 6 }, TopicTodosWidget),
   topicLinks: readyMulti('topicLinks', 'Links', 'Pinned links for this topic', { w: 8, h: 12 }, { w: 2, h: 2 }, TopicLinksWidget),
-  topicNote:  ready('topicNote',  'Pinned note', 'Freeform note for this topic', { w: 8, h: 16 }, { w: 6, h: 4 }, TopicNoteWidget),
+  topicNote:  readyMulti('topicNote', 'Note', 'Freeform note for this topic. Add as many as you like', { w: 8, h: 16 }, { w: 6, h: 4 }, TopicNoteWidget),
   map:        readyMulti('map',   'Map',         'A map you can drop pins and areas on', { w: 12, h: 24 }, { w: 6, h: 8 }, MapWidget),
   linkedin:   ready('linkedin',   'LinkedIn',    'Quick links to your feed, jobs & messaging', { w: 8, h: 18 }, { w: 6, h: 10 }, LinkedInWidget),
 };
