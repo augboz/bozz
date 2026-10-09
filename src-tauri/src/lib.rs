@@ -627,7 +627,20 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Remember size/position/maximised, but NOT decorations or fullscreen.
+        // The plugin restores every flag by default, so a state file saved by
+        // an older frameless build (decorations: false) or while fullscreen
+        // brought the window back with no title bar and no minimise/maximise/
+        // close buttons on every launch, with no way out in the UI.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        & !tauri_plugin_window_state::StateFlags::DECORATIONS
+                        & !tauri_plugin_window_state::StateFlags::FULLSCREEN,
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -642,6 +655,13 @@ pub fn run() {
                 if let Some(msg) = heal_store(&app_data) {
                     eprintln!("[bozz] {msg}");
                 }
+            }
+
+            // Undo anything a stale saved window state already applied: the
+            // native title bar is the only window chrome Bozz has.
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_fullscreen(false);
+                let _ = w.set_decorations(true);
             }
 
             let show = MenuItem::with_id(app, "show", "Show Bozz", true, None::<&str>)?;
