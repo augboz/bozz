@@ -470,7 +470,7 @@ function keepLocalPageBg(remoteTopics: unknown[], localTopics: unknown[]): unkno
 
 export async function pushSnapshot(
   userId: string,
-  opts: { force?: boolean; silentMerge?: boolean } = {},
+  opts: { force?: boolean; silentMerge?: boolean; preferRemote?: boolean } = {},
 ): Promise<boolean> {
   // One push at a time. Overlapping pushes (a save every couple of seconds
   // while editing, each round-trip taking seconds) could land out of order:
@@ -495,7 +495,7 @@ export async function pushSnapshot(
 
 async function runPush(
   userId: string,
-  opts: { force?: boolean; silentMerge?: boolean },
+  opts: { force?: boolean; silentMerge?: boolean; preferRemote?: boolean },
 ): Promise<boolean> {
   if (!syncEnabled()) {
     return blockPush('dev-build', 'dev builds do not sync (set VITE_ALLOW_DEV_SYNC=true to opt in)');
@@ -549,7 +549,13 @@ async function runPush(
               !NEVER_PULL_PREFIXES.some(p => key.startsWith(p)) &&
               !(NEVER_PULL_KEYS as readonly string[]).includes(key)),
           ));
-          const union = deepUnionMerge(snapshot, filteredRemote) as Record<string, unknown>;
+          // preferRemote flips who wins records present on both sides. Used on
+          // the boot after the local store was restored from a backup: that
+          // data is days or weeks old, and letting it win reverted every edit
+          // the cloud had since (2026-10-09). Local-only records still survive.
+          const union = (opts.preferRemote
+            ? deepUnionMerge(filteredRemote, snapshot)
+            : deepUnionMerge(snapshot, filteredRemote)) as Record<string, unknown>;
           // Only a union that actually brought something new is worth
           // persisting and reloading the UI for. A stamp that moved because of
           // our own earlier write yields an identical union — no reload.

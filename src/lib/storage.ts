@@ -273,6 +273,25 @@ export async function deleteItem(key: string): Promise<void> {
   }
 }
 
+let _healConsumed = false;
+
+/**
+ * True once per launch if the Rust side found dashboard.json corrupt at startup
+ * and restored it from a backup. The restored data is older than what this
+ * device last had, so the first sync must let the cloud copy win conflicts.
+ * One-shot: later remounts in the same session hold the user's fresh edits.
+ */
+export async function consumeStoreHealed(): Promise<boolean> {
+  if (!isTauri() || _healConsumed) return false;
+  _healConsumed = true;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return await invoke<boolean>('store_was_healed');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Calls the Rust `create_backup` command if we haven't backed up today.
  * No-op on the web — backup is meaningful only for the local-file Tauri

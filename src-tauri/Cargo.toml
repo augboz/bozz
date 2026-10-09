@@ -35,3 +35,10 @@ serde_json = "1"
 keyring = "3"
 imap = "2"
 native-tls = "0.2"
+
+# tauri-plugin-store 2.4.3 with one change: Store::save() writes a temp file,
+# fsyncs it and renames it over the store instead of truncating the live file.
+# See the BOZZ PATCH comment in vendor/tauri-plugin-store/src/store.rs. Re-apply
+# that patch if the plugin is ever upgraded.
+[patch.crates-io]
+tauri-plugin-store = { path = "vendor/tauri-plugin-store" }

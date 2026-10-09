@@ -327,10 +327,21 @@ fn is_valid_json_file(path: &std::path::Path) -> bool {
     }
 }
 
+/// Set when heal_store replaced a corrupt store this launch. The restored data
+/// is older than what this device last had, so the boot sync must let the
+/// cloud copy win conflicts instead of pushing stale records over it.
+static STORE_HEALED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[tauri::command]
+fn store_was_healed() -> bool {
+    STORE_HEALED.load(std::sync::atomic::Ordering::SeqCst)
+}
+
 /// Startup self-heal for the main store file.
 ///
-/// tauri-plugin-store saves with a plain truncate-and-write (`fs::write`), so
-/// a crash or kill mid-save can leave dashboard.json truncated or zero-filled
+/// tauri-plugin-store upstream saved with a plain truncate-and-write, so a
+/// crash or kill mid-save could leave dashboard.json truncated or zero-filled
+/// (now patched to write atomically, see vendor/tauri-plugin-store)
 /// (2026-07-13 incident: a 27MB store file of NUL bytes). A corrupt store
 /// fails the plugin's load and the app boots empty — which users read as
 /// "my account lost everything", and which can push an empty snapshot over
@@ -349,6 +360,13 @@ fn heal_store(app_data: &std::path::Path) -> Option<String> {
     let quarantine = app_data.join(format!("dashboard.json.corrupt-{stamp}"));
     if std::fs::rename(&store_path, &quarantine).is_err() {
         return Some("store file is corrupt and quarantine failed; leaving as is".into());
+    }
+    STORE_HEALED.store(true, std::sync::atomic::Ordering::SeqCst);
+    // A complete temp file means the last save was interrupted between write
+    // and rename: it is newer than any backup, so it wins.
+    let tmp_path = app_data.join("dashboard.json.tmp");
+    if is_valid_json_file(&tmp_path) && std::fs::rename(&tmp_path, &store_path).is_ok() {
+        return Some("store file was corrupt; quarantined and restored from the last save's temp file".into());
     }
     // Newest valid backup wins (names sort chronologically: YYYY-MM-DD.json).
     let backup_dir = app_data.join("backups");
@@ -465,6 +483,21 @@ mod store_heal_tests {
             .filter_map(|e| e.ok())
             .any(|e| e.file_name().to_string_lossy().starts_with("dashboard.json.corrupt-"));
         assert!(quarantined, "corrupt store should be quarantined, not deleted");
+    }
+
+    #[test]
+    fn complete_temp_file_beats_backups() {
+        let d = tmp_dir("tmpwins");
+        // 2026-10-09 shape: first bytes real, the rest NUL.
+        let mut torn = b"{\"a\":".to_vec();
+        torn.extend(vec![0u8; 512]);
+        std::fs::write(d.join("dashboard.json"), torn).unwrap();
+        std::fs::write(d.join("dashboard.json.tmp"), b"{\"latest\":true}").unwrap();
+        std::fs::write(d.join("backups/2026-10-08.json"), b"{\"old\":true}").unwrap();
+        let msg = heal_store(&d).expect("heal should report a restore");
+        assert!(msg.contains("temp file"), "restored from wrong source: {msg}");
+        assert_eq!(std::fs::read(d.join("dashboard.json")).unwrap(), b"{\"latest\":true}");
+        assert!(super::store_was_healed());
     }
 }
 
@@ -686,7 +719,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            create_backup, store_file_size, secret_set, secret_get, secret_delete,
+            create_backup, store_file_size, store_was_healed, secret_set, secret_get, secret_delete,
             oauth_run, open_oauth_window, start_oauth_server, imap_fetch, open_in_browser
         ])
         .run(tauri::generate_context!())

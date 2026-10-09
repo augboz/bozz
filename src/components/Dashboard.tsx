@@ -19,7 +19,7 @@ import { pullSnapshot, schedulePush, pushSnapshot, clearLocalSnapshot, cancelPen
 import { supabase } from '../lib/supabase';
 import { openLink } from '../lib/links';
 import { listen } from '@tauri-apps/api/event';
-import { getItem, setItem, initBackup } from '../lib/storage';
+import { getItem, setItem, initBackup, consumeStoreHealed } from '../lib/storage';
 import { themes } from '../lib/themes';
 import { DEFAULT_APPEARANCE, applyAppearanceVars } from '../lib/appearance';
 import { DEFAULT_BUDGET } from '../lib/budget';
@@ -192,7 +192,9 @@ export default function Dashboard() {
         } else if (await hasLocalData()) {
           // silentMerge: state is built right after this block, so a merged
           // boot push doesn't need the remount event.
-          const pushed = await pushSnapshot(userId, { silentMerge: true });
+          // After a corrupt-store restore, the local copy is a stale backup:
+          // the cloud wins conflicts on this one push (see preferRemote).
+          const pushed = await pushSnapshot(userId, { silentMerge: true, preferRemote: await consumeStoreHealed() });
           // DATA SAFETY: if the push FAILED (offline, oversized payload, server
           // error), do NOT pull — pulling would overwrite the only good copy of
           // the user's data with a stale remote snapshot. This exact sequence
