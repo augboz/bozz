@@ -411,7 +411,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
       <div style={{ position: 'relative' }}>
         {pageBg && <BgLayer bg={pageBg} t={t} />}
         <div style={{ position: 'relative', zIndex: 1 }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 600, letterSpacing: '-0.03em', color: t.text, margin: '0 0 1.25rem', textShadow: '0 1px 12px rgba(0,0,0,0.45)' }}>{topic.name}</h1>
+        <PageTitle topic={topic} onChange={onChange} t={t} editMode={editMode} />
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
@@ -475,7 +475,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
     <div style={{ position: 'relative' }}>
       {pageBg && <BgLayer bg={pageBg} t={t} />}
       <div style={{ position: 'relative', zIndex: 1 }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 600, letterSpacing: '-0.03em', color: t.text, margin: '0 0 1.25rem', textShadow: '0 1px 12px rgba(0,0,0,0.45)' }}>{topic.name}</h1>
+      <PageTitle topic={topic} onChange={onChange} t={t} editMode={editMode} />
 
       <div style={{
         display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
@@ -577,6 +577,110 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
 }
 
 // ── Simple config panel (accent + bg colour for topic widgets) ────────────────
+
+const TITLE_SIZES: Record<NonNullable<Topic['pageTitleSize']>, string> = {
+  s: '1.5rem', m: '2rem', l: '2.75rem', xl: '3.5rem',
+};
+
+/**
+ * The heading at the top of a topic page. Its text, size and colour are the
+ * page's own (topic.pageTitle / pageTitleSize / pageTitleColor): the sidebar
+ * keeps showing topic.name. Controls appear while the page is in Edit mode.
+ */
+function PageTitle({ topic, onChange, t, editMode }: {
+  topic: Topic; onChange: (next: Topic) => void; t: Theme; editMode: boolean;
+}) {
+  const shown = topic.pageTitle?.trim() || topic.name;
+  const size = topic.pageTitleSize ?? 'm';
+  const [draft, setDraft] = useState(topic.pageTitle ?? '');
+  useEffect(() => { setDraft(topic.pageTitle ?? ''); }, [topic.pageTitle]);
+  // Every control writes the typed title too, so a click that lands before the
+  // input's blur commit has re-rendered can't save over it with the old title.
+  const patch = (p: Partial<Topic>) => onChange({ ...topic, pageTitle: draft.trim() || undefined, ...p });
+  // The colour picker fires on every drag step and each topic change is a
+  // full store save, so preview locally and commit once the drag settles.
+  const [pickColor, setPickColor] = useState<string | null>(null);
+  useEffect(() => {
+    if (pickColor === null) return;
+    const id = setTimeout(() => { patch({ pageTitleColor: pickColor }); setPickColor(null); }, 400);
+    return () => clearTimeout(id);
+  }, [pickColor]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const color = pickColor ?? topic.pageTitleColor ?? t.text;
+  const style: React.CSSProperties = {
+    fontSize: TITLE_SIZES[size], fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.15,
+    color, margin: '0 0 1.25rem', textShadow: '0 1px 12px rgba(0,0,0,0.45)',
+  };
+  if (!editMode) return <h1 style={style}>{shown}</h1>;
+
+  const commit = () => {
+    const next = draft.trim();
+    if (next !== (topic.pageTitle ?? '')) onChange({ ...topic, pageTitle: next || undefined });
+  };
+  const chip = (active: boolean): React.CSSProperties => ({
+    background: active ? t.text : `var(--glass-bg, ${t.panel})`, color: active ? t.bg : t.text,
+    border: `1px solid ${t.borderStrong}`, borderRadius: '7px', padding: '0.25rem 0.55rem',
+    fontSize: '0.72rem', fontFamily: 'inherit', cursor: 'pointer',
+    backdropFilter: 'var(--glass-blur, blur(8px))', WebkitBackdropFilter: 'var(--glass-blur, blur(8px))',
+  });
+  const swatches: Array<{ label: string; value: string | undefined }> = [
+    { label: 'Default', value: undefined },
+    { label: 'White', value: '#ffffff' },
+    { label: 'Black', value: '#111111' },
+    ...(topic.color ? [{ label: 'Page colour', value: topic.color }] : []),
+  ];
+
+  return (
+    <div style={{ margin: '0 0 1.25rem' }}>
+      <input
+        aria-label="Page title"
+        value={draft}
+        placeholder={topic.name}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        style={{
+          ...style, margin: 0, width: '100%', boxSizing: 'border-box', fontFamily: 'inherit',
+          background: 'transparent', border: 'none', borderBottom: `2px dashed ${t.borderStrong}`,
+          outline: 'none', padding: '0 0 0.15rem',
+        }}
+      />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.35rem', marginTop: '0.5rem' }}>
+        <span style={{ fontSize: '0.7rem', color: t.textMuted, marginRight: '0.15rem' }}>Size</span>
+        {(['s', 'm', 'l', 'xl'] as const).map(k => (
+          <button key={k} onClick={() => patch({ pageTitleSize: k === 'm' ? undefined : k })}
+            aria-pressed={size === k} style={chip(size === k)}>{k.toUpperCase()}</button>
+        ))}
+        <span style={{ fontSize: '0.7rem', color: t.textMuted, margin: '0 0.15rem 0 0.6rem' }}>Colour</span>
+        {swatches.map(sw => {
+          const active = (topic.pageTitleColor ?? undefined) === sw.value;
+          return (
+            <button key={sw.label} title={sw.label} aria-label={`Title colour: ${sw.label}`} aria-pressed={active}
+              onClick={() => patch({ pageTitleColor: sw.value })}
+              style={{
+                width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', padding: 0,
+                background: sw.value ?? `linear-gradient(135deg, ${t.text} 50%, ${t.bg} 50%)`,
+                border: active ? `2px solid ${t.doneAccent}` : `1px solid ${t.borderStrong}`,
+                boxShadow: active ? `0 0 0 2px ${t.bg}` : 'none',
+              }} />
+          );
+        })}
+        <label title="Custom colour" style={{ ...chip(false), display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+          Custom
+          <input type="color" aria-label="Custom title colour"
+            value={pickColor ?? (/^#[0-9a-f]{6}$/i.test(topic.pageTitleColor ?? '') ? topic.pageTitleColor : '#ffffff')}
+            onChange={e => setPickColor(e.target.value)}
+            style={{ width: '18px', height: '18px', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
+        </label>
+        {topic.pageTitle && (
+          <button onClick={() => { setDraft(''); onChange({ ...topic, pageTitle: undefined }); }} style={chip(false)}>
+            Use sidebar name
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function TopicColourDropdown({ label, selected, bank, onChange, t }: {
   label: string; selected?: string; bank: string[];

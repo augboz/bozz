@@ -40,6 +40,7 @@ import {
 } from '../lib/alerts';
 import { loadEntitlement } from '../lib/plus';
 import { BgLayer } from './shared/BackgroundControls';
+import { STATUS_COLORS } from '../lib/topicStatus';
 const WorldsView = lazy(() => import('./sections/WorldsView'));
 import TopicFolderEditModal from './TopicFolderEditModal';
 import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock';
@@ -1399,6 +1400,20 @@ export default function Dashboard() {
               // vertical as the topics" report. Deriving it means every render
               // recomputes it and nothing can outlive the state that caused it.
               const isHover = hoverNavId === id && !isActive;
+              // Status set from a page's Status widget, shown as a dot so a
+              // folder of modules can be scanned without opening each page.
+              const status = topics.find(tp => tp.id === id)?.status;
+              const statusDot = status ? (
+                <span
+                  aria-label={status === 'onTrack' ? 'On track' : 'Needs work'}
+                  title={status === 'onTrack' ? 'On track' : 'Needs work'}
+                  style={{
+                    width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+                    background: STATUS_COLORS[status],
+                    ...(sidebarCollapsed ? { position: 'absolute', top: '5px', right: '5px' } : {}),
+                  }}
+                />
+              ) : null;
               return (
                 <button
                   key={id}
@@ -1431,6 +1446,7 @@ export default function Dashboard() {
                       {label}
                     </span>
                   )}
+                  {statusDot}
                 </button>
               );
             };
@@ -2003,6 +2019,7 @@ export default function Dashboard() {
               habits={habits}
               onChange={setHabits}
               colorBank={appearance.colorBank ?? []}
+              topics={topics}
             />
           )}
           {activeSection === 'health' && (

@@ -91,6 +91,16 @@ export interface Topic {
   links?: TopicLink[];
   /** Freeform pinned note shown in the topic dashboard. */
   pinnedNote?: string;
+  /** Heading shown on the topic page. Unset = the sidebar name. */
+  pageTitle?: string;
+  /** Page heading colour (any CSS colour). Unset = theme text colour. */
+  pageTitleColor?: string;
+  /** Page heading size. Unset = 'm' (the original 2rem). */
+  pageTitleSize?: 's' | 'm' | 'l' | 'xl';
+  /** Self-assessed status, set from the Status widget and shown as a dot in the sidebar. */
+  status?: 'onTrack' | 'needsWork';
+  /** When status was last changed (unix ms). */
+  statusAt?: number;
   /** Per-topic widget layout for the topic page grid. */
   widgetLayout?: HomeWidgetItem[];
   /** Page background photo. posX/posY (0-100) and scale (1-3) let the user
@@ -279,6 +289,10 @@ export interface Habit {
   entries: Record<string, true>;
   /** Nav sort order. */
   order: number;
+  /** Topic page this habit belongs to. Unset = general habit. Every habit shows
+   *  in the Habits section and on Home; a topic page's habits widget shows only
+   *  the habits tied to that topic. */
+  topicId?: string;
 }
 
 export interface CalendarFeed {
@@ -378,7 +392,7 @@ export type WidgetType =
   | 'weather' | 'pomodoro' | 'quickCapture' | 'nowPlaying'
   | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd'
   | 'clock' | 'photo' | 'dailyPlanner' | 'todaySchedule' | 'today'
-  | 'topicTodos' | 'topicLinks' | 'topicNote'
+  | 'topicTodos' | 'topicLinks' | 'topicNote' | 'topicStatus'
   | 'map' | 'linkedin';
 
 /** A placed widget on the home grid (combines instance + grid position). */
