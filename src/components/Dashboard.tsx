@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense, type
 import {
   LayoutDashboard, CalendarDays, Wallet, Inbox, NotebookPen, Mail, Settings,
   PanelLeft, ChevronDown, ChevronRight, Pencil, Zap, Blocks, Plus, ListTree, FolderPlus, Sparkles, Search,
+  Flame,
 } from 'lucide-react';
 import SidebarEditNav from './SidebarEditNav';
 import { routeVoice, describeRoute } from '../lib/voiceRouter';
@@ -404,6 +405,13 @@ export default function Dashboard() {
         appr.homeLandingBoardMigrated = true;
       } else if (appr.homeLanding == null) {
         appr.homeLanding = 'board';
+      }
+
+      // Habits used to start hidden; with per-page habits it belongs in the
+      // sidebar. Un-hide it once per account; hiding it again afterwards sticks.
+      if (!appr.habitsNavShownMigrated) {
+        appr.hiddenSections = appr.hiddenSections.filter(id => id !== 'habits');
+        appr.habitsNavShownMigrated = true;
       }
 
       setAppearance(appr);
@@ -1168,6 +1176,7 @@ export default function Dashboard() {
     { id: 'inbox', label: 'Inbox', icon: Inbox },
     { id: 'review', label: 'Review', icon: NotebookPen },
     { id: 'email', label: 'Email', icon: Mail },
+    { id: 'habits', label: 'Habits', icon: Flame },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

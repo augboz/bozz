@@ -454,6 +454,9 @@ export interface AppearancePrefs {
    * set it true. A landing chosen after the migration sticks.
    */
   homeLandingBoardMigrated?: boolean;
+  /** One-time v0.1.78 migration done: Habits un-hidden from the sidebar now
+   *  that habits can belong to a page. Later hiding sticks. */
+  habitsNavShownMigrated?: boolean;
   /**
    * One-time migration guard: the widget grid went from 12 cols / 32px rows to a
    * finer 24 cols / 16px rows so resizing is twice as precise. When falsy we
