@@ -4,11 +4,15 @@
  * Shows today's habits as a compact checklist.
  * Each habit has a checkmark button to mark done for today.
  * Shows streak per habit. "View all" navigates to Habits section.
+ *
+ * On a topic page it shows only that topic's habits (habit.topicId) and lets
+ * you add one right there; on Home it shows every habit.
  */
 
+import { useState } from 'react';
 import type { WidgetCtx } from './context';
 import { Widget, WidgetHeader } from '../shared/Widget';
-import { Flame, ExternalLink, Check } from 'lucide-react';
+import { Flame, ExternalLink, Check, Plus } from 'lucide-react';
 
 const ACCENT = '#a8c4a0';
 const MAX_VISIBLE = 5;
@@ -48,16 +52,56 @@ function currentStreak(habit: import('../../lib/types').Habit, todayKey: string)
 }
 
 export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
-  const { t, habits, onHabitsChange, setActiveSection } = ctx;
+  const { t, habits, onHabitsChange, setActiveSection, currentTopicId, topics } = ctx;
+  const [draft, setDraft] = useState('');
 
   if (!habits || !onHabitsChange) return null;
+
+  const topic = currentTopicId ? topics.find(tp => tp.id === currentTopicId) : undefined;
+  const scoped = topic ? habits.filter(h => h.topicId === topic.id) : habits;
 
   const todayKey = localMidnightKey();
   const todayDow = dow(new Date());
 
   // Only show habits active today
-  const todayHabits = habits.filter(
+  const todayHabits = scoped.filter(
     h => h.activeDays.length === 0 || h.activeDays.includes(todayDow)
+  );
+
+  const addHabit = () => {
+    const name = draft.trim();
+    if (!name || !topic) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    onHabitsChange([...habits, {
+      id, name, color: topic.color ?? ACCENT, activeDays: [], entries: {},
+      order: habits.length, topicId: topic.id,
+    }]);
+    setDraft('');
+  };
+
+  const addRow = topic && (
+    <form
+      onSubmit={e => { e.preventDefault(); addHabit(); }}
+      style={{ display: 'flex', gap: '0.35rem', marginTop: '0.6rem' }}
+    >
+      <input
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        placeholder="New habit for this page"
+        aria-label="New habit for this page"
+        style={{
+          flex: 1, minWidth: 0, background: t.input, border: `1px solid ${t.border}`, borderRadius: '7px',
+          padding: '0.35rem 0.55rem', color: t.text, fontSize: '0.78rem', fontFamily: 'inherit', outline: 'none',
+        }}
+      />
+      <button type="submit" aria-label="Add habit" disabled={!draft.trim()} style={{
+        background: 'none', border: `1px solid ${t.border}`, borderRadius: '7px', padding: '0 0.45rem',
+        color: draft.trim() ? ACCENT : t.textDim, cursor: draft.trim() ? 'pointer' : 'default',
+        display: 'flex', alignItems: 'center',
+      }}>
+        <Plus size={14} strokeWidth={2} />
+      </button>
+    </form>
   );
 
   const visible = todayHabits.slice(0, MAX_VISIBLE);
@@ -80,7 +124,7 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
   return (
     <Widget t={t} accent={ACCENT}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <WidgetHeader label="Habits for Today" accent={ACCENT} t={t} icon={Flame} />
+        <WidgetHeader label={topic ? 'Habits for this page' : 'Habits for Today'} accent={ACCENT} t={t} icon={Flame} />
         {todayHabits.length > 0 && (
           <span style={{
             fontSize: '0.65rem', color: t.textMuted,
@@ -92,7 +136,16 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
         )}
       </div>
 
-      {todayHabits.length === 0 ? (
+      {todayHabits.length === 0 && topic ? (
+        <>
+          <div style={{ marginTop: '0.85rem', fontSize: '0.8rem', color: t.textMuted, lineHeight: 1.5 }}>
+            {scoped.length === 0
+              ? 'No habits for this page yet. They will also show on Home and in Habits.'
+              : 'Nothing due today for this page.'}
+          </div>
+          {addRow}
+        </>
+      ) : todayHabits.length === 0 ? (
         <div style={{ marginTop: '0.85rem', fontSize: '0.8rem', color: t.textMuted, lineHeight: 1.5 }}>
           No habits today.{' '}
           <button
@@ -176,6 +229,7 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
               </div>
             )}
           </div>
+          {addRow}
 
           <button
             onClick={() => setActiveSection('habits')}

@@ -10,7 +10,7 @@
 
 import { useState, useMemo } from 'react';
 import { Plus, X, Flame, Check } from 'lucide-react';
-import type { Theme, Habit } from '../../lib/types';
+import type { Theme, Habit, Topic } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import ColorBankPicker from '../shared/ColorBankPicker';
 
@@ -19,6 +19,8 @@ interface Props {
   habits: Habit[];
   onChange: (next: Habit[]) => void;
   colorBank?: string[];
+  /** Pages a habit can be tied to (habit.topicId). */
+  topics?: Topic[];
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ const PALETTE = [
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function HabitRow({
-  habit, days, todayKey, streak, t, onToggle, onDelete,
+  habit, days, todayKey, streak, t, onToggle, onDelete, topics, onTopic,
 }: {
   habit: Habit;
   days: Array<{ key: string; label: string; isToday: boolean }>;
@@ -105,6 +107,8 @@ function HabitRow({
   t: Theme;
   onToggle: (key: string) => void;
   onDelete: () => void;
+  topics: Topic[];
+  onTopic: (topicId: string | undefined) => void;
 }) {
   return (
     <div style={{
@@ -129,6 +133,22 @@ function HabitRow({
             <Flame size={11} strokeWidth={1.6} color={streak > 0 ? '#e08a4a' : t.textDim} />
             {streak} day streak
           </span>
+          {topics.length > 0 && (
+            <select
+              value={habit.topicId ?? ''}
+              onChange={e => onTopic(e.target.value || undefined)}
+              aria-label={`Page for ${habit.name}`}
+              title="Show this habit on a page's habits widget"
+              style={{
+                fontSize: '0.68rem', color: t.textMuted, background: 'transparent',
+                border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0 0.25rem',
+                fontFamily: 'inherit', maxWidth: '11rem', cursor: 'pointer',
+              }}
+            >
+              <option value="">No page (general)</option>
+              {topics.map(tp => <option key={tp.id} value={tp.id}>{tp.name || 'New topic'}</option>)}
+            </select>
+          )}
         </div>
       </div>
 
@@ -401,7 +421,7 @@ function AddHabitForm({ t, onAdd, bank }: { t: Theme; onAdd: (name: string, colo
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export default function HabitsView({ t, habits, onChange, colorBank }: Props) {
+export default function HabitsView({ t, habits, onChange, colorBank, topics = [] }: Props) {
   const bank = colorBank ?? [];
   const todayKey = useMemo(() => {
     const d = new Date(); d.setHours(0, 0, 0, 0); return String(d.getTime());
@@ -476,6 +496,8 @@ export default function HabitsView({ t, habits, onChange, colorBank }: Props) {
                 t={t}
                 onToggle={(key) => toggleEntry(h.id, key)}
                 onDelete={() => deleteHabit(h.id)}
+                topics={topics}
+                onTopic={(topicId) => onChange(habits.map(x => x.id === h.id ? { ...x, topicId } : x))}
               />
             ))}
           </div>
