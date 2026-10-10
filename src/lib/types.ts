@@ -91,6 +91,9 @@ export interface Topic {
   links?: TopicLink[];
   /** Freeform pinned note shown in the topic dashboard. */
   pinnedNote?: string;
+  /** Formatted copy of pinnedNote (sanitised HTML). Only used while its text
+   *  still matches pinnedNote; see lib/richNote.ts. */
+  pinnedNoteHtml?: string;
   /** Heading shown on the topic page. Unset = the sidebar name. */
   pageTitle?: string;
   /** Page heading colour (any CSS colour). Unset = theme text colour. */
