@@ -296,6 +296,9 @@ export interface Habit {
    *  in the Habits section and on Home; a topic page's habits widget shows only
    *  the habits tied to that topic. */
   topicId?: string;
+  /** 'weekly' = done once at any point in the week (Mon-Sun); activeDays is
+   *  ignored. Unset = daily. */
+  frequency?: 'daily' | 'weekly';
 }
 
 export interface CalendarFeed {

@@ -13,6 +13,7 @@ import { Plus, X, Flame, Check } from 'lucide-react';
 import type { Theme, Habit, Topic } from '../../lib/types';
 import { SectionHeader } from '../shared/ui';
 import ColorBankPicker from '../shared/ColorBankPicker';
+import { isWeekly, doneThisWeek, weeklyStreak } from '../../lib/habits';
 
 interface Props {
   t: Theme;
@@ -98,7 +99,7 @@ const PALETTE = [
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function HabitRow({
-  habit, days, todayKey, streak, t, onToggle, onDelete, topics, onTopic,
+  habit, days, todayKey, streak, t, onToggle, onDelete, topics, onTopic, onFrequency,
 }: {
   habit: Habit;
   days: Array<{ key: string; label: string; isToday: boolean }>;
@@ -109,6 +110,7 @@ function HabitRow({
   onDelete: () => void;
   topics: Topic[];
   onTopic: (topicId: string | undefined) => void;
+  onFrequency: (frequency: 'weekly' | undefined) => void;
 }) {
   return (
     <div style={{
@@ -131,8 +133,27 @@ function HabitRow({
         <div style={{ display: 'flex', gap: '0.85rem' }}>
           <span style={{ fontSize: '0.68rem', color: t.textMuted, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
             <Flame size={11} strokeWidth={1.6} color={streak > 0 ? '#e08a4a' : t.textDim} />
-            {streak} day streak
+            {streak} {isWeekly(habit) ? `week${streak === 1 ? '' : 's'}` : 'day'} streak
+            {isWeekly(habit) && (
+              <span style={{ marginLeft: '0.4rem', color: doneThisWeek(habit) ? habit.color : t.textDim }}>
+                · {doneThisWeek(habit) ? 'done this week' : 'not done this week'}
+              </span>
+            )}
           </span>
+          <select
+            value={habit.frequency === 'weekly' ? 'weekly' : 'daily'}
+            onChange={e => onFrequency(e.target.value === 'weekly' ? 'weekly' : undefined)}
+            aria-label={`How often for ${habit.name}`}
+            title="How often"
+            style={{
+              fontSize: '0.68rem', color: t.textMuted, background: 'transparent',
+              border: `1px solid ${t.border}`, borderRadius: '6px', padding: '0 0.25rem',
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
           {topics.length > 0 && (
             <select
               value={habit.topicId ?? ''}
@@ -156,7 +177,7 @@ function HabitRow({
       <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
         {days.map(({ key, label, isToday }) => {
           const checked = !!habit.entries[key];
-          const isActive = habit.activeDays.length === 0 || habit.activeDays.includes(
+          const isActive = isWeekly(habit) || habit.activeDays.length === 0 || habit.activeDays.includes(
             dow(new Date(Number(key)))
           );
           const isPast = Number(key) < Number(todayKey);
@@ -273,10 +294,11 @@ function HeatmapRow({ habit, keys28, t }: {
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const DAY_FULL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function AddHabitForm({ t, onAdd, bank }: { t: Theme; onAdd: (name: string, color: string, activeDays: number[]) => void; bank: string[] }) {
+function AddHabitForm({ t, onAdd, bank }: { t: Theme; onAdd: (name: string, color: string, activeDays: number[], weekly: boolean) => void; bank: string[] }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(bank[0] ?? PALETTE[0]);
   const [days, setDays] = useState<number[]>([]); // empty = every day
+  const [weekly, setWeekly] = useState(false);
   const [open, setOpen] = useState(false);
 
   const toggleDay = (d: number) => {
@@ -286,8 +308,9 @@ function AddHabitForm({ t, onAdd, bank }: { t: Theme; onAdd: (name: string, colo
   const submit = () => {
     const n = name.trim();
     if (!n) return;
-    onAdd(n, color, days);
+    onAdd(n, color, days, weekly);
     setName('');
+    setWeekly(false);
     setColor(bank[0] ?? PALETTE[0]);
     setDays([]);
     setOpen(false);
@@ -343,8 +366,34 @@ function AddHabitForm({ t, onAdd, bank }: { t: Theme; onAdd: (name: string, colo
         />
       </div>
 
-      {/* Day picker */}
-      <div style={{ marginBottom: '0.85rem' }}>
+      {/* How often */}
+      <div style={{ marginBottom: '0.75rem' }}>
+        <div style={{ fontSize: '0.65rem', color: t.textDim, marginBottom: '0.4rem' }}>
+          How often
+        </div>
+        <div style={{ display: 'flex', gap: '0.35rem' }}>
+          {([['Daily', false], ['Weekly: once at any point in the week', true]] as const).map(([label, w]) => (
+            <button
+              key={label}
+              onClick={() => setWeekly(w)}
+              aria-pressed={weekly === w}
+              style={{
+                height: '28px', padding: '0 0.6rem', borderRadius: '6px',
+                border: `1px solid ${weekly === w ? color : t.border}`,
+                background: weekly === w ? color + '33' : 'transparent',
+                color: weekly === w ? color : t.textDim,
+                fontSize: '0.68rem', fontFamily: 'inherit', cursor: 'pointer',
+                fontWeight: weekly === w ? 500 : 400,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Day picker (daily habits only) */}
+      {!weekly && <div style={{ marginBottom: '0.85rem' }}>
         <div style={{ fontSize: '0.65rem', color: t.textDim, marginBottom: '0.4rem' }}>
           Active days
         </div>
@@ -386,7 +435,7 @@ function AddHabitForm({ t, onAdd, bank }: { t: Theme; onAdd: (name: string, colo
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -430,9 +479,12 @@ export default function HabitsView({ t, habits, onChange, colorBank, topics = []
   const days = useMemo(() => last7Days(todayKey), [todayKey]);
   const keys28 = useMemo(() => last28DayKeys(), []);
 
-  const addHabit = (name: string, color: string, activeDays: number[]) => {
+  const addHabit = (name: string, color: string, activeDays: number[], weekly: boolean) => {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const next: Habit = { id, name, color, activeDays, entries: {}, order: habits.length };
+    const next: Habit = {
+      id, name, color, activeDays: weekly ? [] : activeDays, entries: {}, order: habits.length,
+      ...(weekly ? { frequency: 'weekly' as const } : {}),
+    };
     onChange([...habits, next]);
   };
 
@@ -452,10 +504,11 @@ export default function HabitsView({ t, habits, onChange, colorBank, topics = []
   };
 
   // Today's completion summary
-  const todayTotal = habits.filter(h =>
-    h.activeDays.length === 0 || h.activeDays.includes(dow(new Date()))
-  ).length;
-  const todayDone = habits.filter(h => h.entries[todayKey]).length;
+  const dueToday = habits.filter(h =>
+    isWeekly(h) || h.activeDays.length === 0 || h.activeDays.includes(dow(new Date()))
+  );
+  const todayTotal = dueToday.length;
+  const todayDone = dueToday.filter(h => isWeekly(h) ? doneThisWeek(h) : h.entries[todayKey]).length;
 
   return (
     <div>
@@ -492,12 +545,13 @@ export default function HabitsView({ t, habits, onChange, colorBank, topics = []
                 habit={h}
                 days={days}
                 todayKey={todayKey}
-                streak={currentStreak(h, todayKey)}
+                streak={isWeekly(h) ? weeklyStreak(h) : currentStreak(h, todayKey)}
                 t={t}
                 onToggle={(key) => toggleEntry(h.id, key)}
                 onDelete={() => deleteHabit(h.id)}
                 topics={topics}
                 onTopic={(topicId) => onChange(habits.map(x => x.id === h.id ? { ...x, topicId } : x))}
+                onFrequency={(frequency) => onChange(habits.map(x => x.id === h.id ? { ...x, frequency } : x))}
               />
             ))}
           </div>

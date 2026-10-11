@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import type { WidgetCtx } from './context';
+import { isWeekly, doneThisWeek, toggleWeekly, weeklyStreak } from '../../lib/habits';
 import { Widget, WidgetHeader } from '../shared/Widget';
 import { Flame, ExternalLink, Check, Plus } from 'lucide-react';
 
@@ -54,6 +55,7 @@ function currentStreak(habit: import('../../lib/types').Habit, todayKey: string)
 export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
   const { t, habits, onHabitsChange, setActiveSection, currentTopicId, topics } = ctx;
   const [draft, setDraft] = useState('');
+  const [weekly, setWeekly] = useState(false);
 
   if (!habits || !onHabitsChange) return null;
 
@@ -64,9 +66,11 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
   const todayDow = dow(new Date());
 
   // Only show habits active today
+  // Weekly habits show every day of the week (ticked once done that week).
   const todayHabits = scoped.filter(
-    h => h.activeDays.length === 0 || h.activeDays.includes(todayDow)
+    h => isWeekly(h) || h.activeDays.length === 0 || h.activeDays.includes(todayDow)
   );
+  const isDone = (h: typeof habits[number]) => isWeekly(h) ? doneThisWeek(h) : !!h.entries[todayKey];
 
   const addHabit = () => {
     const name = draft.trim();
@@ -74,7 +78,7 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     onHabitsChange([...habits, {
       id, name, color: topic.color ?? ACCENT, activeDays: [], entries: {},
-      order: habits.length, topicId: topic.id,
+      order: habits.length, topicId: topic.id, ...(weekly ? { frequency: 'weekly' as const } : {}),
     }]);
     setDraft('');
   };
@@ -94,6 +98,19 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
           padding: '0.35rem 0.55rem', color: t.text, fontSize: '0.78rem', fontFamily: 'inherit', outline: 'none',
         }}
       />
+      <button
+        type="button"
+        onClick={() => setWeekly(w => !w)}
+        aria-pressed={weekly}
+        title={weekly ? 'Weekly: once at any point in the week' : 'Daily'}
+        style={{
+          background: weekly ? ACCENT + '33' : 'none', border: `1px solid ${weekly ? ACCENT : t.border}`,
+          borderRadius: '7px', padding: '0 0.45rem', color: weekly ? ACCENT : t.textMuted,
+          fontSize: '0.68rem', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
+        }}
+      >
+        {weekly ? 'Weekly' : 'Daily'}
+      </button>
       <button type="submit" aria-label="Add habit" disabled={!draft.trim()} style={{
         background: 'none', border: `1px solid ${t.border}`, borderRadius: '7px', padding: '0 0.45rem',
         color: draft.trim() ? ACCENT : t.textDim, cursor: draft.trim() ? 'pointer' : 'default',
@@ -106,11 +123,12 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
 
   const visible = todayHabits.slice(0, MAX_VISIBLE);
   const overflow = todayHabits.length - visible.length;
-  const doneCount = todayHabits.filter(h => !!h.entries[todayKey]).length;
+  const doneCount = todayHabits.filter(isDone).length;
 
   const toggle = (habitId: string) => {
     onHabitsChange(habits.map(h => {
       if (h.id !== habitId) return h;
+      if (isWeekly(h)) return toggleWeekly(h, todayKey);
       const next = { ...h.entries };
       if (next[todayKey]) {
         delete next[todayKey];
@@ -163,8 +181,9 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.75rem' }}>
             {visible.map(habit => {
-              const done = !!habit.entries[todayKey];
-              const streak = currentStreak(habit, todayKey);
+              const done = isDone(habit);
+              const weeklyHabit = isWeekly(habit);
+              const streak = weeklyHabit ? weeklyStreak(habit) : currentStreak(habit, todayKey);
               return (
                 <div
                   key={habit.id}
@@ -206,6 +225,11 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
                     transition: 'color 0.12s',
                   }}>
                     {habit.name}
+                    {weeklyHabit && (
+                      <span style={{ marginLeft: '0.35rem', fontSize: '0.6rem', color: t.textDim, textDecoration: 'none', display: 'inline-block' }}>
+                        {done ? 'done this week' : 'this week'}
+                      </span>
+                    )}
                   </div>
 
                   {/* Streak */}
@@ -216,7 +240,7 @@ export default function HabitsWidget({ ctx }: { ctx: WidgetCtx }) {
                       flexShrink: 0,
                     }}>
                       <Flame size={10} strokeWidth={1.5} />
-                      {streak}
+                      {streak}{weeklyHabit ? 'w' : ''}
                     </span>
                   )}
                 </div>
