@@ -42,6 +42,7 @@ import {
 import { loadEntitlement } from '../lib/plus';
 import { BgLayer } from './shared/BackgroundControls';
 import { STATUS_COLORS } from '../lib/topicStatus';
+import { duplicateTopic } from '../lib/topicCopy';
 const WorldsView = lazy(() => import('./sections/WorldsView'));
 import TopicFolderEditModal from './TopicFolderEditModal';
 import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock';
@@ -2115,6 +2116,12 @@ export default function Dashboard() {
                 <TopicView
                   topic={activeTopic}
                   onChange={(next) => setTopics(prev => prev.map(t => t.id === next.id ? next : t))}
+                  onDuplicate={(opts) => {
+                    const copy = duplicateTopic(activeTopic, topics.length, opts);
+                    setTopics(prev => [...prev, copy]);
+                    setActiveSection(copy.id);
+                    setEditTopicId(copy.id); // straight into naming it
+                  }}
                   t={t}
                   ctx={{
                     t, budget, emails,

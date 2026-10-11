@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
-import { Plus, X, Link, StickyNote, ChevronDown, ExternalLink, Pencil, Check, Settings2 } from 'lucide-react';
+import { Plus, X, Link, StickyNote, ChevronDown, ExternalLink, Pencil, Check, Settings2, Copy } from 'lucide-react';
 import { openLink } from '../../lib/links';
 import type { TopicLink } from '../../lib/types';
 import { isMobileViewport, isTauri } from '../../lib/platform';
@@ -13,6 +13,7 @@ import { TITLE_BAR_HEIGHT } from '../TitleBar';
 import ColorBankPicker from '../shared/ColorBankPicker';
 import BackgroundControls, { BgLayer, type PageBg } from '../shared/BackgroundControls';
 import { deleteItem } from '../../lib/storage';
+import type { CopyOptions } from '../../lib/topicCopy';
 
 const Grid = WidthProvider(GridLayout);
 const COLS = 24;
@@ -29,6 +30,8 @@ interface Props {
   onChange: (next: Topic) => void;
   t: Theme;
   ctx: WidgetCtx;
+  /** Make a copy of this page (same layout and look) and open it. */
+  onDuplicate?: (opts: CopyOptions) => void;
 }
 
 function sameLayout(items: HomeWidgetItem[], layout: Layout): boolean {
@@ -270,7 +273,7 @@ const linkInput = (t: Theme): React.CSSProperties => ({
 
 // ── Main TopicView ─────────────────────────────────────────────────────────────
 
-export default function TopicView({ topic, onChange, t, ctx }: Props) {
+export default function TopicView({ topic, onChange, t, ctx, onDuplicate }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   // Grid position transitions are gated on edit mode (see .topic-grid-editing in
@@ -415,6 +418,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
+          {editMode && onDuplicate && <DuplicateControl t={t} onDuplicate={onDuplicate} btnStyle={ghostBtn(t)} />}
           {editMode && (
             <button data-onb="topic-add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
               <Plus size={14} strokeWidth={1.5} /> Add widget
@@ -482,6 +486,7 @@ export default function TopicView({ topic, onChange, t, ctx }: Props) {
         gap: '0.5rem', marginBottom: editMode ? '0.5rem' : '0.75rem', flexWrap: 'wrap',
       }}>
         {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
+          {editMode && onDuplicate && <DuplicateControl t={t} onDuplicate={onDuplicate} btnStyle={ghostBtn(t)} />}
         {editMode && (
           <button data-onb="topic-add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
             <Plus size={14} strokeWidth={1.5} /> Add widget
@@ -678,6 +683,51 @@ function PageTitle({ topic, onChange, t, editMode }: {
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** "Duplicate page" button + a small popover choosing what to bring along. */
+function DuplicateControl({ t, onDuplicate, btnStyle }: {
+  t: Theme; onDuplicate: (opts: CopyOptions) => void; btnStyle: React.CSSProperties;
+}) {
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState(true);
+  const [tasks, setTasks] = useState(false);
+  const check = (label: string, on: boolean, set: (v: boolean) => void) => (
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: t.text, cursor: 'pointer' }}>
+      <input type="checkbox" checked={on} onChange={e => set(e.target.checked)} />
+      {label}
+    </label>
+  );
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)} style={btnStyle} aria-expanded={open}>
+        <Copy size={14} strokeWidth={1.5} /> Duplicate page
+      </button>
+      {open && (
+        <div role="dialog" aria-label="Duplicate page" style={{
+          position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 30, width: '15rem',
+          background: t.panel, border: `1px solid ${t.borderStrong}`, borderRadius: '10px',
+          padding: '0.8rem', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          display: 'flex', flexDirection: 'column', gap: '0.55rem',
+        }}>
+          <div style={{ fontSize: '0.72rem', color: t.textMuted, lineHeight: 1.45 }}>
+            Makes a new page with this layout, widgets, background, title style and stages.
+          </div>
+          {check('Copy notes and links', notes, setNotes)}
+          {check('Copy tasks', tasks, setTasks)}
+          <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
+            <button onClick={() => setOpen(false)} style={{ ...btnStyle, boxShadow: 'none' }}>Cancel</button>
+            <button
+              onClick={() => { setOpen(false); onDuplicate({ notes, tasks }); }}
+              style={{ ...btnStyle, boxShadow: 'none', background: t.doneAccent, color: '#fff', border: 'none' }}
+            >
+              Duplicate
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
