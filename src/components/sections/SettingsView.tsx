@@ -379,6 +379,46 @@ function ColorBankEditor({ t, bank, onChange, currentMood }: {
   );
 }
 
+/** Current version + a manual update check. A found update opens App's
+ *  Install & restart prompt (App listens for bozz:check-updates). */
+function UpdateCheck({ t }: { t: Theme }) {
+  const [version, setVersion] = useState('');
+  const [state, setState] = useState<'idle' | 'checking' | 'latest' | 'found' | 'error'>('idle');
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    import('@tauri-apps/api/app').then(m => m.getVersion()).then(setVersion).catch(() => {});
+    const onResult = (e: Event) => {
+      const d = (e as CustomEvent<{ found: boolean; error?: string }>).detail;
+      if (d.error) { setErr(d.error); setState('error'); } else setState(d.found ? 'found' : 'latest');
+    };
+    window.addEventListener('bozz:update-check-result', onResult);
+    return () => window.removeEventListener('bozz:update-check-result', onResult);
+  }, []);
+  const label = {
+    idle: '', checking: 'Checking…', latest: "You're on the latest version.",
+    found: 'Update found, see the prompt.', error: `Couldn't check: ${err}`,
+  }[state];
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <button
+        onClick={() => { setState('checking'); window.dispatchEvent(new Event('bozz:check-updates')); }}
+        disabled={state === 'checking'}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+          background: 'transparent', border: `1px solid ${t.border}`, borderRadius: '8px',
+          padding: '0.45rem 0.85rem', color: t.text, cursor: state === 'checking' ? 'default' : 'pointer',
+          fontFamily: 'inherit', fontSize: '0.8rem',
+        }}
+      >
+        <RotateCcw size={14} strokeWidth={1.6} color={t.textMuted} /> Check for updates
+      </button>
+      <span style={{ fontSize: '0.75rem', color: state === 'error' ? t.alert : t.textMuted }}>
+        {version && `Bozz ${version}`}{version && label ? ' · ' : ''}{label}
+      </span>
+    </div>
+  );
+}
+
 export default function SettingsView({
   t, appearance, patchAppearance, resetAppearance, resetHomeLayout, onClearTopics, sections,
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
@@ -540,6 +580,8 @@ export default function SettingsView({
           >
             <RotateCcw size={14} strokeWidth={1.6} color={t.textMuted} /> Replay walkthroughs
           </button>
+
+          {isTauri() && <UpdateCheck t={t} />}
 
           {/* Launch on startup — folded into Help to keep the page tidy */}
           <Field label="Launch Bozz when you open your laptop" hint="Desktop app only" t={t}>

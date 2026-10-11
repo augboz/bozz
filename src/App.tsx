@@ -176,24 +176,33 @@ export default function App() {
     if (!isTauri()) return;
     let cancelled = false;
     let lastCheck = 0;
-    // Don't hammer GitHub: ignore focus-driven re-checks within 30 min of the
-    // last one. Forced checks (launch + periodic timer) bypass this.
-    const MIN_GAP = 30 * 60 * 1000;
+    // Don't hammer GitHub: ignore focus-driven re-checks within 5 min of the
+    // last one. Forced checks (launch, timer, Settings button) bypass this.
+    // (It was 30 min, which hid a fresh release from a tray-resident copy for
+    // up to half an hour after it shipped.)
+    const MIN_GAP = 5 * 60 * 1000;
 
-    const runCheck = async (force = false) => {
+    const runCheck = async (force = false, manual = false) => {
       const now = Date.now();
       if (!force && now - lastCheck < MIN_GAP) return;
       lastCheck = now;
+      const report = (detail: { found: boolean; error?: string }) => {
+        if (manual) window.dispatchEvent(new CustomEvent('bozz:update-check-result', { detail }));
+      };
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
         const found = await check();
+        report({ found: !!found });
         if (cancelled || !found) return;
         // Show the themed prompt instead of the native confirm() dialog. The
         // install + relaunch is handled inside UpdatePrompt, which surfaces any
         // error instead of silently swallowing it. Don't clobber a prompt that's
         // already open.
         setUpdate(prev => prev ?? found);
-      } catch (err) { console.warn('[updater]', err); }
+      } catch (err) {
+        console.warn('[updater]', err);
+        report({ found: false, error: err instanceof Error ? err.message : String(err) });
+      }
     };
 
     // Bozz minimises to the system tray on close, so most instances are launched
@@ -204,6 +213,9 @@ export default function App() {
     const timer = setTimeout(() => { void runCheck(true); }, 5000);
     const interval = setInterval(() => { void runCheck(true); }, 6 * 60 * 60 * 1000);
     const onFocus = () => { void runCheck(); };
+    // Settings -> "Check for updates".
+    const onManual = () => { void runCheck(true, true); };
+    window.addEventListener('bozz:check-updates', onManual);
     const onVisible = () => { if (document.visibilityState === 'visible') void runCheck(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
@@ -214,6 +226,7 @@ export default function App() {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('bozz:check-updates', onManual);
     };
   }, []);
 
