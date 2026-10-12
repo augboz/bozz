@@ -137,9 +137,24 @@ function isCorruptAuthError(e: unknown): boolean {
     || msg.includes('stored sign-in is corrupted');
 }
 
+/**
+ * The request never got an answer: no HTTP status, and the platform's fetch
+ * failed (Wi-Fi drop, laptop waking from sleep, DNS). supabase-js surfaces this
+ * as a "FetchError" whose message can be literally "undefined" (2026-10-12),
+ * which told the user nothing.
+ */
+function isNetworkError(e: unknown): boolean {
+  if (!e) return false;
+  const err = e as { name?: string; message?: string; status?: number };
+  if (err.status) return false;
+  const text = `${err.name ?? ''} ${err.message ?? String(e)}`;
+  return /FetchError|Failed to fetch|NetworkError|Load failed|network|timed? ?out|ERR_/i.test(text);
+}
+
 /** Compact, human-readable form of a Supabase/Postgrest error for the banner. */
 function describeError(e: unknown): string {
   if (!e) return 'unknown error';
+  if (isNetworkError(e)) return "couldn't reach the cloud (check your internet connection)";
   const err = e as { message?: string; code?: string; status?: number; details?: string };
   const parts = [err.message ?? String(e)];
   if (err.code) parts.push(`code ${err.code}`);
@@ -151,6 +166,8 @@ export interface SyncBlock {
   reason: SyncBlockReason;
   detail: string;
   at: number;
+  /** The cloud couldn't be reached at all; retried automatically. */
+  network?: boolean;
 }
 
 let lastBlock: SyncBlock | null = null;
@@ -160,8 +177,8 @@ export function getLastSyncBlock(): SyncBlock | null {
   return lastBlock;
 }
 
-function blockPush(reason: SyncBlockReason, detail: string): false {
-  lastBlock = { reason, detail, at: Date.now() };
+function blockPush(reason: SyncBlockReason, detail: string, network = false): false {
+  lastBlock = { reason, detail, at: Date.now(), ...(network ? { network } : {}) };
   console.error(`[sync] push BLOCKED (${reason}): ${detail}`);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('bozz:sync-blocked', { detail: lastBlock }));
@@ -372,7 +389,7 @@ export async function pullSnapshot(userId: string): Promise<boolean> {
     // A pull-only path (foreground refresh, thin-local recovery) must self-heal
     // corrupted credentials too, or a device that never pushes stays wedged.
     if (isCorruptAuthError(e)) {
-      blockPush(await classifyFailure(e), `reading the cloud copy failed: ${describeError(e)}`);
+      blockPush(await classifyFailure(e), `reading the cloud copy failed: ${describeError(e)}`, isNetworkError(e));
     }
     return false;
   }
@@ -484,6 +501,11 @@ export async function pushSnapshot(
   }
   pushInFlight = runPush(userId, opts).finally(() => {
     pushInFlight = null;
+    // Couldn't reach the cloud: try again shortly by itself instead of waiting
+    // for the user's next change (which may not come until tomorrow).
+    if (lastBlock?.network && !networkRetry) {
+      networkRetry = setTimeout(() => { networkRetry = null; schedulePush(userId); }, NETWORK_RETRY_MS);
+    }
     if (pushAgainFor) {
       const again = pushAgainFor;
       pushAgainFor = null;
@@ -518,7 +540,7 @@ async function runPush(
         .maybeSingle();
       if (headError) {
         console.error('[sync] pre-push read error:', headError);
-        return blockPush(await classifyFailure(headError), `reading the cloud copy failed: ${describeError(headError)}`);
+        return blockPush(await classifyFailure(headError), `reading the cloud copy failed: ${describeError(headError)}`, isNetworkError(headError));
       }
       const remoteMs = Date.parse((head as { updated_at?: string } | null)?.updated_at ?? '') || 0;
       const unseen = head !== null && (lastSeenStampMs === null || remoteMs !== lastSeenStampMs);
@@ -531,7 +553,7 @@ async function runPush(
           .maybeSingle();
         if (readError) {
           console.error('[sync] pre-push read error:', readError);
-          return blockPush(await classifyFailure(readError), `reading the cloud copy failed: ${describeError(readError)}`);
+          return blockPush(await classifyFailure(readError), `reading the cloud copy failed: ${describeError(readError)}`, isNetworkError(readError));
         }
         const remoteData = (remote as { data?: Record<string, unknown> } | null)?.data;
         if (remoteData) {
@@ -591,11 +613,14 @@ async function runPush(
       );
     if (error) {
       console.error('[sync] push error:', error);
-      return blockPush(await classifyFailure(error), `uploading failed: ${describeError(error)}`);
+      return blockPush(await classifyFailure(error), `uploading failed: ${describeError(error)}`, isNetworkError(error));
     }
     // Only ever moves forward: an older push completing late must not rewind
     // it to a stamp the row no longer carries.
     lastSeenStampMs = Math.max(lastSeenStampMs ?? 0, Date.parse(stamp));
+    // A banner from an earlier failed attempt is now stale: say so, so it
+    // goes away instead of claiming changes are still unsynced.
+    if (lastBlock && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('bozz:sync-ok'));
     lastBlock = null;
     // A mid-session merge means local storage now holds records the mounted UI
     // has never seen; tell DashboardKeyed to reload state (skipped for the boot
@@ -606,7 +631,7 @@ async function runPush(
     return true;
   } catch (e) {
     console.error('[sync] push failed:', e);
-    return blockPush(await classifyFailure(e), `uploading failed: ${describeError(e)}`);
+    return blockPush(await classifyFailure(e), `uploading failed: ${describeError(e)}`, isNetworkError(e));
   }
 }
 
@@ -663,6 +688,8 @@ export function hasPendingPush(): boolean { return pushTimer !== null || pushInF
 
 // ── Debounced push helper ────────────────────────────────────────────────
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
+let networkRetry: ReturnType<typeof setTimeout> | null = null;
+const NETWORK_RETRY_MS = 30_000;
 const PUSH_DEBOUNCE_MS = 1500;
 
 export function schedulePush(userId: string): void {

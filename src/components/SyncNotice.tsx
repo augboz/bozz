@@ -43,11 +43,16 @@ export default function SyncNotice() {
       // refusal that is merely its symptom paper over it.
       setNotice(prev => (prev?.kind === 'store' ? prev : { kind: 'sync', block }));
     };
+    // A later upload went through: a sync banner is no longer true. (It used
+    // to stay up until dismissed, still saying "did not go through".)
+    const onOk = () => setNotice(prev => (prev?.kind === 'sync' ? null : prev));
     window.addEventListener('bozz:store-unhealthy', onStore);
     window.addEventListener('bozz:sync-blocked', onSync);
+    window.addEventListener('bozz:sync-ok', onOk);
     return () => {
       window.removeEventListener('bozz:store-unhealthy', onStore);
       window.removeEventListener('bozz:sync-blocked', onSync);
+      window.removeEventListener('bozz:sync-ok', onOk);
     };
   }, []);
 
@@ -102,6 +107,8 @@ export default function SyncNotice() {
       ? `This device has less data than your cloud copy (${notice.kind === 'sync' ? notice.block.detail : ''}), so Bozz did not upload it. If you just deleted things on purpose, push anyway. Otherwise restart Bozz to bring the cloud copy down.`
       : isSignedOut
         ? 'Your sign-in on this device has expired, so nothing can sync to or from the cloud. Your data here is safe. Sign out and sign back in with Google to reconnect.'
+        : isPushFail && notice.kind === 'sync' && notice.block.network
+          ? "Bozz couldn't reach the cloud, probably a dropped connection. Your changes are safe on this device and it will keep retrying by itself. This message goes away once they upload."
         : isPushFail
           ? 'Bozz could not upload your latest changes. They are safe on this device and will be retried on your next change or restart.'
           : 'This device could not read its own data, so it will not upload anything. Restart Bozz before making changes here.';
