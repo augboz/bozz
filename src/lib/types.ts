@@ -104,11 +104,22 @@ export interface Topic {
   status?: 'onTrack' | 'needsWork';
   /** When status was last changed (unix ms). */
   statusAt?: number;
+  /** Study timer (topicTimer widget): finished sessions plus the start of the
+   *  one running now, if any. Sessions carry ids so two devices' logs union. */
+  timeLog?: { sessions: StudySession[]; runningSince?: number };
   /** Per-topic widget layout for the topic page grid. */
   widgetLayout?: HomeWidgetItem[];
   /** Page background photo. posX/posY (0-100) and scale (1-3) let the user
    *  reposition and zoom the photo so it frames correctly on the page. */
   pageBg?: { url: string; dim: number; posX?: number; posY?: number; scale?: number };
+}
+
+export interface StudySession {
+  id: string;
+  /** unix ms */
+  start: number;
+  /** unix ms */
+  end: number;
 }
 
 export interface WeeklyReview {
@@ -398,7 +409,7 @@ export type WidgetType =
   | 'weather' | 'pomodoro' | 'quickCapture' | 'nowPlaying'
   | 'recentEmails' | 'notion' | 'budget' | 'habits' | 'quickAdd'
   | 'clock' | 'photo' | 'dailyPlanner' | 'todaySchedule' | 'today'
-  | 'topicTodos' | 'topicLinks' | 'topicNote' | 'topicStatus'
+  | 'topicTodos' | 'topicLinks' | 'topicNote' | 'topicStatus' | 'topicTimer'
   | 'map' | 'linkedin';
 
 /** A placed widget on the home grid (combines instance + grid position). */

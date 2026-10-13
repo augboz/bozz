@@ -21,6 +21,7 @@ import TopicTodosWidget from './TopicTodosWidget';
 import TopicLinksWidget from './TopicLinksWidget';
 import TopicNoteWidget from './TopicNoteWidget';
 import TopicStatusWidget from './TopicStatusWidget';
+import TopicTimerWidget from './TopicTimerWidget';
 import MapWidget from './MapWidget';
 import LinkedInWidget from './LinkedInWidget';
 
@@ -80,6 +81,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
   topicTodos: ready('topicTodos', 'Topic tasks', 'Items and stages for this topic', { w: 8, h: 12 }, { w: 6, h: 6 }, TopicTodosWidget),
   topicLinks: readyMulti('topicLinks', 'Links', 'Pinned links for this topic', { w: 8, h: 12 }, { w: 2, h: 2 }, TopicLinksWidget),
   topicNote:  readyMulti('topicNote', 'Note', 'Freeform note for this topic. Add as many as you like', { w: 8, h: 16 }, { w: 6, h: 4 }, TopicNoteWidget),
+  topicTimer: ready('topicTimer', 'Study timer', 'Start/stop stopwatch that totals your time on this page: today, this week, all time', { w: 8, h: 12 }, { w: 6, h: 6 }, TopicTimerWidget),
   topicStatus: ready('topicStatus', 'Status', 'Mark this page On track or Needs work. Shows as a dot in the sidebar', { w: 8, h: 8 }, { w: 4, h: 4 }, TopicStatusWidget),
   map:        readyMulti('map',   'Map',         'A map you can drop pins and areas on', { w: 12, h: 24 }, { w: 6, h: 8 }, MapWidget),
   linkedin:   ready('linkedin',   'LinkedIn',    'Quick links to your feed, jobs & messaging', { w: 8, h: 18 }, { w: 6, h: 10 }, LinkedInWidget),
@@ -88,7 +90,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetMeta> = {
 /** Widgets shown in the home Add Widget panel. */
 const HIDDEN_FROM_HOME_PANEL = new Set([
   'summary', 'quickCapture', 'todaySchedule', 'dailyPlanner',
-  'topicTodos', 'topicLinks', 'topicNote', 'topicStatus',   // topic-only widgets
+  'topicTodos', 'topicLinks', 'topicNote', 'topicStatus', 'topicTimer',   // topic-only widgets
 ]);
 export const WIDGET_LIST: WidgetMeta[] = Object.values(WIDGET_REGISTRY).filter(
   m => !HIDDEN_FROM_HOME_PANEL.has(m.type)

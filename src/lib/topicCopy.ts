@@ -2,8 +2,8 @@
 //
 // Copies layout, widget settings, stages, colour, icon, folder, background and
 // title style. Notes/links and tasks are opt-in. Never copied: the page title
-// text (the copy shows its own sidebar name), status, keywords (capture would
-// route to two pages) and habits (they belong to the original page).
+// text (the copy shows its own sidebar name), status, study time, keywords
+// (capture would route to two pages) and habits (they belong to the original).
 import type { Topic, TopicItem } from './types';
 import { nextId } from './ids';
 
@@ -34,6 +34,7 @@ export function duplicateTopic(src: Topic, order: number, opts: CopyOptions): To
     pageTitle: undefined,
     status: undefined,
     statusAt: undefined,
+    timeLog: undefined,
   };
   if (!opts.notes) {
     copy.pinnedNote = undefined;
