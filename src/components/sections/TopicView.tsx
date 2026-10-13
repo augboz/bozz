@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import GridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 import type { Layout, LayoutItem } from 'react-grid-layout/legacy';
-import { Plus, X, Link, StickyNote, ChevronDown, ExternalLink, Pencil, Check, Settings2, Copy } from 'lucide-react';
+import { Plus, X, Link, StickyNote, ChevronDown, ExternalLink, Pencil, Check, Settings2, Copy, ClipboardPaste } from 'lucide-react';
 import { openLink } from '../../lib/links';
 import type { TopicLink } from '../../lib/types';
 import { isMobileViewport, isTauri } from '../../lib/platform';
@@ -14,6 +14,7 @@ import ColorBankPicker from '../shared/ColorBankPicker';
 import BackgroundControls, { BgLayer, type PageBg } from '../shared/BackgroundControls';
 import { deleteItem } from '../../lib/storage';
 import type { CopyOptions } from '../../lib/topicCopy';
+import { copyWidget, readWidgetClip, onWidgetClipChange, type WidgetClip } from '../../lib/widgetClipboard';
 
 const Grid = WidthProvider(GridLayout);
 const COLS = 24;
@@ -367,6 +368,44 @@ export default function TopicView({ topic, onChange, t, ctx, onDuplicate }: Prop
     }]);
   };
 
+  // ── Copy / paste widgets between pages ──────────────────────────────────
+  const [clip, setClip] = useState<WidgetClip | null>(() => readWidgetClip());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  useEffect(() => onWidgetClipChange(() => setClip(readWidgetClip())), []);
+  const copyOne = (it: HomeWidgetItem) => {
+    copyWidget(it, topic);
+    setCopiedId(it.i);
+    setTimeout(() => setCopiedId(c => (c === it.i ? null : c)), 1500);
+  };
+  const clipMeta = clip ? WIDGET_REGISTRY[clip.type] : undefined;
+  const clipBlocked = !!clip && !!clipMeta && !clipMeta.allowMultiple && widgetLayout.some(it => it.type === clip.type);
+  const pasteWidget = () => {
+    if (!clip || !clipMeta || clipBlocked) return;
+    const maxY = widgetLayout.reduce((m, it) => Math.max(m, it.y + it.h), 0);
+    updateLayout([...widgetLayout, {
+      i: `${clip.type}-${Date.now()}`, type: clip.type,
+      x: 0, y: maxY, w: Math.min(COLS, clip.w), h: clip.h,
+      ...(clip.config ? { config: JSON.parse(JSON.stringify(clip.config)) } : {}),
+    }]);
+  };
+  const renderPaste = () => editMode && clip && clipMeta && clip.type !== 'topicTodos' && (
+    <button
+      onClick={pasteWidget}
+      disabled={clipBlocked}
+      title={clipBlocked ? `This page already has a ${clipMeta.label} widget` : `Paste the copied ${clipMeta.label} widget`}
+      style={{ ...ghostBtn(t), opacity: clipBlocked ? 0.5 : 1, cursor: clipBlocked ? 'default' : 'pointer' }}
+    >
+      <ClipboardPaste size={14} strokeWidth={1.5} /> Paste {clipMeta.label}
+    </button>
+  );
+  const copyBtn = (it: HomeWidgetItem, right: string, size: number) => it.type !== 'topicTodos' && (
+    <button className="widget-remove" onClick={() => copyOne(it)} aria-label={`Copy ${WIDGET_REGISTRY[it.type].label} widget`}
+      title="Copy widget (paste it on any page)"
+      style={{ position: 'absolute', top: `-${size / 2 - 1}px`, right, zIndex: 5, width: `${size}px`, height: `${size}px`, borderRadius: '50%', background: copiedId === it.i ? t.doneAccent : t.panel, border: `1px solid ${t.borderStrong}`, color: copiedId === it.i ? '#fff' : t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+      {copiedId === it.i ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
+    </button>
+  );
+
   const removeWidget = (i: string) => {
     updateLayout(widgetLayout.filter(it => it.i !== i));
   };
@@ -419,6 +458,7 @@ export default function TopicView({ topic, onChange, t, ctx, onDuplicate }: Prop
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
           {editMode && onDuplicate && <DuplicateControl t={t} onDuplicate={onDuplicate} btnStyle={ghostBtn(t)} />}
+          {renderPaste()}
           {editMode && (
             <button data-onb="topic-add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
               <Plus size={14} strokeWidth={1.5} /> Add widget
@@ -452,6 +492,7 @@ export default function TopicView({ topic, onChange, t, ctx, onDuplicate }: Prop
                     <X size={12} strokeWidth={2} />
                   </button>
                 )}
+                {editMode && copyBtn(it, isTopicTodos ? '22px' : '52px', 24)}
                 {editMode && (
                   <button onClick={(e) => openConfig(e, it.i)} aria-label="Widget settings"
                     style={{ position: 'absolute', top: '-8px', right: isTopicTodos ? '-8px' : '22px', zIndex: 5, width: '24px', height: '24px', borderRadius: '50%', background: configuringId === it.i ? t.text : t.panel, border: `1px solid ${t.borderStrong}`, color: configuringId === it.i ? t.bg : t.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
@@ -487,6 +528,7 @@ export default function TopicView({ topic, onChange, t, ctx, onDuplicate }: Prop
       }}>
         {editMode && <BackgroundControls t={t} bg={pageBg} onChange={setPageBg} />}
           {editMode && onDuplicate && <DuplicateControl t={t} onDuplicate={onDuplicate} btnStyle={ghostBtn(t)} />}
+          {renderPaste()}
         {editMode && (
           <button data-onb="topic-add-widget" onClick={() => setShowAdd(s => !s)} style={ghostBtn(t)}>
             <Plus size={14} strokeWidth={1.5} /> Add widget
@@ -547,6 +589,7 @@ export default function TopicView({ topic, onChange, t, ctx, onDuplicate }: Prop
                   <X size={12} strokeWidth={2} />
                 </button>
               )}
+              {editMode && copyBtn(it, isTopicTodos ? '18px' : '46px', 22)}
               {editMode && (
                 <button className="widget-remove" onClick={(e) => openConfig(e, it.i)} aria-label="Widget settings"
                   style={{ position: 'absolute', top: '-10px', right: isTopicTodos ? '-10px' : '18px', zIndex: 5, width: '22px', height: '22px', borderRadius: '50%', background: configuringId === it.i ? t.text : t.panel, border: `1px solid ${t.borderStrong}`, color: configuringId === it.i ? t.bg : t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
