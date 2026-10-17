@@ -1,0 +1,43 @@
+name: CI
+
+# Every push and pull request: TypeScript type check, the Vitest unit suite
+# (sync merge/thin-push guards, habits, study timer, rich notes) and the Rust
+# unit tests (store self-heal). Releases (release.yml) run on tags only, so
+# this is what catches a broken main before a tag is cut.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+env:
+  CARGO_NET_RETRY: "10"
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+jobs:
+  web:
+    name: Type check and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  rust:
+    name: cargo test
+    # Same runner as the release build, so the Tauri crate compiles without
+    # installing the Linux WebKit stack.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo test --lib
+        working-directory: src-tauri

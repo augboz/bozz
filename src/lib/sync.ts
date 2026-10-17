@@ -143,7 +143,7 @@ function isCorruptAuthError(e: unknown): boolean {
  * as a "FetchError" whose message can be literally "undefined" (2026-10-12),
  * which told the user nothing.
  */
-function isNetworkError(e: unknown): boolean {
+export function isNetworkError(e: unknown): boolean {
   if (!e) return false;
   const err = e as { name?: string; message?: string; status?: number };
   if (err.status) return false;
@@ -211,7 +211,7 @@ const GUARDED_COLLECTIONS = [
   'oauthAccounts', 'imapAccounts',
 ] as const;
 
-function countRecords(snapshot: Record<string, unknown>): number {
+export function countRecords(snapshot: Record<string, unknown>): number {
   let n = 0;
   for (const key of GUARDED_COLLECTIONS) {
     const value = snapshot[key];
@@ -287,7 +287,7 @@ const THIN_PUSH_RATIO = 0.5;
  * (failed store load, fresh dev install, interrupted first sign-in), at which
  * point it silently overwrites a full account. This is the tripwire for that.
  */
-function thinPushReason(
+export function thinPushReason(
   local: Record<string, unknown>,
   remote: Record<string, unknown>,
 ): string | null {
@@ -457,7 +457,7 @@ let pushAgainFor: string | null = null;
  * save uploaded 5MB and every refresh downloaded it (2026-09-07). Like
  * homeBackground and photos, backgrounds are per-device.
  */
-function stripTopicLocalOnly(snapshot: Record<string, unknown>): Record<string, unknown> {
+export function stripTopicLocalOnly(snapshot: Record<string, unknown>): Record<string, unknown> {
   const topics = snapshot.topics;
   if (!Array.isArray(topics)) return snapshot;
   return {
@@ -474,7 +474,7 @@ function stripTopicLocalOnly(snapshot: Record<string, unknown>): Record<string, 
  * Topics arriving from the cloud carry no page background; keep the one this
  * device already has for the same topic, so a pull never wipes it.
  */
-function keepLocalPageBg(remoteTopics: unknown[], localTopics: unknown[]): unknown[] {
+export function keepLocalPageBg(remoteTopics: unknown[], localTopics: unknown[]): unknown[] {
   const localBg = new Map<unknown, unknown>();
   for (const t of localTopics) if (isPlainObject(t) && t.pageBg) localBg.set(t.id, t.pageBg);
   return remoteTopics.map(t => {
