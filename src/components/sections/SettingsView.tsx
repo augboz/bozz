@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronRight, ChevronDown, Palette,
   Plug, RotateCcw, LogOut, Plus, X,
-  Sparkles, HelpCircle,
+  Sparkles, HelpCircle, Bot,
 } from 'lucide-react';
+import AssistantBlock from './settings/AssistantBlock';
+import type { AssistantSettings } from '../../lib/assistant/settings';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
   AppearancePrefs, FontChoice, FontSize,
@@ -17,6 +19,8 @@ import { isTauri } from '../../lib/platform';
 import PlanBlock from './settings/PlanBlock';
 
 interface SettingsViewProps {
+  assistantSettings: AssistantSettings;
+  onAssistantSettingsChange: (s: AssistantSettings) => void;
   t: Theme;
   appearance: AppearancePrefs;
   patchAppearance: (patch: Partial<AppearancePrefs>) => void;
@@ -424,6 +428,7 @@ export default function SettingsView({
   reviewSettings, onReviewSettingsChange, onOpenApps, onReplayWalkthroughs,
   topics, hiddenTopicIds,
   accountEmail, onSignOut, onOpenWorlds,
+  assistantSettings, onAssistantSettingsChange,
 }: SettingsViewProps) {
   const [autostartOn, setAutostartOn] = useState(true);
   const [checking, setChecking] = useState(true);
@@ -565,6 +570,10 @@ export default function SettingsView({
 
       <Block title="Bozz Plus" t={t} icon={Sparkles}>
         <PlanBlock t={t} onOpenWorlds={onOpenWorlds} />
+      </Block>
+
+      <Block title="Assistant" t={t} icon={Bot} collapsible>
+        <AssistantBlock t={t} settings={assistantSettings} onChange={onAssistantSettingsChange} />
       </Block>
 
       <Block title="Help" t={t} icon={HelpCircle} collapsible>

@@ -1,0 +1,29 @@
+// Per-device assistant settings: which provider and model, and whether
+// changes are proposed first or applied live. Stored under its own key, which
+// is not in SYNCED_KEYS, so it stays on this device.
+import { getItem, setItem } from '../storage';
+import type { ProviderId } from './providers/types';
+
+export interface AssistantSettings {
+  provider: ProviderId;
+  model: string;
+  /** 'propose' shows a change card to approve; 'live' applies as it goes (destructive ops still ask). */
+  mode: 'propose' | 'live';
+  /** The user has seen the "what gets sent" notice and accepted it. */
+  consented: boolean;
+}
+
+const KEY = 'assistantSettings';
+export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = { provider: 'anthropic', model: 'claude-sonnet-5-5', mode: 'propose', consented: false };
+
+export async function loadAssistantSettings(): Promise<AssistantSettings> {
+  try {
+    const raw = await getItem(KEY);
+    if (!raw?.value) return DEFAULT_ASSISTANT_SETTINGS;
+    return { ...DEFAULT_ASSISTANT_SETTINGS, ...(JSON.parse(raw.value) as Partial<AssistantSettings>) };
+  } catch { return DEFAULT_ASSISTANT_SETTINGS; }
+}
+
+export async function saveAssistantSettings(s: AssistantSettings): Promise<void> {
+  await setItem(KEY, JSON.stringify(s));
+}

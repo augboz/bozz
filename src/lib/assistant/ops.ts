@@ -8,7 +8,7 @@
 // Every optional field is `nullable` rather than `optional`, so the JSON
 // schema handed to the model has every key required with an explicit null.
 // That keeps the three providers' strict/function-calling modes happy.
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { WidgetType } from '../types';
 import { WIDGET_CATALOG } from '../widgetCatalog';
 

@@ -43,6 +43,12 @@ import { loadEntitlement } from '../lib/plus';
 import { BgLayer } from './shared/BackgroundControls';
 import { STATUS_COLORS } from '../lib/topicStatus';
 import { duplicateTopic } from '../lib/topicCopy';
+import AssistantPanel, { type AssistantApi } from './AssistantPanel';
+import { applyOps } from '../lib/assistant/applyOps';
+import { diffStore } from '../lib/assistant/diff';
+import { snapshotStore, withLocalBackgrounds, changedSlices, type AssistantStore } from '../lib/assistant/store';
+import type { Op } from '../lib/assistant/ops';
+import { loadAssistantSettings, DEFAULT_ASSISTANT_SETTINGS, type AssistantSettings } from '../lib/assistant/settings';
 const WorldsView = lazy(() => import('./sections/WorldsView'));
 import TopicFolderEditModal from './TopicFolderEditModal';
 import { makeBlankTopic, normalizeStages } from './sections/settings/TopicsBlock';
@@ -98,6 +104,9 @@ export default function Dashboard() {
   const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(DEFAULT_REVIEW_SETTINGS);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(DEFAULT_ASSISTANT_SETTINGS);
+  useEffect(() => { void loadAssistantSettings().then(setAssistantSettings); }, []);
   // Calendar focus request — set when a specific event is clicked elsewhere so
   // the Calendar opens in DAY mode on that event's date. A fresh object per click
   // (CalendarView keys its focus effect on identity) re-focuses even on same date.
@@ -822,12 +831,63 @@ export default function Dashboard() {
     window.setTimeout(() => setVoiceStatus(null), 2200);
   }, []);
 
+  // ── Assistant: the one write path for assistant changes ───────────────────
+  // applyOps is pure; here we snapshot, compute the next store, and write only
+  // the slices that changed (each slice's save effect then pushes once).
+  const assistantStoreRef = useRef<AssistantStore>({ topics, topicFolders, homeLayout: homeItems, appearance, habits });
+  assistantStoreRef.current = { topics, topicFolders, homeLayout: homeItems, appearance, habits };
+  const assistantUndoRef = useRef<Array<{ turnId: number; before: AssistantStore }>>([]);
+  const assistantTurnRef = useRef(0);
+  const writeAssistantStore = (next: AssistantStore, from: AssistantStore) => {
+    for (const slice of changedSlices(from, next)) {
+      if (slice === 'topics') setTopics(next.topics);
+      else if (slice === 'topicFolders') setTopicFolders(next.topicFolders);
+      else if (slice === 'homeLayout') setHomeItems(next.homeLayout);
+      else if (slice === 'appearance') setAppearance(next.appearance);
+      else if (slice === 'habits') setHabits(next.habits);
+    }
+    assistantStoreRef.current = next;
+  };
+  const assistantApi: AssistantApi = {
+    getStore: () => assistantStoreRef.current,
+    currentPageId: topics.some(tp => tp.id === activeSection) ? activeSection : null,
+    currentPageName: topics.find(tp => tp.id === activeSection)?.name ?? null,
+    apply: (ops: Op[]) => {
+      const before = assistantStoreRef.current;
+      const after = applyOps(before, ops);
+      const turnId = ++assistantTurnRef.current;
+      assistantUndoRef.current = [...assistantUndoRef.current.slice(-19), { turnId, before: snapshotStore(before) }];
+      writeAssistantStore(after, before);
+      const receipt = diffStore(before, after);
+      // A brand-new page is the natural thing to look at next.
+      const created = after.topics.find(tp => !before.topics.some(b => b.id === tp.id));
+      if (created) setActiveSection(created.id);
+      return { receipt, turnId };
+    },
+    undo: (turnId: number) => {
+      const stack = assistantUndoRef.current;
+      const last = stack[stack.length - 1];
+      if (!last || last.turnId !== turnId) return false;
+      const current = assistantStoreRef.current;
+      writeAssistantStore(withLocalBackgrounds(last.before, current), current);
+      assistantUndoRef.current = stack.slice(0, -1);
+      if (!assistantStoreRef.current.topics.some(tp => tp.id === activeSection) && !builtInSectionIds.has(activeSection)) setActiveSection('home');
+      return true;
+    },
+    latestTurnId: () => assistantUndoRef.current[assistantUndoRef.current.length - 1]?.turnId ?? null,
+    openSettings: () => { setActiveSection('settings'); setAssistantOpen(false); },
+  };
+
   // Ctrl/Cmd+K opens global search. Ctrl+Q opens quick add.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'f')) {
         e.preventDefault();
         setSearchOpen(o => !o);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setAssistantOpen(o => !o);
       }
       // Ctrl only, never Cmd: on macOS Cmd+Q is quit, and hijacking it would
       // be far worse than the shortcut not firing.
@@ -1648,6 +1708,29 @@ export default function Dashboard() {
                 <Search size={11} strokeWidth={1.8} />
               </button>
             )}
+            {!sidebarEditing && (
+              <button
+                onClick={() => setAssistantOpen(o => !o)}
+                title="Assistant (Ctrl+J)"
+                aria-label="Assistant"
+                aria-pressed={assistantOpen}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  background: assistantOpen ? sT.bgAlt : 'transparent',
+                  border: `1px solid ${sT.border}`,
+                  color: assistantOpen ? sT.text : sT.textMuted,
+                  cursor: 'pointer', borderRadius: '6px',
+                  padding: '0.28rem 0.45rem',
+                  fontFamily: 'inherit',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = sT.bgAlt; e.currentTarget.style.color = sT.text; }}
+                onMouseLeave={e => { if (!assistantOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = sT.textMuted; } }}
+              >
+                <Sparkles size={11} strokeWidth={1.8} />
+              </button>
+            )}
             <button
               onClick={() => setSidebarEditing(e => !e)}
               data-onb="edit-nav"
@@ -2184,6 +2267,8 @@ export default function Dashboard() {
                 .map(s => ({ id: s.id, label: s.label }))}
               hiddenTopicIds={hiddenTopicIds}
               accountEmail={session?.user.email ?? null}
+              assistantSettings={assistantSettings}
+              onAssistantSettingsChange={setAssistantSettings}
               onSignOut={async () => {
                 cancelPendingPush();
                 // Push all local data to Supabase before wiping.
@@ -2253,6 +2338,15 @@ export default function Dashboard() {
           />
         );
       })()}
+
+      <AssistantPanel
+        t={t}
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        api={assistantApi}
+        settings={assistantSettings}
+        onSettingsChange={setAssistantSettings}
+      />
 
       {searchOpen && (
         <Suspense fallback={null}>
