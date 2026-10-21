@@ -67,7 +67,6 @@ jobs:
           # complete version instead of a 404 until latest.json exists. Promoted
           # in publish-updater.
           prerelease: true
-          prerelease: false
 
       # ── Authenticode signing via SignPath (free for OSS projects) ──────────
       # Signs the NSIS installer so Microsoft Defender/SmartScreen stops
@@ -197,7 +196,6 @@ jobs:
           # complete version instead of a 404 until latest.json exists. Promoted
           # in publish-updater.
           prerelease: true
-          prerelease: false
           args: --target aarch64-apple-darwin
 
       - name: Build macOS (Intel)
@@ -224,7 +222,6 @@ jobs:
           # complete version instead of a 404 until latest.json exists. Promoted
           # in publish-updater.
           prerelease: true
-          prerelease: false
           args: --target x86_64-apple-darwin
 
       - name: Upload fixed-name DMGs and sign updater tarballs
