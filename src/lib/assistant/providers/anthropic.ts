@@ -1,8 +1,8 @@
 // Anthropic Messages API, called directly with the user's own key.
-// On desktop the request goes through the Tauri HTTP plugin (Rust), so there
-// is no browser CORS question; on the web build we send the opt-in header.
+// The request goes through the Tauri HTTP plugin on desktop and fetch on the
+// web; both carry the app's Origin, so the direct-browser-access header is
+// always sent.
 import { platformFetch } from '../../http';
-import { isTauri } from '../../platform';
 import { failFromResponse, type ChatMessage, type Provider, type ToolCall } from './types';
 
 type Block =
@@ -37,7 +37,10 @@ export const anthropicProvider: Provider = {
         'content-type': 'application/json',
         'x-api-key': req.apiKey,
         'anthropic-version': '2023-06-01',
-        ...(isTauri() ? {} : { 'anthropic-dangerous-direct-browser-access': 'true' }),
+        // Required on desktop too: the Tauri HTTP plugin forwards the webview's
+        // Origin, so Anthropic classifies the call as a browser request and
+        // rejects it without this (v0.1.87 report). The key is the user's own.
+        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
         model: req.model,
