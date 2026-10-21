@@ -17,7 +17,7 @@ const store = (): AssistantStore => ({
   topics: [{ id: 'cp', name: 'Concurrent Programming', color: '#7da7d9', keywords: [], order: 0, stages: [{ id: 's1', label: 'To do' }, { id: 's2', label: 'Done', done: true }], items: [], widgetLayout: [{ i: 'topicTodos', type: 'topicTodos', x: 0, y: 0, w: 8, h: 12 }] }],
   topicFolders: [], homeLayout: [], appearance: { ...DEFAULT_APPEARANCE }, habits: [],
 });
-const settings: AssistantSettings = { provider: 'mock', model: 'mock', mode: 'propose', consented: true };
+const settings: AssistantSettings = { provider: 'mock', model: 'mock', mode: 'check', consented: true };
 
 /** Drives a turn with the mock provider, applying proposals through the real applier. */
 async function drive(text: string, currentPageId: string | null, decide: (p: Proposal) => 'apply' | 'decline') {
@@ -85,7 +85,7 @@ describe('tool schemas', () => {
     expect(apply.required).toEqual(['summary', 'ops']);
     expect(apply.additionalProperties).toBe(false);
     const variants = (apply.properties.ops.items.oneOf ?? apply.properties.ops.items.anyOf) as Array<{ properties: Record<string, unknown>; required: string[] }>;
-    expect(variants.length).toBe(15);
+    expect(variants.length).toBe(16);
     for (const v of variants) expect(v.required.sort()).toEqual(Object.keys(v.properties).sort());
   });
 

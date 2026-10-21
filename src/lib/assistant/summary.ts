@@ -21,12 +21,14 @@ export function summarizeStore(s: AssistantStore, currentPageId: string | null):
   const a = s.appearance;
   lines.push(`appearance: mood=${a.mood}, font=${a.font}, fontSize=${a.fontSize}, shape=${a.widgetShape}, border=${a.widgetBorder}${a.readability ? `, readability=${JSON.stringify(a.readability)}` : ''}${a.activeWorldId ? `, world=${a.activeWorldId}` : ''}`);
   lines.push(`current page: ${currentPageId ?? 'home'}`);
-  lines.push(`home widgets: ${s.homeLayout.length ? s.homeLayout.map(w => `${w.type}#${w.i}(${w.w}×${w.h})`).join(', ') : 'none'}`);
+  const wdesc = (w: { type: string; i: string; x: number; y: number; w: number; h: number }) => `${w.type}#${w.i}(${w.w}×${w.h} at col ${w.x} row ${w.y})`;
+  const ordered = (ws: Array<{ type: string; i: string; x: number; y: number; w: number; h: number }>) => [...ws].sort((a, b) => a.y - b.y || a.x - b.x).map(wdesc).join(', ');
+  lines.push(`home widgets (grid is 24 columns wide): ${s.homeLayout.length ? ordered(s.homeLayout) : 'none'}`);
   if (s.topicFolders.length) lines.push(`folders: ${s.topicFolders.map(f => `${f.name}#${f.id}`).join(', ')}`);
   lines.push('pages:');
   for (const t of s.topics) {
     const open = t.items.filter(i => !t.stages.find(st => st.id === i.stageId)?.done).length;
-    const widgets = (t.widgetLayout ?? []).map(w => `${w.type}#${w.i}(${w.w}×${w.h})`).join(', ');
+    const widgets = ordered(t.widgetLayout ?? []);
     lines.push(`- "${t.name}"#${t.id}${t.folderId ? ` folder=${t.folderId}` : ''}${t.pageTitle ? ` title="${t.pageTitle}"` : ''}${t.status ? ` status=${t.status}` : ''}: ${t.items.length} tasks (${open} open), stages=[${t.stages.map(st => `${st.label}#${st.id}`).join(', ')}], widgets=[${widgets || 'none'}]${t.pinnedNote ? ', has a page note' : ''}`);
   }
   if (!s.topics.length) lines.push('- (no pages yet)');

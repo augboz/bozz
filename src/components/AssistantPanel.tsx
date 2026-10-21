@@ -72,6 +72,20 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   useEffect(() => { if (open) { void getApiKey(settings.provider).then(k => setHasKey(!!k)); setTimeout(() => inputRef.current?.focus(), 50); } }, [open, settings.provider]);
   useEffect(() => { threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight }); }, [items, status]);
 
+  // Grow the input with its text, one line at a time, up to five lines; after
+  // that it scrolls. Measured from scrollHeight so wrapped long lines count.
+  const MAX_INPUT_LINES = 5;
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 18;
+    const padding = parseFloat(getComputedStyle(el).paddingTop) + parseFloat(getComputedStyle(el).paddingBottom);
+    el.style.height = 'auto';
+    const max = lineHeight * MAX_INPUT_LINES + padding;
+    el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+    el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
+  }, [input, open]);
+
   const add = (item: DistributiveOmit<Item, 'id'>) => { const id = nextItemId++; dispatch({ type: 'add', item: { ...item, id } as Item }); return id; };
 
   const decide = (itemId: number, d: Decision, patch: Partial<Item>) => {
@@ -113,7 +127,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
             const lines = p.ops.map(op => describeOp(op, api.getStore()));
             const id = add({ kind: 'proposal', proposal: p, lines, status: 'pending' });
             pendingRef.current.set(id, resolve);
-            if (settings.mode === 'live' && !p.destructive) applyItem(id, p);
+            if (settings.mode === 'auto' && !p.destructive) applyItem(id, p);
           }),
         },
       );
@@ -160,14 +174,6 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           <div style={{ fontSize: '0.85rem', fontWeight: 500, color: t.text }}>Bozz Assistant</div>
           <div style={{ fontSize: '0.65rem', color: t.textDim }}>AI · can be wrong · {provider.label}</div>
         </div>
-        <div role="radiogroup" aria-label="Mode" style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '999px', overflow: 'hidden' }}>
-          {(['propose', 'live'] as const).map(m => (
-            <button key={m} role="radio" aria-checked={settings.mode === m} onClick={() => setMode(m)} style={{
-              font: 'inherit', fontSize: '0.66rem', padding: '0.2rem 0.55rem', border: 'none', cursor: 'pointer',
-              background: settings.mode === m ? t.text : 'transparent', color: settings.mode === m ? t.bg : t.textMuted,
-            }}>{m === 'propose' ? 'Propose' : 'Apply live'}</button>
-          ))}
-        </div>
         <button onClick={api.openSettings} title="Assistant settings" aria-label="Assistant settings" style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', padding: 2, display: 'flex' }}><SettingsIcon size={15} strokeWidth={1.6} /></button>
         <button onClick={onClose} title="Close (Ctrl+J)" aria-label="Close assistant" style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', padding: 2, display: 'flex' }}><X size={16} strokeWidth={1.6} /></button>
       </header>
@@ -209,13 +215,23 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
       )}
 
       <form onSubmit={e => { e.preventDefault(); void send(input); }} style={{ margin: '0 0.8rem 0.8rem', border: `1px solid ${t.border}`, background: t.input, borderRadius: '12px', padding: '0.45rem 0.55rem', display: 'flex', alignItems: 'flex-end', gap: '0.4rem' }}>
-        <span style={{ fontSize: '0.62rem', background: t.bgAlt, color: t.text, padding: '0.15rem 0.45rem', borderRadius: '999px', whiteSpace: 'nowrap', marginBottom: 4 }} title="What the assistant is looking at">{api.currentPageName ?? 'Home'}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, marginBottom: 2 }}>
+          <span style={{ fontSize: '0.62rem', background: t.bgAlt, color: t.text, padding: '0.15rem 0.45rem', borderRadius: '999px', whiteSpace: 'nowrap' }} title="What the assistant is looking at">{api.currentPageName ?? 'Home'}</span>
+          <div role="radiogroup" aria-label="How changes are applied" style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '999px', overflow: 'hidden' }}>
+            {([['check', 'Check', 'Check: every change is shown to you first'], ['auto', 'Auto', 'Auto: changes are applied straight away; deletions still ask']] as const).map(([m, label, title]) => (
+              <button key={m} type="button" role="radio" aria-checked={settings.mode === m} title={title} onClick={() => setMode(m)} style={{
+                font: 'inherit', fontSize: '0.6rem', fontWeight: 500, padding: '0.1rem 0.45rem', border: 'none', cursor: 'pointer',
+                background: settings.mode === m ? t.text : 'transparent', color: settings.mode === m ? t.bg : t.textMuted,
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
         <textarea
           ref={inputRef} value={input} onChange={e => setInput(e.target.value)} rows={1}
           placeholder="Ask for a change…" aria-label="Ask the assistant"
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(input); } }}
           disabled={busy || !settings.consented}
-          style={{ flex: 1, minWidth: 0, resize: 'none', background: 'transparent', border: 'none', outline: 'none', color: t.text, font: 'inherit', fontSize: '0.84rem', lineHeight: 1.4, maxHeight: '6rem' }}
+          style={{ flex: 1, minWidth: 0, resize: 'none', background: 'transparent', border: 'none', outline: 'none', color: t.text, font: 'inherit', fontSize: '0.84rem', lineHeight: 1.4, padding: 0, overflowY: 'hidden' }}
         />
         {busy
           ? <button type="button" onClick={() => abortRef.current?.abort()} title="Stop" style={{ ...btn(), padding: '0.25rem 0.5rem' }}>Stop</button>

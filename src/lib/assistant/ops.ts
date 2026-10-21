@@ -38,7 +38,8 @@ export const widgetConfigSchema = z.object({
 export type WidgetConfigInput = z.infer<typeof widgetConfigSchema>;
 
 const size = z.object({ w: z.number().int().min(1).max(24), h: z.number().int().min(1).max(60) });
-const placement = z.enum(['top', 'bottom']);
+const placement = z.enum(['top', 'bottom', 'above', 'below', 'leftOf', 'rightOf']);
+const anchor = z.string().nullable().describe('widget id for above/below/leftOf/rightOf; null for top/bottom');
 const pageRef = z.string().min(1).max(64).describe("'home' or a page id from the snapshot");
 
 const widgetSpec = z.object({
@@ -54,6 +55,7 @@ export const opSchemas = {
     type: z.enum(widgetTypes),
     size: size.nullable().describe('null = the type\'s default size'),
     placement: placement.nullable().describe('null = bottom'),
+    anchorId: anchor,
     config: widgetConfigSchema.nullable(),
   }),
   configure_widget: z.object({
@@ -66,6 +68,13 @@ export const opSchemas = {
     widgetId: z.string().min(1),
     size: size.nullable(),
     placement: placement.nullable(),
+    anchorId: anchor,
+  }),
+  arrange_page: z.object({
+    op: z.literal('arrange_page'),
+    page: pageRef,
+    rows: z.array(z.array(z.string().min(1)).min(1).max(4)).min(1).max(12)
+      .describe('every widget id on the page, grouped into rows from top to bottom, left to right; widgets in one row share it and are widened to fill it'),
   }),
   remove_widget: z.object({
     op: z.literal('remove_widget'),
@@ -160,7 +169,7 @@ export const opSchemas = {
 } as const;
 
 export const opSchema = z.discriminatedUnion('op', [
-  opSchemas.add_widget, opSchemas.configure_widget, opSchemas.move_widget, opSchemas.remove_widget,
+  opSchemas.add_widget, opSchemas.configure_widget, opSchemas.move_widget, opSchemas.arrange_page, opSchemas.remove_widget,
   opSchemas.create_page, opSchemas.update_page, opSchemas.delete_page, opSchemas.create_folder,
   opSchemas.set_appearance, opSchemas.set_readability, opSchemas.apply_world,
   opSchemas.edit_note, opSchemas.add_task, opSchemas.complete_task, opSchemas.add_habit,

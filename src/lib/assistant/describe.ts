@@ -14,10 +14,18 @@ export function describeOp(op: Op, s: AssistantStore): string {
     return hit ? `${WIDGET_CATALOG[hit.w.type]?.label ?? hit.w.type} on ${hit.page}` : `widget ${id}`;
   };
   const size = (sz: { w: number; h: number } | null) => (sz ? ` (${sz.w}×${sz.h})` : '');
+  const short = (id: string) => widget(id).replace(/ on .*$/, '');
+  const where = (placement: string | null, anchorId: string | null) => {
+    if (!placement) return '';
+    if (placement === 'top' || placement === 'bottom') return `, at the ${placement}`;
+    const a = anchorId ? short(anchorId) : 'it';
+    return placement === 'above' ? `, above ${a}` : placement === 'below' ? `, below ${a}` : placement === 'leftOf' ? `, left of ${a}` : `, right of ${a}`;
+  };
   switch (op.op) {
-    case 'add_widget': return `Add ${WIDGET_CATALOG[op.type]?.label ?? op.type}${size(op.size)} to ${pageName(op.page)}${op.placement === 'top' ? ', at the top' : ''}`;
+    case 'add_widget': return `Add ${WIDGET_CATALOG[op.type]?.label ?? op.type}${size(op.size)} to ${pageName(op.page)}${where(op.placement, op.anchorId)}`;
     case 'configure_widget': return `Change settings of ${widget(op.widgetId)}: ${Object.keys(op.config).join(', ') || 'nothing'}`;
-    case 'move_widget': return `${op.size ? `Resize ${widget(op.widgetId)}${size(op.size)}` : `Move ${widget(op.widgetId)}`}${op.placement ? ` to the ${op.placement}` : ''}`;
+    case 'move_widget': return `${op.size ? `Resize ${widget(op.widgetId)}${size(op.size)}` : `Move ${widget(op.widgetId)}`}${where(op.placement, op.anchorId)}`;
+    case 'arrange_page': return `Rearrange ${pageName(op.page)} into ${op.rows.length} row${op.rows.length === 1 ? '' : 's'}: ${op.rows.map(r => r.map(short).join(' | ')).join(' / ')}`;
     case 'remove_widget': return `Remove ${widget(op.widgetId)}`;
     case 'create_page': return `Create page "${op.name}"${op.folderId ? ` in folder ${s.topicFolders.find(f => f.id === op.folderId)?.name ?? op.folderId}` : ''}${op.widgets?.length ? ` with ${op.widgets.map(w => WIDGET_CATALOG[w.type]?.label ?? w.type).join(', ')}` : ''}`;
     case 'update_page': {

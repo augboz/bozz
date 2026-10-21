@@ -41,9 +41,9 @@ export const mockProvider: Provider = {
     }
     if (/timer|note|status|set (this|the) page up|set up/.test(text) && page) {
       return { text: '', toolCalls: [call('apply_changes', { summary: 'Add a study timer, a note and a status to this page', ops: [
-        { op: 'add_widget', page, type: 'topicTimer', size: null, placement: null, config: null },
-        { op: 'add_widget', page, type: 'topicNote', size: null, placement: null, config: { note: '' } },
-        { op: 'add_widget', page, type: 'topicStatus', size: null, placement: null, config: null },
+        { op: 'add_widget', page, type: 'topicTimer', size: null, placement: null, anchorId: null, config: null },
+        { op: 'add_widget', page, type: 'topicNote', size: null, placement: null, anchorId: null, config: { note: '' } },
+        { op: 'add_widget', page, type: 'topicStatus', size: null, placement: null, anchorId: null, config: null },
       ] })] };
     }
     if (/new page|page for/.test(text)) {

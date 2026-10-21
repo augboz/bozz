@@ -70,11 +70,80 @@ function cleanConfig(type: HomeWidgetItem['type'], cfg: WidgetConfigInput | null
   return out;
 }
 
-/** Appends at the bottom (or the top, pushing everything down). Never overlaps. */
-function place(layout: HomeWidgetItem[], item: HomeWidgetItem, placement: 'top' | 'bottom'): HomeWidgetItem[] {
+type Placement = 'top' | 'bottom' | 'above' | 'below' | 'leftOf' | 'rightOf';
+
+function overlaps(a: HomeWidgetItem, b: HomeWidgetItem): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+/** Lowest y at or below `fromY` where `item` fits at its x without overlapping. */
+function dropIn(layout: HomeWidgetItem[], item: HomeWidgetItem, fromY: number): HomeWidgetItem {
+  let y = fromY;
+  for (let guard = 0; guard < 500; guard++) {
+    const candidate = { ...item, y };
+    const hit = layout.find(w => w.i !== item.i && overlaps(candidate, w));
+    if (!hit) return candidate;
+    y = hit.y + hit.h;
+  }
+  return { ...item, y };
+}
+
+/**
+ * Put `item` (not yet in `layout`) somewhere that never overlaps.
+ * top/bottom: a row at the top (pushing the rest down) or the end.
+ * above/below/leftOf/rightOf: relative to `anchor`; beside-placements use the
+ * same row when there is room, otherwise go underneath.
+ */
+function place(layout: HomeWidgetItem[], item: HomeWidgetItem, placement: Placement, anchor?: HomeWidgetItem): HomeWidgetItem[] {
   if (placement === 'top') return [{ ...item, x: 0, y: 0 }, ...layout.map(w => ({ ...w, y: w.y + item.h }))];
-  const maxY = layout.reduce((m, w) => Math.max(m, w.y + w.h), 0);
-  return [...layout, { ...item, x: 0, y: maxY }];
+  if (placement === 'bottom' || !anchor) {
+    const maxY = layout.reduce((m, w) => Math.max(m, w.y + w.h), 0);
+    return [...layout, { ...item, x: 0, y: maxY }];
+  }
+  if (placement === 'above') {
+    const moved = layout.map(w => (w.y >= anchor.y ? { ...w, y: w.y + item.h } : w));
+    return [...moved, dropIn(moved, { ...item, x: anchor.x }, anchor.y)];
+  }
+  if (placement !== 'below') {
+    const x = placement === 'rightOf' ? anchor.x + anchor.w : anchor.x - item.w;
+    if (x >= 0 && x + item.w <= GRID_COLS) {
+      const candidate = { ...item, x, y: anchor.y };
+      if (!layout.some(w => overlaps(candidate, w))) return [...layout, candidate];
+    }
+  }
+  // below, or no room beside: go underneath the anchor.
+  const moved = layout.map(w => (w.y >= anchor.y + anchor.h ? { ...w, y: w.y + item.h } : w));
+  return [...moved, dropIn(moved, { ...item, x: anchor.x }, anchor.y + anchor.h)];
+}
+
+/** Lay the given rows out top to bottom; each row shares the width, scaled from the widgets' current widths. */
+function arrangeRows(layout: HomeWidgetItem[], rows: string[][], index: number): HomeWidgetItem[] {
+  const byId = new Map(layout.map(w => [w.i, w]));
+  const seen = new Set<string>();
+  const out: HomeWidgetItem[] = [];
+  let y = 0;
+  for (const row of rows) {
+    const items = row.map(id => {
+      const w = byId.get(id);
+      if (!w) throw new OpError(index, `no widget with id "${id}" on that page`);
+      if (seen.has(id)) throw new OpError(index, `widget "${id}" listed twice`);
+      seen.add(id);
+      return w;
+    });
+    const total = items.reduce((n, w) => n + w.w, 0);
+    const widths = items.map(w => Math.max(WIDGET_CATALOG[w.type]?.minSize.w ?? 2, Math.round((w.w / total) * GRID_COLS)));
+    // Rounding and minimums can leave a gap or an overrun: settle it on the widest widget.
+    const used = widths.reduce((a, b) => a + b, 0);
+    const widest = widths.indexOf(Math.max(...widths));
+    widths[widest] = Math.max(1, widths[widest] + GRID_COLS - used);
+    const rowH = Math.max(...items.map(w => w.h));
+    let x = 0;
+    items.forEach((w, i) => { out.push({ ...w, x, y, w: widths[i] }); x += widths[i]; });
+    y += rowH;
+  }
+  // Anything the model left out keeps its order, appended underneath.
+  for (const w of layout) if (!seen.has(w.i)) { out.push({ ...w, x: 0, y }); y += w.h; }
+  return out;
 }
 
 function makeWidget(page: 'home' | 'topic', layout: HomeWidgetItem[], spec: { type: HomeWidgetItem['type']; size: { w: number; h: number } | null; config: WidgetConfigInput | null }, index: number): HomeWidgetItem {
@@ -105,7 +174,9 @@ function applyOne(s: AssistantStore, op: Op, index: number): AssistantStore {
       const kind = op.page === 'home' ? 'home' : 'topic';
       const layout = getLayout(s, op.page, index);
       const item = makeWidget(kind, layout, op, index);
-      return setLayout(s, op.page, place(layout, item, op.placement ?? 'bottom'));
+      const anchor = op.anchorId ? layout.find(w => w.i === op.anchorId) : undefined;
+      if (op.anchorId && !anchor) throw new OpError(index, `no widget with id "${op.anchorId}" on that page`);
+      return setLayout(s, op.page, place(layout, item, op.placement ?? 'bottom', anchor));
     }
     case 'configure_widget': {
       const loc = findWidget(s, op.widgetId);
@@ -121,8 +192,16 @@ function applyOne(s: AssistantStore, op: Op, index: number): AssistantStore {
       let item = loc.item;
       if (op.size) item = { ...item, w: Math.min(GRID_COLS, Math.max(meta.minSize.w, op.size.w)), h: Math.max(meta.minSize.h, op.size.h) };
       let layout = getLayout(s, loc.page, index).map(w => (w.i === op.widgetId ? item : w));
-      if (op.placement) layout = place(layout.filter(w => w.i !== op.widgetId), item, op.placement);
+      if (op.placement) {
+        const rest = layout.filter(w => w.i !== op.widgetId);
+        const anchor = op.anchorId ? rest.find(w => w.i === op.anchorId) : undefined;
+        if (op.anchorId && !anchor) throw new OpError(index, `no widget with id "${op.anchorId}" on that page`);
+        layout = place(rest, item, op.placement, anchor);
+      }
       return setLayout(s, loc.page, layout);
+    }
+    case 'arrange_page': {
+      return setLayout(s, op.page, arrangeRows(getLayout(s, op.page, index), op.rows, index));
     }
     case 'remove_widget': {
       const loc = findWidget(s, op.widgetId);

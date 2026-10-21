@@ -96,11 +96,11 @@ export default function AssistantBlock({ t, settings, onChange }: { t: Theme; se
       {!isTauri() && settings.provider !== 'mock' && <div style={{ fontSize: '0.72rem', color: t.textMuted, padding: '0 0 0.5rem' }}>In the browser the key is stored in this browser's local storage. The desktop app keeps it in the system keychain.</div>}
 
       <div style={row}>
-        {label('Changes', settings.mode === 'propose' ? 'Shown to you first; you click Apply' : 'Applied as the assistant goes; deletions still ask')}
+        {label('Changes', settings.mode === 'check' ? 'Check: shown to you first; you click Apply' : 'Auto: applied straight away; deletions still ask')}
         <div role="radiogroup" style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '999px', overflow: 'hidden' }}>
-          {(['propose', 'live'] as const).map(m => (
+          {(['check', 'auto'] as const).map(m => (
             <button key={m} role="radio" aria-checked={settings.mode === m} onClick={() => update({ mode: m })} style={{ font: 'inherit', fontSize: '0.74rem', padding: '0.3rem 0.7rem', border: 'none', cursor: 'pointer', background: settings.mode === m ? t.text : 'transparent', color: settings.mode === m ? t.bg : t.textMuted }}>
-              {m === 'propose' ? 'Propose first' : 'Apply live'}
+              {m === 'check' ? 'Check' : 'Auto'}
             </button>
           ))}
         </div>

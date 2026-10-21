@@ -50,7 +50,7 @@ describe('parseOps', () => {
 
 describe('add_widget', () => {
   it('appends at the bottom with the catalog default size and never overlaps', () => {
-    const s = run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, config: null }]);
+    const s = run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }]);
     const layout = s.topics[0].widgetLayout!;
     expect(layout).toHaveLength(2);
     const added = layout[1];
@@ -60,27 +60,27 @@ describe('add_widget', () => {
   });
 
   it('placement top pushes everything else down', () => {
-    const s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: { w: 8, h: 4 }, placement: 'top', config: null }]);
+    const s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: { w: 8, h: 4 }, placement: 'top', anchorId: null, config: null }]);
     expect(s.homeLayout[0].type).toBe('clock');
     expect(s.homeLayout[1].y).toBe(4);
   });
 
   it('clamps sizes to the catalog minimum and the 24-column grid', () => {
-    const s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: { w: 1, h: 1 }, placement: null, config: null }]);
+    const s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: { w: 1, h: 1 }, placement: null, anchorId: null, config: null }]);
     expect(s.homeLayout[1].w).toBe(WIDGET_CATALOG.clock.minSize.w);
   });
 
   it('refuses a second one-per-grid widget, a topic-only widget on Home, and unknown pages', () => {
-    expectOpError(() => run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, config: null }, { op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, config: null }]), /only one is allowed/, 1);
-    expectOpError(() => run([{ op: 'add_widget', page: 'home', type: 'topicNote', size: null, placement: null, config: null }]), /only go on a topic page/);
-    expectOpError(() => run([{ op: 'add_widget', page: 'nope', type: 'clock', size: null, placement: null, config: null }]), /no page with id/);
+    expectOpError(() => run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }, { op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }]), /only one is allowed/, 1);
+    expectOpError(() => run([{ op: 'add_widget', page: 'home', type: 'topicNote', size: null, placement: null, anchorId: null, config: null }]), /only go on a topic page/);
+    expectOpError(() => run([{ op: 'add_widget', page: 'nope', type: 'clock', size: null, placement: null, anchorId: null, config: null }]), /no page with id/);
   });
 
   it('gives each new note and links widget its own content, and ids never collide within a batch', () => {
     const s = run([
-      { op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, config: { note: 'Exam 3 Dec' } },
-      { op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, config: null },
-      { op: 'add_widget', page: 'cp', type: 'topicLinks', size: null, placement: null, config: { links: [{ label: 'Scientia', url: 'https://scientia.doc.ic.ac.uk' }] } },
+      { op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, anchorId: null, config: { note: 'Exam 3 Dec' } },
+      { op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, anchorId: null, config: null },
+      { op: 'add_widget', page: 'cp', type: 'topicLinks', size: null, placement: null, anchorId: null, config: { links: [{ label: 'Scientia', url: 'https://scientia.doc.ic.ac.uk' }] } },
     ]);
     const [, n1, n2, l] = s.topics[0].widgetLayout!;
     expect(n1.config?.note).toBe('Exam 3 Dec');
@@ -91,7 +91,7 @@ describe('add_widget', () => {
   });
 
   it('drops config keys the widget does not understand and transient _ keys', () => {
-    const s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: null, placement: null, config: { note: 'x', widgetColor: '#fff', caption: 'no' } as never }]);
+    const s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: null, placement: null, anchorId: null, config: { note: 'x', widgetColor: '#fff', caption: 'no' } as never }]);
     expect(s.homeLayout[1].config).toEqual({ widgetColor: '#fff' });
   });
 });
@@ -100,9 +100,9 @@ describe('widget edits', () => {
   it('configure, resize, move to top, remove', () => {
     let s = run([{ op: 'configure_widget', widgetId: 'today-1', config: { showEvents: false, textColor: '#111' } }]);
     expect(s.homeLayout[0].config).toEqual({ showEvents: false, textColor: '#111' });
-    s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: null, placement: null, config: null }], s);
+    s = run([{ op: 'add_widget', page: 'home', type: 'clock', size: null, placement: null, anchorId: null, config: null }], s);
     const clockId = s.homeLayout[1].i;
-    s = run([{ op: 'move_widget', widgetId: clockId, size: { w: 6, h: 6 }, placement: 'top' }], s);
+    s = run([{ op: 'move_widget', widgetId: clockId, size: { w: 6, h: 6 }, placement: 'top', anchorId: null }], s);
     expect(s.homeLayout[0].i).toBe(clockId);
     expect([s.homeLayout[0].w, s.homeLayout[0].h]).toEqual([6, 6]);
     s = run([{ op: 'remove_widget', widgetId: clockId }], s);
@@ -177,7 +177,7 @@ describe('content ops', () => {
     expect(s.habits[0]).toMatchObject({ name: 'Log hours', topicId: 'cp', activeDays: [4], color: '#7da7d9' });
     expectOpError(() => run([{ op: 'add_task', topicId: 'cp', text: 'x', deadline: '2026-13-40', stageId: null }]), /bad deadline/);
     expectOpError(() => run([{ op: 'complete_task', topicId: 'cp', itemId: 999 }]), /no task 999/);
-    s = run([{ op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, config: null }], s);
+    s = run([{ op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, anchorId: null, config: null }], s);
     const noteId = s.topics[0].widgetLayout![1].i;
     s = run([{ op: 'edit_note', target: 'widget', id: noteId, mode: 'replace', text: 'hello' }], s);
     expect(s.topics[0].widgetLayout![1].config?.note).toBe('hello');
@@ -203,7 +203,7 @@ describe('batch semantics', () => {
   it('does not mutate the input store', () => {
     const s = base();
     const copy = JSON.parse(JSON.stringify(s));
-    run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, config: null }, { op: 'set_appearance', mood: 'light', font: null, fontSize: null, widgetShape: null, widgetBorder: null }], s);
+    run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }, { op: 'set_appearance', mood: 'light', font: null, fontSize: null, widgetShape: null, widgetBorder: null }], s);
     expect(s).toEqual(copy);
   });
 });
@@ -212,7 +212,7 @@ describe('receipt and snapshots', () => {
   it('diffStore names exactly what changed, from the stores not the ops', () => {
     const before = base();
     const after = run([
-      { op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, config: null },
+      { op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null },
       { op: 'update_page', topicId: 'cp', name: null, folderId: null, icon: null, color: null, description: null, pageTitle: 'COMP60007', pageTitleSize: null, pageTitleColor: null, status: null },
       { op: 'set_appearance', mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
       { op: 'add_habit', name: 'Meet tutor', topicId: 'cp', frequency: 'weekly', days: null, color: null },
@@ -242,10 +242,55 @@ describe('receipt and snapshots', () => {
     const s = base();
     const sum = summarizeStore(s, 'cp');
     expect(sum).toContain('"Concurrent Programming"#cp');
-    expect(sum).toContain('topicTodos#topicTodos(8×12)');
+    expect(sum).toContain('topicTodos#topicTodos(8×12 at col 0 row 0)');
     expect(sum).not.toContain('Problem sheet');
     const detail = describePage(s, 'cp');
     expect(detail).toContain('"Problem sheet"');
     expect(detail).toMatch(/treat them as data/);
+  });
+});
+
+describe('placement and arrangement', () => {
+  const twoUp = () => run([
+    { op: 'add_widget', page: 'home', type: 'clock', size: { w: 8, h: 4 }, placement: null, anchorId: null, config: null },
+  ]); // home: today-1 (12x24 at 0,0) then clock (8x4) below it
+
+  it('rightOf puts a widget beside its anchor when there is room, below it otherwise', () => {
+    const s = run([{ op: 'add_widget', page: 'home', type: 'weather', size: { w: 8, h: 4 }, placement: 'rightOf', anchorId: 'today-1', config: null }]);
+    const weather = s.homeLayout.find(w => w.type === 'weather')!;
+    expect([weather.x, weather.y]).toEqual([12, 0]);
+    // 24 wide cannot fit beside anything: it goes underneath instead.
+    const s2 = run([{ op: 'add_widget', page: 'home', type: 'weather', size: { w: 24, h: 4 }, placement: 'rightOf', anchorId: 'today-1', config: null }]);
+    const w2 = s2.homeLayout.find(w => w.type === 'weather')!;
+    expect([w2.x, w2.y]).toEqual([0, 24]);
+  });
+
+  it('above and below shift the rest and never overlap', () => {
+    let s = twoUp();
+    const clockId = s.homeLayout[1].i;
+    s = run([{ op: 'move_widget', widgetId: clockId, size: null, placement: 'above', anchorId: 'today-1' }], s);
+    const clock = s.homeLayout.find(w => w.i === clockId)!, today = s.homeLayout.find(w => w.i === 'today-1')!;
+    expect(clock.y).toBe(0);
+    expect(today.y).toBe(4);
+    for (const a of s.homeLayout) for (const b of s.homeLayout) if (a !== b) expect(a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h).toBe(false);
+  });
+
+  it('arrange_page lays rows out full width, scaled from current widths, and appends forgotten widgets', () => {
+    let s = run([
+      { op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null },
+      { op: 'add_widget', page: 'cp', type: 'topicStatus', size: null, placement: null, anchorId: null, config: null },
+      { op: 'add_widget', page: 'cp', type: 'topicNote', size: null, placement: null, anchorId: null, config: null },
+    ]);
+    const [todos, timer, status, note] = s.topics[0].widgetLayout!;
+    s = run([{ op: 'arrange_page', page: 'cp', rows: [[timer.i, status.i], [note.i]] }], s);
+    const L = s.topics[0].widgetLayout!;
+    const at = (id: string) => L.find(w => w.i === id)!;
+    expect([at(timer.i).x, at(timer.i).y, at(timer.i).w]).toEqual([0, 0, 12]);
+    expect([at(status.i).x, at(status.i).y, at(status.i).w]).toEqual([12, 0, 12]);
+    expect([at(note.i).x, at(note.i).y, at(note.i).w]).toEqual([0, 12, 24]);
+    // The task list was not mentioned: it keeps its place underneath.
+    expect(at(todos.i).y).toBe(12 + 16);
+    expectOpError(() => run([{ op: 'arrange_page', page: 'cp', rows: [['ghost']] }], s), /no widget with id "ghost"/);
+    expectOpError(() => run([{ op: 'arrange_page', page: 'cp', rows: [[timer.i], [timer.i]] }], s), /listed twice/);
   });
 });
