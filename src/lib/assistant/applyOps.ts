@@ -9,7 +9,6 @@
 import type { AppearancePrefs, Habit, HomeWidgetItem, Topic, TopicFolder, TopicItem } from '../types';
 import { GRID_COLS, WIDGET_CATALOG, allowedOn } from '../widgetCatalog';
 import { findWorld, applyWorld, worldToTopic, worldTopicPatch } from '../worlds';
-import { nextId } from '../ids';
 import type { AssistantStore } from './store';
 import type { Op, WidgetConfigInput } from './ops';
 
@@ -20,15 +19,25 @@ export class OpError extends Error {
   }
 }
 
+// Ids are derived from a per-run seed plus a counter, so running the same ops
+// on the same store twice (once on the assistant's draft, once for real)
+// produces the same ids, and an op can refer to something an earlier op in
+// the batch created. The seed is a Date.now() string; see applyOps.
+let seedMs = Date.now();
+let seedTag = seedMs.toString(36);
 let seq = 0;
-/** Unique per call even inside one millisecond (two widgets in one batch). */
 function freshWidgetId(type: string): string {
   seq += 1;
-  return `${type}-${Date.now().toString(36)}-${seq}`;
+  return `${type}-${seedTag}-${seq}`;
 }
 function freshId(prefix: string): string {
   seq += 1;
-  return `${prefix}-${Date.now().toString(36)}-${seq}${Math.random().toString(36).slice(2, 5)}`;
+  return `${prefix}-${seedTag}-${seq}`;
+}
+/** Numeric task ids (TopicItem.id): seed ms plus the counter, like nextId() but reproducible. */
+function freshItemId(): number {
+  seq += 1;
+  return seedMs + seq;
 }
 
 /** YYYY-MM-DD -> local midnight ms, rejecting dates that only exist by rollover (2026-13-40). */
@@ -327,7 +336,7 @@ function applyOne(s: AssistantStore, op: Op, index: number): AssistantStore {
       if (!stage) throw new OpError(index, op.stageId ? `no stage "${op.stageId}" on that page` : 'that page has no stages');
       const deadline = op.deadline ? strictLocalMidnight(op.deadline) : null;
       if (op.deadline && deadline === null) throw new OpError(index, `bad deadline "${op.deadline}"`);
-      const item: TopicItem = { id: nextId(), text: op.text, stageId: stage.id, completedAt: null, deadline };
+      const item: TopicItem = { id: freshItemId(), text: op.text, stageId: stage.id, completedAt: null, deadline };
       return { ...s, topics: s.topics.map(tp => (tp.id === op.topicId ? { ...tp, items: [...tp.items, item] } : tp)) };
     }
     case 'complete_task': {
@@ -351,8 +360,20 @@ function applyOne(s: AssistantStore, op: Op, index: number): AssistantStore {
   }
 }
 
-/** Apply every op in order. Throws OpError (with the op's index) on the first bad one; the store is untouched. */
-export function applyOps(store: AssistantStore, ops: Op[]): AssistantStore {
+/** A fresh seed for one assistant turn: pass the same one to every applyOps run of that turn. */
+export function newOpSeed(): string {
+  return String(Date.now());
+}
+
+/**
+ * Apply every op in order. Throws OpError (with the op's index) on the first
+ * bad one; the store is untouched. `seed` makes generated ids reproducible:
+ * the same ops with the same seed always create the same ids.
+ */
+export function applyOps(store: AssistantStore, ops: Op[], seed: string = newOpSeed()): AssistantStore {
+  seedMs = Number(seed) || Date.now();
+  seedTag = seedMs.toString(36);
+  seq = 0;
   let s = store;
   ops.forEach((op, i) => { s = applyOne(s, op, i); });
   return s;

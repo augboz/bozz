@@ -24,8 +24,8 @@ export interface AssistantApi {
   getStore: () => AssistantStore;
   currentPageId: string | null;
   currentPageName: string | null;
-  /** Apply a validated batch; returns the receipt and an undo handle. */
-  apply: (ops: Op[]) => { receipt: ReceiptLine[]; turnId: number };
+  /** Apply a validated batch (ids reproduced from `seed`); returns the receipt and an undo handle. */
+  apply: (ops: Op[], seed: string) => { receipt: ReceiptLine[]; turnId: number };
   /** Restore the store from before that turn. Only the latest turn can be undone. */
   undo: (turnId: number) => boolean;
   latestTurnId: () => number | null;
@@ -97,7 +97,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
 
   const applyItem = (itemId: number, proposal: Proposal) => {
     try {
-      const { receipt, turnId } = api.apply(proposal.ops);
+      const { receipt, turnId } = api.apply(proposal.ops, proposal.seed);
       decide(itemId, { kind: 'applied', receipt, turnId }, { status: 'applied', receipt, turnId });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -124,7 +124,8 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           onText: txt => add({ kind: 'assistant', text: txt }),
           onStatus: setStatus,
           onProposal: p => new Promise<Decision>(resolve => {
-            const lines = p.ops.map(op => describeOp(op, api.getStore()));
+            // The preview is the real-vs-draft diff; fall back to op descriptions if it is empty.
+            const lines = p.preview.length ? p.preview.map(l => `${l.kind === 'added' ? '+ ' : l.kind === 'removed' ? '− ' : '~ '}${l.text}`) : p.ops.map(op => describeOp(op, api.getStore()));
             const id = add({ kind: 'proposal', proposal: p, lines, status: 'pending' });
             pendingRef.current.set(id, resolve);
             if (settings.mode === 'auto' && !p.destructive) applyItem(id, p);

@@ -33,7 +33,7 @@ async function drive(text: string, currentPageId: string | null, decide: (p: Pro
       onProposal: async (p): Promise<Decision> => {
         proposals.push(p);
         if (decide(p) === 'decline') return { kind: 'declined' };
-        const after = applyOps(s, p.ops);
+        const after = applyOps(s, p.ops, p.seed);
         const receipt = diffStore(s, after);
         s = after;
         return { kind: 'applied', receipt, turnId: 1 };
@@ -53,16 +53,32 @@ describe('assistant engine', () => {
     // Transcript: user, assistant(tool call), tool result, assistant(text). Append-only.
     expect(history.map(m => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
     const toolMsg = history[2];
-    expect(toolMsg.role === 'tool' && toolMsg.results[0].content).toMatch(/applied\. receipt:/);
+    expect(toolMsg.role === 'tool' && toolMsg.results[0].content).toMatch(/applied to the working copy/);
+    // The preview came from diffing the draft, not from the op list.
+    expect(proposals[0].preview.map(l => l.text)).toEqual([
+      'Page "Concurrent Programming": added Study timer (8×12)',
+      'Page "Concurrent Programming": added Note (8×16)',
+      'Page "Concurrent Programming": added Status (8×8)',
+    ]);
   });
 
-  it('flags deletions as destructive and reports a decline to the model without retrying', async () => {
+  it('merges several tool calls in one turn into ONE proposal with the net result', async () => {
+    const { s, proposals } = await drive('do it in two steps', 'cp', () => 'apply');
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].ops.map(o => o.op)).toEqual(['add_widget', 'move_widget']);
+    expect(proposals[0].summary).toBe('Add a study timer; Move it to the top');
+    const layout = s.topics[0].widgetLayout!;
+    expect(layout.map(w => w.type).sort()).toEqual(['topicTimer', 'topicTodos']);
+    expect(layout.find(w => w.type === 'topicTimer')!.y).toBe(0);
+    expect(layout.find(w => w.type === 'topicTodos')!.y).toBe(12);
+  });
+
+  it('flags deletions as destructive; a decline applies nothing and is recorded for the model', async () => {
     const { s, proposals, history } = await drive('delete this page', 'cp', () => 'decline');
     expect(proposals[0].destructive).toBe(true);
     expect(s.topics).toHaveLength(1);
-    const toolMsg = history[2];
-    expect(toolMsg.role === 'tool' && toolMsg.results[0].isError).toBe(true);
-    expect(toolMsg.role === 'tool' && toolMsg.results[0].content).toMatch(/user declined/);
+    const note = history[history.length - 2];
+    expect(note.role === 'user' && note.text).toMatch(/discarded all the changes/);
   });
 
   it('answers read_dashboard with the page detail, content fenced', async () => {

@@ -19,12 +19,20 @@ export const mockProvider: Provider = {
     const text = last && last.role === 'user' ? last.text.toLowerCase() : '';
     const sysPage = /current page: (\S+)/.exec(req.system)?.[1] ?? 'home';
     const page = sysPage === 'home' ? null : sysPage;
-    // A tool result just came back: wrap up.
-    if (req.messages[req.messages.length - 1]?.role === 'tool') {
-      const r = req.messages[req.messages.length - 1];
-      if (r.role === 'tool' && r.results.some(x => x.isError)) return { text: `I couldn't do that: ${r.results.find(x => x.isError)?.content}`, toolCalls: [] };
-      return { text: 'Done. Tell me if you want anything adjusted.', toolCalls: [] };
+    // How many tool rounds this turn has had so far.
+    const lastUserIdx = req.messages.map(m => m.role).lastIndexOf('user');
+    const rounds = req.messages.slice(lastUserIdx).filter(m => m.role === 'tool').length;
+    const lastMsg = req.messages[req.messages.length - 1];
+    if (lastMsg?.role === 'tool' && lastMsg.results.some(x => x.isError)) return { text: `I couldn't do that: ${lastMsg.results.find(x => x.isError)?.content}`, toolCalls: [] };
+    // "two steps": add a timer, then, seeing its id in the working copy, move it to the top.
+    if (/two steps/.test(text) && page) {
+      if (rounds === 0) return { text: '', toolCalls: [call('apply_changes', { summary: 'Add a study timer', ops: [{ op: 'add_widget', page, type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }] })] };
+      if (rounds === 1 && lastMsg?.role === 'tool') {
+        const id = /topicTimer#(\S+?)\(/.exec(lastMsg.results[0].content)?.[1];
+        if (id) return { text: '', toolCalls: [call('apply_changes', { summary: 'Move it to the top', ops: [{ op: 'move_widget', widgetId: id, size: null, placement: 'top', anchorId: null }] })] };
+      }
     }
+    if (lastMsg?.role === 'tool') return { text: 'Done. Tell me if you want anything adjusted.', toolCalls: [] };
     if (/easier to read|readab/.test(text)) {
       return { text: '', toolCalls: [call('apply_changes', { summary: 'Larger text with wider line and letter spacing', ops: [
         { op: 'set_appearance', mood: null, font: null, fontSize: 'large', widgetShape: null, widgetBorder: null },

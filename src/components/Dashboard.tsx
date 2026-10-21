@@ -852,9 +852,9 @@ export default function Dashboard() {
     getStore: () => assistantStoreRef.current,
     currentPageId: topics.some(tp => tp.id === activeSection) ? activeSection : null,
     currentPageName: topics.find(tp => tp.id === activeSection)?.name ?? null,
-    apply: (ops: Op[]) => {
+    apply: (ops: Op[], seed: string) => {
       const before = assistantStoreRef.current;
-      const after = applyOps(before, ops);
+      const after = applyOps(before, ops, seed);
       const turnId = ++assistantTurnRef.current;
       assistantUndoRef.current = [...assistantUndoRef.current.slice(-19), { turnId, before: snapshotStore(before) }];
       writeAssistantStore(after, before);
