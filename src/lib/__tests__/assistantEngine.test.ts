@@ -73,6 +73,16 @@ describe('assistant engine', () => {
     expect(layout.find(w => w.type === 'topicTodos')!.y).toBe(12);
   });
 
+  it('a "make it prettier" request yields a layout, backdrop and title change in one proposal', async () => {
+    const { s, proposals } = await drive('make this page prettier', 'cp', () => 'apply');
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].ops.map(o => o.op)).toEqual(['set_background', 'update_page']);
+    expect(s.topics[0].pageBg?.url).toMatch(/^data:image\/svg\+xml/);
+    expect(s.topics[0].pageBg?.dim).toBe(0.35);
+    expect(s.topics[0].pageTitleColor).toBe('#ffffff');
+    expect(proposals[0].preview.map(l => l.text)).toContain('Page "Concurrent Programming": backdrop updated');
+  });
+
   it('flags deletions as destructive; a decline applies nothing and is recorded for the model', async () => {
     const { s, proposals, history } = await drive('delete this page', 'cp', () => 'decline');
     expect(proposals[0].destructive).toBe(true);
@@ -101,7 +111,7 @@ describe('tool schemas', () => {
     expect(apply.required).toEqual(['summary', 'ops']);
     expect(apply.additionalProperties).toBe(false);
     const variants = (apply.properties.ops.items.oneOf ?? apply.properties.ops.items.anyOf) as Array<{ properties: Record<string, unknown>; required: string[] }>;
-    expect(variants.length).toBe(16);
+    expect(variants.length).toBe(17);
     for (const v of variants) expect(v.required.sort()).toEqual(Object.keys(v.properties).sort());
   });
 

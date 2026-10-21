@@ -44,10 +44,11 @@ export function diffStore(before: AssistantStore, after: AssistantStore): Receip
       ['renamed to', p.name, t.name], ['icon', p.icon, t.icon], ['colour', p.color, t.color], ['folder', p.folderId, t.folderId],
       ['description', p.description, t.description], ['page title', p.pageTitle, t.pageTitle], ['title size', p.pageTitleSize, t.pageTitleSize],
       ['title colour', p.pageTitleColor, t.pageTitleColor], ['status', p.status, t.status], ['note', p.pinnedNote, t.pinnedNote],
+      ['backdrop', p.pageBg?.url, t.pageBg?.url],
     ];
     for (const [f, x, y] of fields) {
       if (JSON.stringify(x) === JSON.stringify(y)) continue;
-      out.push({ kind: 'changed', text: f === 'renamed to' ? `Page "${name}" renamed to "${y}"` : `Page "${name}": ${f} ${y === undefined ? 'cleared' : f === 'note' ? 'updated' : `set to ${String(y)}`}` });
+      out.push({ kind: 'changed', text: f === 'renamed to' ? `Page "${name}" renamed to "${y}"` : `Page "${name}": ${f} ${y === undefined ? 'cleared' : f === 'note' || f === 'backdrop' ? 'updated' : `set to ${String(y)}`}` });
     }
     const addedTasks = t.items.filter(i => !p.items.some(j => j.id === i.id));
     if (addedTasks.length) out.push({ kind: 'added', text: `Page "${name}": ${addedTasks.length} task${addedTasks.length === 1 ? '' : 's'} added (${addedTasks.map(i => `"${i.text}"`).join(', ')})` });
@@ -67,6 +68,8 @@ export function diffStore(before: AssistantStore, after: AssistantStore): Receip
   for (const k of ['mood', 'font', 'fontSize', 'widgetShape', 'widgetBorder', 'activeWorldId'] as const) {
     if (ba[k] !== aa[k]) out.push({ kind: 'changed', text: `Appearance: ${k === 'activeWorldId' ? 'world' : k} set to ${String(aa[k])}` });
   }
+  if (JSON.stringify(ba.colorBank) !== JSON.stringify(aa.colorBank)) out.push({ kind: 'changed', text: `Appearance: colour palette set to ${aa.colorBank.join(', ')}` });
+  if ((ba.appBackground?.url ?? '') !== (aa.appBackground?.url ?? '') || (ba.appBackground?.dim ?? -1) !== (aa.appBackground?.dim ?? -1)) out.push({ kind: 'changed', text: aa.appBackground ? 'App backdrop updated' : 'App backdrop removed' });
   if (JSON.stringify(ba.readability ?? {}) !== JSON.stringify(aa.readability ?? {})) {
     const r = aa.readability;
     out.push({ kind: 'changed', text: r && Object.keys(r).length

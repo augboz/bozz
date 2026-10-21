@@ -15,7 +15,7 @@ import { hasWorldsAccess } from './plus';
 // data URI, so they look good instantly with zero downloads and stay
 // licence-clean. Premium Worlds will swap these for server-delivered art.
 
-function gradientWallpaper(stops: string[], angle = 145): string {
+export function gradientWallpaper(stops: string[], angle = 145): string {
   const id = 'g';
   const offsets = stops.map((c, i) => {
     const off = stops.length === 1 ? 0 : (i / (stops.length - 1)) * 100;

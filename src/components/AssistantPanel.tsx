@@ -36,7 +36,7 @@ type Item =
   | { id: number; kind: 'user'; text: string }
   | { id: number; kind: 'assistant'; text: string }
   | { id: number; kind: 'error'; text: string }
-  | { id: number; kind: 'proposal'; proposal: Proposal; lines: string[]; status: 'pending' | 'applied' | 'declined' | 'failed'; receipt?: ReceiptLine[]; turnId?: number; undone?: boolean };
+  | { id: number; kind: 'proposal'; proposal: Proposal; lines: string[]; status: 'pending' | 'previewing' | 'applied' | 'declined' | 'failed'; receipt?: ReceiptLine[]; turnId?: number; undone?: boolean };
 
 type Action =
   | { type: 'add'; item: Item }
@@ -105,6 +105,31 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
     }
   };
 
+  // Manual mode: apply straight away so the user SEES the result, and keep the
+  // engine waiting on Keep / Cancel. Cancel undoes it.
+  const previewItem = (itemId: number, proposal: Proposal) => {
+    try {
+      const { receipt, turnId } = api.apply(proposal.ops, proposal.seed);
+      dispatch({ type: 'update', id: itemId, patch: { status: 'previewing', receipt, turnId } });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      decide(itemId, { kind: 'failed', message }, { status: 'failed', receipt: [{ kind: 'changed', text: `Could not apply: ${message}` }] });
+    }
+  };
+  const keepItem = (item: Extract<Item, { kind: 'proposal' }>) => {
+    decide(item.id, { kind: 'applied', receipt: item.receipt ?? [], turnId: item.turnId ?? 0 }, { status: 'applied' });
+  };
+  const cancelItem = (item: Extract<Item, { kind: 'proposal' }>) => {
+    if (item.turnId !== undefined) api.undo(item.turnId);
+    decide(item.id, { kind: 'declined' }, { status: 'declined', undone: true });
+  };
+  // Closing the panel with a preview still up means it was not accepted.
+  useEffect(() => {
+    if (open) return;
+    items.filter((i): i is Extract<Item, { kind: 'proposal' }> => i.kind === 'proposal' && i.status === 'previewing').forEach(cancelItem);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
@@ -128,7 +153,9 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
             const lines = p.preview.length ? p.preview.map(l => `${l.kind === 'added' ? '+ ' : l.kind === 'removed' ? '− ' : '~ '}${l.text}`) : p.ops.map(op => describeOp(op, api.getStore()));
             const id = add({ kind: 'proposal', proposal: p, lines, status: 'pending' });
             pendingRef.current.set(id, resolve);
-            if (settings.mode === 'auto' && !p.destructive) applyItem(id, p);
+            if (p.destructive) return; // always a two-step confirmation, no preview
+            if (settings.mode === 'auto') applyItem(id, p);
+            else previewItem(id, p);
           }),
         },
       );
@@ -204,6 +231,8 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           return <ChangeCard key={item.id} t={t} item={item} latest={latest} btn={btn}
             onApply={() => applyItem(item.id, item.proposal)}
             onDecline={() => decide(item.id, { kind: 'declined' }, { status: 'declined' })}
+            onKeep={() => keepItem(item)}
+            onCancel={() => cancelItem(item)}
             onUndo={() => undo(item)} />;
         })}
         {status && <div style={{ fontSize: '0.72rem', color: t.textDim }}>{status}…</div>}
@@ -248,10 +277,10 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   );
 }
 
-function ChangeCard({ t, item, latest, btn, onApply, onDecline, onUndo }: {
+function ChangeCard({ t, item, latest, btn, onApply, onDecline, onKeep, onCancel, onUndo }: {
   t: Theme; item: Extract<Item, { kind: 'proposal' }>; latest: number | null;
   btn: (primary?: boolean, danger?: boolean) => React.CSSProperties;
-  onApply: () => void; onDecline: () => void; onUndo: () => void;
+  onApply: () => void; onDecline: () => void; onKeep: () => void; onCancel: () => void; onUndo: () => void;
 }) {
   const [armed, setArmed] = useState(false);
   const { proposal: p, status } = item;
@@ -259,7 +288,7 @@ function ChangeCard({ t, item, latest, btn, onApply, onDecline, onUndo }: {
   return (
     <div style={{ border: `1px solid ${status === 'applied' ? t.doneAccent + '66' : t.border}`, borderLeft: `3px solid ${status === 'applied' ? t.doneAccent : status === 'declined' ? t.textDim : p.destructive ? t.alert : t.borderStrong}`, borderRadius: '10px', padding: '0.55rem 0.7rem', fontSize: '0.78rem', color: t.text, background: t.panel }}>
       <div style={{ fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: t.textDim, marginBottom: '0.35rem' }}>
-        {status === 'pending' ? `Proposed · ${p.ops.length} change${p.ops.length === 1 ? '' : 's'}` : status === 'applied' ? (item.undone ? 'Undone' : 'Applied') : status === 'declined' ? 'Discarded' : 'Failed'}
+        {status === 'pending' ? `Proposed · ${p.ops.length} change${p.ops.length === 1 ? '' : 's'}` : status === 'previewing' ? 'Previewing · look at the page' : status === 'applied' ? (item.undone ? 'Undone' : 'Applied') : status === 'declined' ? (item.undone ? 'Cancelled' : 'Discarded') : 'Failed'}
         {p.destructive && status === 'pending' && <span style={{ color: t.alert, marginLeft: 6 }}>· deletes something</span>}
       </div>
       {status === 'pending' || status === 'declined' ? (
@@ -281,6 +310,12 @@ function ChangeCard({ t, item, latest, btn, onApply, onDecline, onUndo }: {
             {(item.receipt ?? []).map((l, i) => <li key={i}><span style={{ color: t.textDim, marginRight: 4 }}>{label(l.kind)}</span>{l.text}</li>)}
             {status === 'applied' && !(item.receipt ?? []).length && <li style={{ color: t.textDim }}>Nothing visible changed.</li>}
           </ul>
+          {status === 'previewing' && (
+            <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.55rem' }}>
+              <button onClick={onKeep} style={btn(true)}><Check size={11} strokeWidth={2.5} style={{ marginRight: 4, verticalAlign: -1 }} />Keep</button>
+              <button onClick={onCancel} style={btn()}>Cancel</button>
+            </div>
+          )}
           {status === 'applied' && !item.undone && item.turnId !== undefined && (
             <div style={{ marginTop: '0.5rem' }}>
               <button onClick={onUndo} disabled={latest !== item.turnId} title={latest !== item.turnId ? 'Only the most recent change can be undone' : undefined} style={{ ...btn(), opacity: latest !== item.turnId ? 0.5 : 1 }}>

@@ -37,7 +37,7 @@ const expectOpError = (fn: () => unknown, re: RegExp, index?: number) => {
 
 describe('parseOps', () => {
   it('accepts a valid batch and rejects unknown ops, bad colours and oversized batches', () => {
-    expect(parseOps({ summary: 'ok', ops: [{ op: 'set_appearance', mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null }] }).ok).toBe(true);
+    expect(parseOps({ summary: 'ok', ops: [{ op: 'set_appearance', colorBank: null, mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null }] }).ok).toBe(true);
     const bad = parseOps({ summary: 'x', ops: [{ op: 'sync_everything' }] });
     expect(bad.ok).toBe(false);
     const colour = parseOps({ summary: 'x', ops: [{ op: 'update_page', topicId: 'cp', name: null, folderId: null, icon: null, color: 'url(evil)', description: null, pageTitle: null, pageTitleSize: null, pageTitleColor: null, status: null }] });
@@ -183,8 +183,28 @@ describe('content ops', () => {
     expect(s.topics[0].widgetLayout![1].config?.note).toBe('hello');
   });
 
+  it('backdrops and the colour bank', () => {
+    let s = run([
+      { op: 'set_background', target: 'cp', colors: ['#1b2a41', '#2f6b5f'], worldId: null, dim: null, remove: null },
+      { op: 'set_background', target: 'app', colors: null, worldId: 'tokyo-night', dim: 0.5, remove: null },
+      { op: 'set_appearance', colorBank: ['#111111', '#222222', '#333333'], mood: null, font: null, fontSize: null, widgetShape: null, widgetBorder: null },
+    ]);
+    expect(s.topics[0].pageBg?.url).toMatch(/^data:image\/svg\+xml/);
+    expect(s.topics[0].pageBg?.dim).toBe(0.35);
+    expect(s.appearance.appBackground?.dim).toBe(0.5);
+    expect(s.appearance.colorBank).toEqual(['#111111', '#222222', '#333333']);
+    const lines = diffStore(base(), s).map(l => l.text);
+    expect(lines).toContain('Page "Concurrent Programming": backdrop updated');
+    expect(lines).toContain('App backdrop updated');
+    s = run([{ op: 'set_background', target: 'cp', colors: null, worldId: null, dim: null, remove: true }, { op: 'set_background', target: 'app', colors: null, worldId: null, dim: null, remove: true }], s);
+    expect(s.topics[0].pageBg).toBeUndefined();
+    expect(s.appearance.appBackground).toBeUndefined();
+    expectOpError(() => run([{ op: 'set_background', target: 'cp', colors: null, worldId: null, dim: null, remove: null }]), /needs colors or a worldId/);
+    expectOpError(() => run([{ op: 'set_background', target: 'nope', colors: ['#000'], worldId: null, dim: null, remove: null }]), /no page with id/);
+  });
+
   it('readability and appearance', () => {
-    let s = run([{ op: 'set_readability', lineHeight: 1.5, letterSpacing: 0.12, wordSpacing: null, reducedMotion: true, reset: null }, { op: 'set_appearance', mood: 'warm', font: null, fontSize: 'large', widgetShape: null, widgetBorder: null }]);
+    let s = run([{ op: 'set_readability', lineHeight: 1.5, letterSpacing: 0.12, wordSpacing: null, reducedMotion: true, reset: null }, { op: 'set_appearance', colorBank: null, mood: 'warm', font: null, fontSize: 'large', widgetShape: null, widgetBorder: null }]);
     expect(s.appearance.readability).toEqual({ lineHeight: 1.5, letterSpacing: 0.12, reducedMotion: true });
     expect(s.appearance.mood).toBe('warm');
     expect(s.appearance.fontSize).toBe('large');
@@ -203,7 +223,7 @@ describe('batch semantics', () => {
   it('does not mutate the input store', () => {
     const s = base();
     const copy = JSON.parse(JSON.stringify(s));
-    run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }, { op: 'set_appearance', mood: 'light', font: null, fontSize: null, widgetShape: null, widgetBorder: null }], s);
+    run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }, { op: 'set_appearance', colorBank: null, mood: 'light', font: null, fontSize: null, widgetShape: null, widgetBorder: null }], s);
     expect(s).toEqual(copy);
   });
 });
@@ -214,10 +234,10 @@ describe('receipt and snapshots', () => {
     const after = run([
       { op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null },
       { op: 'update_page', topicId: 'cp', name: null, folderId: null, icon: null, color: null, description: null, pageTitle: 'COMP60007', pageTitleSize: null, pageTitleColor: null, status: null },
-      { op: 'set_appearance', mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
+      { op: 'set_appearance', colorBank: null, mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
       { op: 'add_habit', name: 'Meet tutor', topicId: 'cp', frequency: 'weekly', days: null, color: null },
       // A no-op: same mood again must not appear in the receipt.
-      { op: 'set_appearance', mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
+      { op: 'set_appearance', colorBank: null, mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
     ], before);
     const lines = diffStore(before, after).map(l => l.text);
     expect(lines).toEqual([

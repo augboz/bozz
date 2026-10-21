@@ -118,11 +118,20 @@ export const opSchemas = {
   }),
   set_appearance: z.object({
     op: z.literal('set_appearance'),
+    colorBank: z.array(cssColor).min(3).max(8).nullable().describe('the palette offered everywhere; pick harmonious colours'),
     mood: z.enum(['dark', 'light', 'warm']).nullable(),
     font: z.enum(['geist', 'inter', 'manrope', 'quicksand', 'mono', 'fraunces']).nullable(),
     fontSize: z.enum(['small', 'medium', 'large', 'xlarge']).nullable(),
     widgetShape: z.enum(['sharp', 'rounded', 'pill']).nullable(),
     widgetBorder: z.enum(['subtle', 'normal', 'bold']).nullable(),
+  }),
+  set_background: z.object({
+    op: z.literal('set_background'),
+    target: z.string().min(1).describe("'app' for the whole app, or a page id"),
+    colors: z.array(cssColor).min(1).max(4).nullable().describe('gradient stops, dark to light or analogous hues; null with worldId to borrow a world\'s backdrop'),
+    worldId: z.string().nullable(),
+    dim: z.number().min(0).max(0.9).nullable().describe('darkening over the backdrop so widgets stay readable; 0.35 is a good default'),
+    remove: z.boolean().nullable().describe('true clears the backdrop'),
   }),
   set_readability: z.object({
     op: z.literal('set_readability'),
@@ -171,7 +180,7 @@ export const opSchemas = {
 export const opSchema = z.discriminatedUnion('op', [
   opSchemas.add_widget, opSchemas.configure_widget, opSchemas.move_widget, opSchemas.arrange_page, opSchemas.remove_widget,
   opSchemas.create_page, opSchemas.update_page, opSchemas.delete_page, opSchemas.create_folder,
-  opSchemas.set_appearance, opSchemas.set_readability, opSchemas.apply_world,
+  opSchemas.set_appearance, opSchemas.set_background, opSchemas.set_readability, opSchemas.apply_world,
   opSchemas.edit_note, opSchemas.add_task, opSchemas.complete_task, opSchemas.add_habit,
 ]);
 export type Op = z.infer<typeof opSchema>;

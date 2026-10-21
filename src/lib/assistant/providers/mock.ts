@@ -33,15 +33,23 @@ export const mockProvider: Provider = {
       }
     }
     if (lastMsg?.role === 'tool') return { text: 'Done. Tell me if you want anything adjusted.', toolCalls: [] };
+    if (/prettier|nicer|look better|organi[sz]e/.test(text) && page) {
+      const ids = [...req.system.matchAll(new RegExp(`#${page}[^\\n]*widgets=\\[([^\\]]*)\\]`, 'g'))][0]?.[1]?.split(', ').map(w => /#(\S+?)\(/.exec(w)?.[1]).filter((x): x is string => !!x) ?? [];
+      return { text: '', toolCalls: [call('apply_changes', { summary: 'Tidy the layout and give the page a backdrop', ops: [
+        ...(ids.length > 1 ? [{ op: 'arrange_page', page, rows: [ids.slice(0, 2), ...ids.slice(2).map(id => [id])] }] : []),
+        { op: 'set_background', target: page, colors: ['#1b2a41', '#2f6b5f'], worldId: null, dim: 0.35, remove: null },
+        { op: 'update_page', topicId: page, name: null, folderId: null, icon: null, color: null, description: null, pageTitle: null, pageTitleSize: 'l', pageTitleColor: '#ffffff', status: null },
+      ] })] };
+    }
     if (/easier to read|readab/.test(text)) {
       return { text: '', toolCalls: [call('apply_changes', { summary: 'Larger text with wider line and letter spacing', ops: [
-        { op: 'set_appearance', mood: null, font: null, fontSize: 'large', widgetShape: null, widgetBorder: null },
+        { op: 'set_appearance', colorBank: null, mood: null, font: null, fontSize: 'large', widgetShape: null, widgetBorder: null },
         { op: 'set_readability', lineHeight: 1.5, letterSpacing: 0.12, wordSpacing: 0.16, reducedMotion: null, reset: null },
       ] })] };
     }
     if (/warm|theme|colour|color/.test(text)) {
       return { text: '', toolCalls: [call('apply_changes', { summary: 'Switch to the warm theme', ops: [
-        { op: 'set_appearance', mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
+        { op: 'set_appearance', colorBank: null, mood: 'warm', font: null, fontSize: null, widgetShape: null, widgetBorder: null },
       ] })] };
     }
     if (/delete/.test(text) && page) {

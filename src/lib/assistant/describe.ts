@@ -45,8 +45,12 @@ export function describeOp(op: Op, s: AssistantStore): string {
     case 'create_folder': return `Create folder "${op.name}"`;
     case 'set_appearance': {
       const bits = (['mood', 'font', 'fontSize', 'widgetShape', 'widgetBorder'] as const).filter(k => op[k] !== null).map(k => `${k === 'mood' ? 'theme' : k === 'fontSize' ? 'text size' : k === 'widgetShape' ? 'corners' : k === 'widgetBorder' ? 'borders' : k} ${op[k]}`);
+      if (op.colorBank !== null) bits.push(`colour palette ${op.colorBank.join(', ')}`);
       return `Appearance: ${bits.join(', ') || 'no change'}`;
     }
+    case 'set_background': return op.remove
+      ? `Remove the backdrop ${op.target === 'app' ? 'from the whole app' : `from "${pageName(op.target)}"`}`
+      : `${op.target === 'app' ? 'App' : `"${pageName(op.target)}"`} backdrop: ${op.worldId ? `the "${findWorld(op.worldId)?.name ?? op.worldId}" world's` : `gradient ${op.colors?.join(' → ')}`}${op.dim !== null ? `, dim ${op.dim}` : ''}`;
     case 'set_readability': {
       if (op.reset) return 'Readability: back to defaults';
       const bits = [op.lineHeight !== null && `line height ${op.lineHeight}`, op.letterSpacing !== null && `letter spacing ${op.letterSpacing}em`, op.wordSpacing !== null && `word spacing ${op.wordSpacing}em`, op.reducedMotion !== null && (op.reducedMotion ? 'reduce motion' : 'normal motion')].filter(Boolean);

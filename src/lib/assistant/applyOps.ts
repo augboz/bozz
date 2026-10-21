@@ -8,7 +8,7 @@
 // one-per-page widget), so the caller can send the reason back to the model.
 import type { AppearancePrefs, Habit, HomeWidgetItem, Topic, TopicFolder, TopicItem } from '../types';
 import { GRID_COLS, WIDGET_CATALOG, allowedOn } from '../widgetCatalog';
-import { findWorld, applyWorld, worldToTopic, worldTopicPatch } from '../worlds';
+import { findWorld, applyWorld, worldToTopic, worldTopicPatch, gradientWallpaper } from '../worlds';
 import type { AssistantStore } from './store';
 import type { Op, WidgetConfigInput } from './ops';
 
@@ -287,12 +287,34 @@ function applyOne(s: AssistantStore, op: Op, index: number): AssistantStore {
     }
     case 'set_appearance': {
       const a: AppearancePrefs = { ...s.appearance };
+      if (op.colorBank !== null) a.colorBank = op.colorBank;
       if (op.mood !== null) a.mood = op.mood;
       if (op.font !== null) a.font = op.font;
       if (op.fontSize !== null) a.fontSize = op.fontSize;
       if (op.widgetShape !== null) a.widgetShape = op.widgetShape;
       if (op.widgetBorder !== null) a.widgetBorder = op.widgetBorder;
       return { ...s, appearance: a };
+    }
+    case 'set_background': {
+      const isApp = op.target === 'app';
+      if (!isApp) requireTopic(s, op.target, index);
+      if (op.remove) {
+        if (isApp) { const { appBackground: _bg, ...rest } = s.appearance; return { ...s, appearance: rest }; }
+        return { ...s, topics: s.topics.map(t => { if (t.id !== op.target) return t; const { pageBg: _bg, ...rest } = t; return rest; }) };
+      }
+      let url: string;
+      if (op.worldId) {
+        const w = findWorld(op.worldId);
+        if (!w) throw new OpError(index, `no world with id "${op.worldId}"`);
+        url = w.background.url;
+      } else if (op.colors && op.colors.length) {
+        url = gradientWallpaper(op.colors);
+      } else {
+        throw new OpError(index, 'set_background needs colors or a worldId (or remove: true)');
+      }
+      const dim = op.dim ?? 0.35;
+      if (isApp) return { ...s, appearance: { ...s.appearance, appBackground: { url, dim } } };
+      return { ...s, topics: s.topics.map(t => (t.id === op.target ? { ...t, pageBg: { url, dim } } : t)) };
     }
     case 'set_readability': {
       if (op.reset) { const { readability: _r, ...rest } = s.appearance; return { ...s, appearance: rest }; }

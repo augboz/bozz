@@ -19,7 +19,7 @@ export function worldsForPrompt(): string {
 export function summarizeStore(s: AssistantStore, currentPageId: string | null): string {
   const lines: string[] = [];
   const a = s.appearance;
-  lines.push(`appearance: mood=${a.mood}, font=${a.font}, fontSize=${a.fontSize}, shape=${a.widgetShape}, border=${a.widgetBorder}${a.readability ? `, readability=${JSON.stringify(a.readability)}` : ''}${a.activeWorldId ? `, world=${a.activeWorldId}` : ''}`);
+  lines.push(`appearance: mood=${a.mood}, font=${a.font}, fontSize=${a.fontSize}, shape=${a.widgetShape}, border=${a.widgetBorder}, colorBank=[${a.colorBank.join(', ')}]${a.appBackground ? ', app backdrop set' : ''}${a.readability ? `, readability=${JSON.stringify(a.readability)}` : ''}${a.activeWorldId ? `, world=${a.activeWorldId}` : ''}`);
   lines.push(`current page: ${currentPageId ?? 'home'}`);
   const wdesc = (w: { type: string; i: string; x: number; y: number; w: number; h: number }) => `${w.type}#${w.i}(${w.w}×${w.h} at col ${w.x} row ${w.y})`;
   const ordered = (ws: Array<{ type: string; i: string; x: number; y: number; w: number; h: number }>) => [...ws].sort((a, b) => a.y - b.y || a.x - b.x).map(wdesc).join(', ');
@@ -29,7 +29,7 @@ export function summarizeStore(s: AssistantStore, currentPageId: string | null):
   for (const t of s.topics) {
     const open = t.items.filter(i => !t.stages.find(st => st.id === i.stageId)?.done).length;
     const widgets = ordered(t.widgetLayout ?? []);
-    lines.push(`- "${t.name}"#${t.id}${t.folderId ? ` folder=${t.folderId}` : ''}${t.pageTitle ? ` title="${t.pageTitle}"` : ''}${t.status ? ` status=${t.status}` : ''}: ${t.items.length} tasks (${open} open), stages=[${t.stages.map(st => `${st.label}#${st.id}`).join(', ')}], widgets=[${widgets || 'none'}]${t.pinnedNote ? ', has a page note' : ''}`);
+    lines.push(`- "${t.name}"#${t.id} color=${t.color}${t.folderId ? ` folder=${t.folderId}` : ''}${t.pageTitle ? ` title="${t.pageTitle}"${t.pageTitleSize ? ` size=${t.pageTitleSize}` : ''}${t.pageTitleColor ? ` titleColor=${t.pageTitleColor}` : ''}` : ''}${t.pageBg ? ' backdrop set' : ''}${t.status ? ` status=${t.status}` : ''}: ${t.items.length} tasks (${open} open), stages=[${t.stages.map(st => `${st.label}#${st.id}`).join(', ')}], widgets=[${widgets || 'none'}]${t.pinnedNote ? ', has a page note' : ''}`);
   }
   if (!s.topics.length) lines.push('- (no pages yet)');
   lines.push(`habits: ${s.habits.length ? s.habits.map(h => `"${h.name}"#${h.id}${h.topicId ? ` page=${h.topicId}` : ''}${h.frequency === 'weekly' ? ' weekly' : ''}`).join(', ') : 'none'}`);
