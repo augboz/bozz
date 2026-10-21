@@ -25,8 +25,13 @@ export default function AssistantBlock({ t, settings, onChange }: { t: Theme; se
 
   const saveKey = async () => {
     if (!keyInput.trim()) return;
-    await setApiKey(settings.provider, keyInput);
-    setKeyInput(''); setHasKey(true);
+    try {
+      await setApiKey(settings.provider, keyInput);
+      setKeyInput(''); setHasKey(true);
+      setTest({ state: 'ok', text: 'Key saved. Click Test to check it.' });
+    } catch (e) {
+      setTest({ state: 'error', text: `Could not save the key: ${e instanceof Error ? e.message : String(e)}` });
+    }
   };
   const removeKey = async () => { await clearApiKey(settings.provider); setHasKey(false); setTest({ state: 'idle' }); };
 

@@ -32,7 +32,10 @@ zip = { version = "4", default-features = false, features = ["deflate"] }
 url = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-keyring = "3"
+# Platform stores are opt-in features; without them keyring uses an in-memory
+# mock and every secret_get after a restart (or even a second Entry::new) is
+# empty. That silently broke IMAP passwords and the assistant API key.
+keyring = { version = "3", features = ["windows-native", "apple-native"] }
 imap = "2"
 native-tls = "0.2"
 

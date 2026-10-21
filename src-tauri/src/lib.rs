@@ -485,6 +485,20 @@ mod store_heal_tests {
         assert!(quarantined, "corrupt store should be quarantined, not deleted");
     }
 
+    /// The keyring crate's platform stores are opt-in features. Without them
+    /// it uses an in-memory mock where a fresh Entry never sees an earlier
+    /// write, which is exactly the "key saved, then no key" bug. This runs
+    /// against the real OS store (Credential Manager on Windows).
+    #[test]
+    fn keychain_round_trips_through_a_fresh_entry() {
+        let account = format!("test:{}", std::process::id());
+        super::secret_set(account.clone(), "sk-test-123".into()).expect("set");
+        let back = super::secret_get(account.clone()).expect("get");
+        super::secret_delete(account.clone()).expect("delete");
+        assert_eq!(back.as_deref(), Some("sk-test-123"));
+        assert_eq!(super::secret_get(account).expect("get after delete"), None);
+    }
+
     #[test]
     fn complete_temp_file_beats_backups() {
         let d = tmp_dir("tmpwins");
