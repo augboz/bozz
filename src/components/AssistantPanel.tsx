@@ -215,17 +215,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
       )}
 
       <form onSubmit={e => { e.preventDefault(); void send(input); }} style={{ margin: '0 0.8rem 0.8rem', border: `1px solid ${t.border}`, background: t.input, borderRadius: '12px', padding: '0.45rem 0.55rem', display: 'flex', alignItems: 'flex-end', gap: '0.4rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, marginBottom: 2 }}>
-          <span style={{ fontSize: '0.62rem', background: t.bgAlt, color: t.text, padding: '0.15rem 0.45rem', borderRadius: '999px', whiteSpace: 'nowrap' }} title="What the assistant is looking at">{api.currentPageName ?? 'Home'}</span>
-          <div role="radiogroup" aria-label="How changes are applied" style={{ display: 'inline-flex', border: `1px solid ${t.border}`, borderRadius: '999px', overflow: 'hidden' }}>
-            {([['check', 'Check', 'Check: every change is shown to you first'], ['auto', 'Auto', 'Auto: changes are applied straight away; deletions still ask']] as const).map(([m, label, title]) => (
-              <button key={m} type="button" role="radio" aria-checked={settings.mode === m} title={title} onClick={() => setMode(m)} style={{
-                font: 'inherit', fontSize: '0.6rem', fontWeight: 500, padding: '0.1rem 0.45rem', border: 'none', cursor: 'pointer',
-                background: settings.mode === m ? t.text : 'transparent', color: settings.mode === m ? t.bg : t.textMuted,
-              }}>{label}</button>
-            ))}
-          </div>
-        </div>
+        <span style={{ fontSize: '0.62rem', background: t.bgAlt, color: t.text, padding: '0.15rem 0.45rem', borderRadius: '999px', whiteSpace: 'nowrap', marginBottom: 4 }} title="What the assistant is looking at">{api.currentPageName ?? 'Home'}</span>
         <textarea
           ref={inputRef} value={input} onChange={e => setInput(e.target.value)} rows={1}
           placeholder="Ask for a change…" aria-label="Ask the assistant"
@@ -237,6 +227,22 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           ? <button type="button" onClick={() => abortRef.current?.abort()} title="Stop" style={{ ...btn(), padding: '0.25rem 0.5rem' }}>Stop</button>
           : <button type="submit" aria-label="Send" disabled={!input.trim()} style={{ background: 'none', border: 'none', color: input.trim() ? t.doneAccent : t.textDim, cursor: 'pointer', padding: 2, display: 'flex' }}><Send size={16} strokeWidth={1.8} /></button>}
       </form>
+      {/* Mode line, like a terminal status line: small, bottom left, click to switch. */}
+      <button
+        type="button"
+        onClick={() => setMode(settings.mode === 'auto' ? 'check' : 'auto')}
+        title={settings.mode === 'auto' ? 'Auto: changes are applied straight away (deletions still ask). Click for manual.' : 'Manual: every change is shown to you first. Click for auto.'}
+        aria-label={`Mode: ${settings.mode === 'auto' ? 'auto' : 'manual'}. Click to switch.`}
+        style={{
+          alignSelf: 'flex-start', margin: '-0.45rem 0 0.55rem 1rem', padding: 0,
+          background: 'none', border: 'none', cursor: 'pointer', font: 'inherit',
+          fontSize: '0.66rem', color: settings.mode === 'auto' ? t.doneAccent : t.textDim,
+          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+        }}
+      >
+        <span aria-hidden="true" style={{ fontSize: '0.5rem' }}>{settings.mode === 'auto' ? '⚡' : '◆'}</span>
+        {settings.mode === 'auto' ? 'auto mode' : 'manual mode'}
+      </button>
     </aside>
   );
 }
