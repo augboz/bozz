@@ -1,6 +1,6 @@
 [package]
 name = "bozz"
-version = "0.1.86"
+version = "0.1.87"
 description = "Bozz — personal life dashboard"
 authors = ["you"]
 edition = "2021"
