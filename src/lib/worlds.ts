@@ -56,9 +56,13 @@ function world(w: Omit<BozzWorld, 'background' | 'previewUrl' | 'author' | 'vers
 
 let wcount = 0;
 const wid = () => { wcount += 1; return `ww-${wcount}`; };
-/** A positioned widget for a template's bespoke topic-page layout (12-col grid). */
+/** A positioned widget for a template's bespoke topic-page layout. The
+ *  coordinates below were written for the old 12-column grid; the grid has
+ *  been 24 columns (and 16px rows) since v0.1.49, so double them here, the
+ *  same way the one-time layout migration doubled stored layouts. Without
+ *  this a template page rendered at half width. */
 function tw(type: WidgetType, x: number, y: number, w: number, h: number): HomeWidgetItem {
-  return { i: wid(), type, x, y, w, h };
+  return { i: wid(), type, x: x * 2, y: y * 2, w: w * 2, h: h * 2 };
 }
 
 // ── The bundled free Worlds ──────────────────────────────────────────────────

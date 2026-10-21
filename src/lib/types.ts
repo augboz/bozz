@@ -504,6 +504,16 @@ export interface AppearancePrefs {
    * reason this exists. See lib/links.ts.
    */
   linkBrowser?: 'default' | 'chrome' | 'edge' | 'firefox';
+  /** Text-spacing knobs behind "make the text easier to read" (WCAG 1.4.12).
+   *  Unset = the app's defaults. */
+  readability?: {
+    lineHeight?: number;
+    /** em */
+    letterSpacing?: number;
+    /** em */
+    wordSpacing?: number;
+    reducedMotion?: boolean;
+  };
 }
 
 // ── Priority alerts (Bozz Plus — "Watch" pillar) ─────────────────────────────

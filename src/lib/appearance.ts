@@ -79,6 +79,14 @@ export function applyAppearanceVars(p: AppearancePrefs): void {
   root.style.setProperty('--app-text-dim',      theme.textDim);
   root.dataset.theme = mood;
 
+  // Readability (assistant's set_readability op, or Settings). Consumed by
+  // body in index.css; unset values fall back to the stylesheet defaults.
+  const r = p.readability;
+  root.style.setProperty('--app-line-height', r?.lineHeight ? String(r.lineHeight) : '');
+  root.style.setProperty('--app-letter-spacing', r?.letterSpacing ? `${r.letterSpacing}em` : '');
+  root.style.setProperty('--app-word-spacing', r?.wordSpacing ? `${r.wordSpacing}em` : '');
+  root.dataset.reducedMotion = r?.reducedMotion ? 'true' : '';
+
   root.style.setProperty('--widget-radius',  SHAPE_RADIUS[p.widgetShape ?? 'rounded']);
   root.style.setProperty('--widget-border',  BORDER_WIDTH[p.widgetBorder ?? 'subtle']);
 

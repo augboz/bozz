@@ -250,7 +250,7 @@ export default function HomeView({ items, setItems, ctx, widgetShape, widgetBord
     // created from a stale `items` closure (two adds in one tick) would stick
     // instead of being auto-resolved by the grid.
     setItems(prev => {
-      if (prev.some(it => it.type === type)) return prev; // one per type
+      if (!meta.allowMultiple && prev.some(it => it.type === type)) return prev; // one per type unless the catalog allows more
       const maxY = prev.reduce((m, it) => Math.max(m, it.y + it.h), 0);
       return [...prev, {
         i: `${type}-${Date.now()}`, type,

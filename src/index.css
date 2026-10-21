@@ -98,6 +98,11 @@ body {
   margin: 0;
   font-family: var(--app-font);
   font-weight: 400;
+  /* Readability tokens (Settings / the assistant's "easier to read"). Empty
+     values fall through to the browser defaults. */
+  line-height: var(--app-line-height, normal);
+  letter-spacing: var(--app-letter-spacing, normal);
+  word-spacing: var(--app-word-spacing, normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -264,4 +269,12 @@ select:focus-visible,
 @container widget (max-height: 90px) {
   /* Very short: trim vertical padding so content isn't clipped by blank space. */
   .w-shell, .w-shell.w-shell-compact { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+}
+
+/* Reduced motion, from the OS or from the readability settings. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+:root[data-reduced-motion="true"] *, :root[data-reduced-motion="true"] *::before, :root[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important; transition-duration: 0.01ms !important;
 }
