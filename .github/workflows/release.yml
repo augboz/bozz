@@ -62,6 +62,11 @@ jobs:
             Download the installer for your platform below.
             If you already have Bozz installed, it will update itself automatically on next launch.
           releaseDraft: false
+          # Pre-release while the build runs: GitHub's /releases/latest (what the
+          # in-app updater reads) skips pre-releases, so users keep seeing the last
+          # complete version instead of a 404 until latest.json exists. Promoted
+          # in publish-updater.
+          prerelease: true
           prerelease: false
 
       # ── Authenticode signing via SignPath (free for OSS projects) ──────────
@@ -187,6 +192,11 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Bozz ${{ github.ref_name }}
           releaseDraft: false
+          # Pre-release while the build runs: GitHub's /releases/latest (what the
+          # in-app updater reads) skips pre-releases, so users keep seeing the last
+          # complete version instead of a 404 until latest.json exists. Promoted
+          # in publish-updater.
+          prerelease: true
           prerelease: false
           args: --target aarch64-apple-darwin
 
@@ -209,6 +219,11 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Bozz ${{ github.ref_name }}
           releaseDraft: false
+          # Pre-release while the build runs: GitHub's /releases/latest (what the
+          # in-app updater reads) skips pre-releases, so users keep seeing the last
+          # complete version instead of a 404 until latest.json exists. Promoted
+          # in publish-updater.
+          prerelease: true
           prerelease: false
           args: --target x86_64-apple-darwin
 
@@ -296,3 +311,6 @@ jobs:
             }' > /tmp/latest.json
 
           gh release upload "$TAG" /tmp/latest.json --repo "$REPO" --clobber
+
+          # Everything the updater needs is uploaded: make this the latest release.
+          gh release edit "$TAG" --repo "$REPO" --prerelease=false --latest

@@ -400,7 +400,10 @@ function UpdateCheck({ t }: { t: Theme }) {
   }, []);
   const label = {
     idle: '', checking: 'Checking…', latest: "You're on the latest version.",
-    found: 'Update found, see the prompt.', error: `Couldn't check: ${err}`,
+    found: 'Update found, see the prompt.',
+    error: /release JSON|404/i.test(err)
+      ? 'A new version is being published right now. Try again in a few minutes.'
+      : `Couldn't check: ${err}`,
   }[state];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
