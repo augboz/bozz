@@ -6,9 +6,14 @@
  * Discard; after apply it becomes a receipt written from the real diff, with
  * a persistent "Undo this turn". Deletions always need a second click.
  * Everything the assistant can see or do comes through `api` (Dashboard).
+ *
+ * Every page has its own thread (Home too): switching page switches the
+ * conversation, and the model continues from that page's transcript, so the
+ * user never has to repeat what they told it about a page. Threads survive a
+ * restart (saved on this device only).
  */
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { Sparkles, X, Send, Undo2, Check, AlertTriangle, Settings as SettingsIcon } from 'lucide-react';
+import { Sparkles, X, Send, Undo2, Check, AlertTriangle, Settings as SettingsIcon, MessageSquarePlus } from 'lucide-react';
 import type { Theme } from '../lib/types';
 import type { AssistantStore } from '../lib/assistant/store';
 import type { Op } from '../lib/assistant/ops';
@@ -19,6 +24,7 @@ import { describeOp } from '../lib/assistant/describe';
 import { getApiKey } from '../lib/assistant/keys';
 import { PROVIDERS } from '../lib/assistant/providers';
 import { saveAssistantSettings, type AssistantSettings } from '../lib/assistant/settings';
+import { HOME_THREAD, loadThreads, saveThreads, threadKey, type Threads } from '../lib/assistant/threads';
 
 export interface AssistantApi {
   getStore: () => AssistantStore;
@@ -38,17 +44,39 @@ type Item =
   | { id: number; kind: 'error'; text: string }
   | { id: number; kind: 'proposal'; proposal: Proposal; lines: string[]; status: 'pending' | 'previewing' | 'applied' | 'declined' | 'failed'; receipt?: ReceiptLine[]; turnId?: number; undone?: boolean };
 
+/** The cards of every thread, keyed by page (see threadKey). */
+type ItemsByKey = Record<string, Item[]>;
 type Action =
-  | { type: 'add'; item: Item }
+  | { type: 'add'; key: string; item: Item }
   | { type: 'update'; id: number; patch: Partial<Item> }
-  | { type: 'clear' };
+  | { type: 'clear'; key: string }
+  | { type: 'load'; items: ItemsByKey }
+  | { type: 'touch' };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 let nextItemId = 1;
-function reducer(state: Item[], a: Action): Item[] {
-  if (a.type === 'add') return [...state, a.item];
-  if (a.type === 'update') return state.map(it => (it.id === a.id ? ({ ...it, ...a.patch } as Item) : it));
-  return [];
+function reducer(state: ItemsByKey, a: Action): ItemsByKey {
+  if (a.type === 'add') return { ...state, [a.key]: [...(state[a.key] ?? []), a.item] };
+  if (a.type === 'update') {
+    const out: ItemsByKey = {};
+    for (const [k, list] of Object.entries(state)) out[k] = list.map(it => (it.id === a.id ? ({ ...it, ...a.patch } as Item) : it));
+    return out;
+  }
+  if (a.type === 'clear') { const next = { ...state }; delete next[a.key]; return next; }
+  if (a.type === 'load') return a.items;
+  return { ...state };
+}
+
+/** A card read back from disk. A proposal that was still waiting is over; a
+ * preview had already been written to the store, so it counts as kept. */
+function reviveItem(raw: unknown): Item | null {
+  const it = raw as Item;
+  if (!it || typeof it !== 'object' || typeof it.id !== 'number' || typeof it.kind !== 'string') return null;
+  if (it.kind === 'proposal') {
+    if (it.status === 'pending') return { ...it, status: 'declined' };
+    if (it.status === 'previewing') return { ...it, status: 'applied' };
+  }
+  return it;
 }
 
 const CHIPS = ['Make the text easier to read', 'Switch to the warm theme', 'Set this page up with a timer and a note', 'Add a weekly habit here'];
@@ -57,20 +85,52 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   t: Theme; open: boolean; onClose: () => void; api: AssistantApi;
   settings: AssistantSettings; onSettingsChange: (s: AssistantSettings) => void;
 }) {
-  const [items, dispatch] = useReducer(reducer, []);
+  const [byKey, dispatch] = useReducer(reducer, {});
+  const activeKey = threadKey(api.currentPageId);
+  const items = byKey[activeKey] ?? [];
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
-  const historyRef = useRef<ChatMessage[]>([]);
+  /** Model transcripts per thread; the next turn on that page continues from it. */
+  const historiesRef = useRef<Record<string, ChatMessage[]>>({});
+  const dirtyRef = useRef(false);
   const pendingRef = useRef<Map<number, (d: Decision) => void>>(new Map());
-  const undoneNoteRef = useRef(false);
+  /** Threads whose last change the user undid; the next message there says so. */
+  const undoneKeysRef = useRef(new Set<string>());
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => { if (open) { void getApiKey(settings.provider).then(k => setHasKey(!!k)); setTimeout(() => inputRef.current?.focus(), 50); } }, [open, settings.provider]);
   useEffect(() => { threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight }); }, [items, status]);
+
+  // Pick the threads up where they were left. Pruning of threads for deleted
+  // pages happens on save, once the dashboard's own data is surely loaded.
+  useEffect(() => {
+    let cancelled = false;
+    void loadThreads<Item>(reviveItem).then(threads => {
+      if (cancelled) return;
+      const loaded: ItemsByKey = {};
+      for (const [k, th] of Object.entries(threads)) { loaded[k] = th.items; historiesRef.current[k] = th.history; }
+      const maxId = Object.values(loaded).flat().reduce((m, it) => Math.max(m, it.id), 0);
+      nextItemId = Math.max(nextItemId, maxId + 1);
+      dispatch({ type: 'load', items: loaded });
+    });
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    const live = new Set(api.getStore().topics.map(tp => tp.id));
+    const threads: Threads<Item> = {};
+    for (const k of new Set([...Object.keys(byKey), ...Object.keys(historiesRef.current)])) {
+      if (k !== HOME_THREAD && !live.has(k)) { delete historiesRef.current[k]; continue; }
+      threads[k] = { history: historiesRef.current[k] ?? [], items: byKey[k] ?? [], updatedAt: Date.now() };
+    }
+    void saveThreads(threads);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byKey]);
 
   // Grow the input with its text, one line at a time, up to five lines; after
   // that it scrolls. Measured from scrollHeight so wrapped long lines count.
@@ -86,10 +146,13 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
     el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
   }, [input, open]);
 
-  const add = (item: DistributiveOmit<Item, 'id'>) => { const id = nextItemId++; dispatch({ type: 'add', item: { ...item, id } as Item }); return id; };
+  const add = (key: string, item: DistributiveOmit<Item, 'id'>) => { const id = nextItemId++; dirtyRef.current = true; dispatch({ type: 'add', key, item: { ...item, id } as Item }); return id; };
+  const update = (id: number, patch: Partial<Item>) => { dirtyRef.current = true; dispatch({ type: 'update', id, patch }); };
+  const keyOf = (itemId: number) => Object.keys(byKey).find(k => byKey[k].some(it => it.id === itemId)) ?? activeKey;
+  const clearThread = (key: string) => { delete historiesRef.current[key]; undoneKeysRef.current.delete(key); dirtyRef.current = true; dispatch({ type: 'clear', key }); };
 
   const decide = (itemId: number, d: Decision, patch: Partial<Item>) => {
-    dispatch({ type: 'update', id: itemId, patch });
+    update(itemId, patch);
     const resolve = pendingRef.current.get(itemId);
     pendingRef.current.delete(itemId);
     resolve?.(d);
@@ -110,7 +173,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   const previewItem = (itemId: number, proposal: Proposal) => {
     try {
       const { receipt, turnId } = api.apply(proposal.ops, proposal.seed);
-      dispatch({ type: 'update', id: itemId, patch: { status: 'previewing', receipt, turnId } });
+      update(itemId, { status: 'previewing', receipt, turnId });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       decide(itemId, { kind: 'failed', message }, { status: 'failed', receipt: [{ kind: 'changed', text: `Could not apply: ${message}` }] });
@@ -126,7 +189,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   // Closing the panel with a preview still up means it was not accepted.
   useEffect(() => {
     if (open) return;
-    items.filter((i): i is Extract<Item, { kind: 'proposal' }> => i.kind === 'proposal' && i.status === 'previewing').forEach(cancelItem);
+    Object.values(byKey).flat().filter((i): i is Extract<Item, { kind: 'proposal' }> => i.kind === 'proposal' && i.status === 'previewing').forEach(cancelItem);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -134,24 +197,28 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
     const trimmed = text.trim();
     if (!trimmed || busy) return;
     setInput('');
-    add({ kind: 'user', text: trimmed });
+    // The turn belongs to the page it started on, even if the user moves away
+    // while the model is working.
+    const key = activeKey;
+    const pageId = api.currentPageId;
+    add(key, { kind: 'user', text: trimmed });
     setBusy(true);
     const apiKey = await getApiKey(settings.provider);
-    if (!apiKey) { add({ kind: 'error', text: 'No API key yet. Add one in Settings > Assistant.' }); setBusy(false); return; }
+    if (!apiKey) { add(key, { kind: 'error', text: 'No API key yet. Add one in Settings > Assistant.' }); setBusy(false); return; }
     const abort = new AbortController(); abortRef.current = abort;
-    const userText = undoneNoteRef.current ? `[Note: the user undid your previous change; the dashboard is back to how it was before it.]\n${trimmed}` : trimmed;
-    undoneNoteRef.current = false;
+    const userText = undoneKeysRef.current.has(key) ? `[Note: the user undid your previous change; the dashboard is back to how it was before it.]\n${trimmed}` : trimmed;
+    undoneKeysRef.current.delete(key);
     try {
-      historyRef.current = await runTurn(
-        { settings, apiKey, getStore: api.getStore, currentPageId: api.currentPageId, signal: abort.signal },
-        historyRef.current, userText,
+      historiesRef.current[key] = await runTurn(
+        { settings, apiKey, getStore: api.getStore, currentPageId: pageId, signal: abort.signal },
+        historiesRef.current[key] ?? [], userText,
         {
-          onText: txt => add({ kind: 'assistant', text: txt }),
+          onText: txt => add(key, { kind: 'assistant', text: txt }),
           onStatus: setStatus,
           onProposal: p => new Promise<Decision>(resolve => {
             // The preview is the real-vs-draft diff; fall back to op descriptions if it is empty.
             const lines = p.preview.length ? p.preview.map(l => `${l.kind === 'added' ? '+ ' : l.kind === 'removed' ? '− ' : '~ '}${l.text}`) : p.ops.map(op => describeOp(op, api.getStore()));
-            const id = add({ kind: 'proposal', proposal: p, lines, status: 'pending' });
+            const id = add(key, { kind: 'proposal', proposal: p, lines, status: 'pending' });
             pendingRef.current.set(id, resolve);
             if (p.destructive) return; // always a two-step confirmation, no preview
             if (settings.mode === 'auto') applyItem(id, p);
@@ -159,8 +226,9 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           }),
         },
       );
+      dirtyRef.current = true; dispatch({ type: 'touch' }); // the transcript changed; save it
     } catch (e) {
-      if (!(e instanceof DOMException && e.name === 'AbortError')) add({ kind: 'error', text: e instanceof Error ? e.message : String(e) });
+      if (!(e instanceof DOMException && e.name === 'AbortError')) add(key, { kind: 'error', text: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusy(false); setStatus(''); abortRef.current = null;
     }
@@ -168,8 +236,8 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
 
   const undo = (item: Extract<Item, { kind: 'proposal' }>) => {
     if (item.turnId === undefined || !api.undo(item.turnId)) return;
-    dispatch({ type: 'update', id: item.id, patch: { undone: true } });
-    undoneNoteRef.current = true;
+    update(item.id, { undone: true });
+    undoneKeysRef.current.add(keyOf(item.id));
   };
 
   const setMode = (mode: AssistantSettings['mode']) => { const next = { ...settings, mode }; onSettingsChange(next); void saveAssistantSettings(next); };
@@ -202,6 +270,9 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           <div style={{ fontSize: '0.85rem', fontWeight: 500, color: t.text }}>Bozz Assistant</div>
           <div style={{ fontSize: '0.65rem', color: t.textDim }}>AI · can be wrong · {provider.label}</div>
         </div>
+        {items.length > 0 && !busy && (
+          <button onClick={() => clearThread(activeKey)} title={`New chat: forget this page's conversation (${api.currentPageName ?? 'Home'})`} aria-label="New chat for this page" style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', padding: 2, display: 'flex' }}><MessageSquarePlus size={15} strokeWidth={1.6} /></button>
+        )}
         <button onClick={api.openSettings} title="Assistant settings" aria-label="Assistant settings" style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', padding: 2, display: 'flex' }}><SettingsIcon size={15} strokeWidth={1.6} /></button>
         <button onClick={onClose} title="Close (Ctrl+J)" aria-label="Close assistant" style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', padding: 2, display: 'flex' }}><X size={16} strokeWidth={1.6} /></button>
       </header>
@@ -221,6 +292,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
         ) : items.length === 0 ? (
           <div style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.55 }}>
             Ask for a change to {api.currentPageName ? <b style={{ color: t.text, fontWeight: 500 }}>{api.currentPageName}</b> : 'your dashboard'}: widgets, pages, theme, text size, notes, tasks, habits.
+            <div style={{ marginTop: '0.4rem', color: t.textDim, fontSize: '0.72rem' }}>Each page keeps its own chat, so what you say here is remembered next time you ask about {api.currentPageName ? 'this page' : 'Home'}.</div>
           </div>
         ) : null}
 
