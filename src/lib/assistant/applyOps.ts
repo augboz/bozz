@@ -334,9 +334,17 @@ function applyOne(s: AssistantStore, op: Op, index: number): AssistantStore {
         return { ...s, topics: [...s.topics, topic] };
       }
       if (!op.topicId) throw new OpError(index, 'existingPage needs a topicId');
-      requireTopic(s, op.topicId, index);
-      const patch = worldTopicPatch(world);
-      return { ...s, topics: s.topics.map(t => (t.id === op.topicId ? { ...t, ...patch } : t)) };
+      const target = requireTopic(s, op.topicId, index);
+      const { widgetLayout: templateLayout, ...patch } = worldTopicPatch(world);
+      // The world's look applies; its widgets are added only where the page
+      // has none of that type. Nothing already on the page is removed: the
+      // assistant may never drop a widget unless the user asked (remove_widget).
+      let layout = target.widgetLayout ?? [];
+      for (const w of templateLayout ?? []) {
+        if (layout.some(x => x.type === w.type)) continue;
+        layout = place(layout, { ...w, i: freshWidgetId(w.type) }, 'bottom');
+      }
+      return { ...s, topics: s.topics.map(t => (t.id === op.topicId ? { ...t, ...patch, widgetLayout: layout } : t)) };
     }
     case 'edit_note': {
       if (op.target === 'page') {

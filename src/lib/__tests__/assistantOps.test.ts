@@ -157,6 +157,18 @@ describe('pages, folders, worlds', () => {
     expect(s.appearance.activeWorldId).toBe('tokyo-night');
     expectOpError(() => run([{ op: 'apply_world', worldId: 'nope', scope: 'global', topicId: null, name: null }]), /no world/);
   });
+
+  it('apply_world on an existing page keeps every widget already there', () => {
+    let s = run([{ op: 'add_widget', page: 'cp', type: 'topicTimer', size: null, placement: null, anchorId: null, config: null }]);
+    const before = s.topics[0].widgetLayout!.map(w => w.i);
+    s = run([{ op: 'apply_world', worldId: 'study', scope: 'existingPage', topicId: 'cp', name: null }], s);
+    const after = s.topics[0].widgetLayout!;
+    for (const id of before) expect(after.some(w => w.i === id)).toBe(true);
+    expect(after.length).toBeGreaterThanOrEqual(before.length);
+    expect(new Set(after.map(w => w.type)).size).toBe(after.length); // no duplicate types added
+    expect(s.topics[0].pageBg).toBeDefined();
+    expect(diffStore(base(), s).some(l => l.kind === 'removed')).toBe(false);
+  });
 });
 
 describe('content ops', () => {

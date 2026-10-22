@@ -48,6 +48,7 @@ describe('assistant engine', () => {
     const { s, texts, proposals, history } = await drive('set this page up with a timer and a note', 'cp', () => 'apply');
     expect(proposals).toHaveLength(1);
     expect(proposals[0].destructive).toBe(false);
+    expect(proposals[0].removals).toEqual([]);
     expect(s.topics[0].widgetLayout!.map(w => w.type)).toEqual(['topicTodos', 'topicTimer', 'topicNote', 'topicStatus']);
     expect(texts[texts.length - 1]).toMatch(/Done/);
     // Transcript: user, assistant(tool call), tool result, assistant(text). Append-only.
@@ -86,6 +87,7 @@ describe('assistant engine', () => {
   it('flags deletions as destructive; a decline applies nothing and is recorded for the model', async () => {
     const { s, proposals, history } = await drive('delete this page', 'cp', () => 'decline');
     expect(proposals[0].destructive).toBe(true);
+    expect(proposals[0].removals).toEqual(['Deleted page "Concurrent Programming" (0 tasks)']);
     expect(s.topics).toHaveLength(1);
     const note = history[history.length - 2];
     expect(note.role === 'user' && note.text).toMatch(/discarded all the changes/);
@@ -102,6 +104,7 @@ describe('assistant engine', () => {
     expect(p).toContain('topicTimer: Study timer');
     expect(p).toContain('"Concurrent Programming"#cp');
     expect(p).toMatch(/Never claim to have changed something without calling it/);
+    expect(p).toMatch(/NEVER remove a widget/);
   });
 });
 

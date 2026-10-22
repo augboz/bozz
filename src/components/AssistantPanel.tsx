@@ -300,7 +300,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           if (item.kind === 'user') return <div key={item.id} style={{ alignSelf: 'flex-end', maxWidth: '92%', background: t.bgAlt, color: t.text, borderRadius: '12px', padding: '0.45rem 0.65rem', fontSize: '0.82rem', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{item.text}</div>;
           if (item.kind === 'assistant') return <div key={item.id} style={{ alignSelf: 'flex-start', maxWidth: '92%', color: t.textMuted, fontSize: '0.82rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.text}</div>;
           if (item.kind === 'error') return <div key={item.id} style={{ color: t.alert, fontSize: '0.78rem', lineHeight: 1.45, display: 'flex', gap: '0.4rem' }}><AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} />{item.text}</div>;
-          return <ChangeCard key={item.id} t={t} item={item} latest={latest} btn={btn}
+          return <ChangeCard key={item.id} t={t} item={item} latest={latest} btn={btn} api={api}
             onApply={() => applyItem(item.id, item.proposal)}
             onDecline={() => decide(item.id, { kind: 'declined' }, { status: 'declined' })}
             onKeep={() => keepItem(item)}
@@ -349,8 +349,8 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   );
 }
 
-function ChangeCard({ t, item, latest, btn, onApply, onDecline, onKeep, onCancel, onUndo }: {
-  t: Theme; item: Extract<Item, { kind: 'proposal' }>; latest: number | null;
+function ChangeCard({ t, item, latest, btn, api, onApply, onDecline, onKeep, onCancel, onUndo }: {
+  t: Theme; item: Extract<Item, { kind: 'proposal' }>; latest: number | null; api: AssistantApi;
   btn: (primary?: boolean, danger?: boolean) => React.CSSProperties;
   onApply: () => void; onDecline: () => void; onKeep: () => void; onCancel: () => void; onUndo: () => void;
 }) {
@@ -361,18 +361,27 @@ function ChangeCard({ t, item, latest, btn, onApply, onDecline, onKeep, onCancel
     <div style={{ border: `1px solid ${status === 'applied' ? t.doneAccent + '66' : t.border}`, borderLeft: `3px solid ${status === 'applied' ? t.doneAccent : status === 'declined' ? t.textDim : p.destructive ? t.alert : t.borderStrong}`, borderRadius: '10px', padding: '0.55rem 0.7rem', fontSize: '0.78rem', color: t.text, background: t.panel }}>
       <div style={{ fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: t.textDim, marginBottom: '0.35rem' }}>
         {status === 'pending' ? `Proposed · ${p.ops.length} change${p.ops.length === 1 ? '' : 's'}` : status === 'previewing' ? 'Previewing · look at the page' : status === 'applied' ? (item.undone ? 'Undone' : 'Applied') : status === 'declined' ? (item.undone ? 'Cancelled' : 'Discarded') : 'Failed'}
-        {p.destructive && status === 'pending' && <span style={{ color: t.alert, marginLeft: 6 }}>· deletes something</span>}
+        {p.destructive && status === 'pending' && <span style={{ color: t.alert, marginLeft: 6 }}>· removes something</span>}
       </div>
       {status === 'pending' || status === 'declined' ? (
         <>
           <div style={{ color: t.textMuted, marginBottom: '0.3rem' }}>{p.summary}</div>
           <ul style={{ margin: 0, paddingLeft: '1rem', lineHeight: 1.45 }}>{item.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
+          {status === 'pending' && p.destructive && armed && (
+            <div role="alert" style={{ marginTop: '0.55rem', padding: '0.5rem 0.6rem', borderRadius: '8px', border: `1px solid ${t.alertBorder}`, color: t.text, lineHeight: 1.45 }}>
+              <div style={{ fontWeight: 500, color: t.alert, marginBottom: '0.25rem' }}>Are you sure you want to remove this?</div>
+              <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                {(p.removals.length ? p.removals : p.ops.filter(o => o.op === 'remove_widget' || o.op === 'delete_page').map(o => describeOp(o, api.getStore()))).map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+              <div style={{ color: t.textMuted, marginTop: '0.3rem', fontSize: '0.72rem' }}>You can undo this turn afterwards.</div>
+            </div>
+          )}
           {status === 'pending' && (
             <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.55rem' }}>
               {p.destructive && !armed
                 ? <button onClick={() => setArmed(true)} style={btn(false, true)}>Apply (asks again)</button>
-                : <button onClick={onApply} style={btn(true)}><Check size={11} strokeWidth={2.5} style={{ marginRight: 4, verticalAlign: -1 }} />{p.destructive ? 'Yes, delete' : 'Apply'}</button>}
-              <button onClick={onDecline} style={btn()}>Discard</button>
+                : <button onClick={onApply} style={btn(true, p.destructive)}><Check size={11} strokeWidth={2.5} style={{ marginRight: 4, verticalAlign: -1 }} />{p.destructive ? 'Yes, remove it' : 'Apply'}</button>}
+              <button onClick={onDecline} style={btn()}>{p.destructive && armed ? 'No, keep it' : 'Discard'}</button>
             </div>
           )}
         </>
