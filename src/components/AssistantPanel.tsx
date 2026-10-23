@@ -25,6 +25,8 @@ import { getApiKey } from '../lib/assistant/keys';
 import { PROVIDERS } from '../lib/assistant/providers';
 import { saveAssistantSettings, type AssistantSettings } from '../lib/assistant/settings';
 import { HOME_THREAD, loadThreads, saveThreads, threadKey, type Threads } from '../lib/assistant/threads';
+import { addUsage, fmtTokens, loadUsage, saveUsage, type UsageTotals } from '../lib/assistant/usage';
+import type { Usage } from '../lib/assistant/providers/types';
 
 export interface AssistantApi {
   getStore: () => AssistantStore;
@@ -98,6 +100,9 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
   const pendingRef = useRef<Map<number, (d: Decision) => void>>(new Map());
   /** Threads whose last change the user undid; the next message there says so. */
   const undoneKeysRef = useRef(new Set<string>());
+  const usageRef = useRef<UsageTotals | null>(null);
+  const [lastTurnTokens, setLastTurnTokens] = useState<{ input: number; cached: number; output: number } | null>(null);
+  useEffect(() => { void loadUsage().then(u => { usageRef.current = u; }); }, []);
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -206,6 +211,12 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
     const apiKey = await getApiKey(settings.provider);
     if (!apiKey) { add(key, { kind: 'error', text: 'No API key yet. Add one in Settings > Assistant.' }); setBusy(false); return; }
     const abort = new AbortController(); abortRef.current = abort;
+    const turnTokens = { input: 0, cached: 0, output: 0 };
+    const onUsage = (u: Usage) => {
+      turnTokens.input += u.input + (u.cacheWrite ?? 0); turnTokens.cached += u.cacheRead ?? 0; turnTokens.output += u.output;
+      setLastTurnTokens({ ...turnTokens });
+      if (usageRef.current) usageRef.current = addUsage(usageRef.current, u);
+    };
     const userText = undoneKeysRef.current.has(key) ? `[Note: the user undid your previous change; the dashboard is back to how it was before it.]\n${trimmed}` : trimmed;
     undoneKeysRef.current.delete(key);
     try {
@@ -215,6 +226,7 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
         {
           onText: txt => add(key, { kind: 'assistant', text: txt }),
           onStatus: setStatus,
+          onUsage,
           onProposal: p => new Promise<Decision>(resolve => {
             // The preview is the real-vs-draft diff; fall back to op descriptions if it is empty.
             const lines = p.preview.length ? p.preview.map(l => `${l.kind === 'added' ? '+ ' : l.kind === 'removed' ? '− ' : '~ '}${l.text}`) : p.ops.map(op => describeOp(op, api.getStore()));
@@ -231,6 +243,10 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
       if (!(e instanceof DOMException && e.name === 'AbortError')) add(key, { kind: 'error', text: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusy(false); setStatus(''); abortRef.current = null;
+      if (usageRef.current && turnTokens.input + turnTokens.cached + turnTokens.output > 0) {
+        usageRef.current = { ...usageRef.current, turns: usageRef.current.turns + 1 };
+        void saveUsage(usageRef.current);
+      }
     }
   };
 
@@ -330,13 +346,14 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
           : <button type="submit" aria-label="Send" disabled={!input.trim()} style={{ background: 'none', border: 'none', color: input.trim() ? t.doneAccent : t.textDim, cursor: 'pointer', padding: 2, display: 'flex' }}><Send size={16} strokeWidth={1.8} /></button>}
       </form>
       {/* Mode line, like a terminal status line: small, bottom left, click to switch. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '-0.45rem 1rem 0.55rem', fontSize: '0.66rem' }}>
       <button
         type="button"
         onClick={() => setMode(settings.mode === 'auto' ? 'check' : 'auto')}
         title={settings.mode === 'auto' ? 'Auto: changes are applied straight away (deletions still ask). Click for manual.' : 'Manual: every change is shown to you first. Click for auto.'}
         aria-label={`Mode: ${settings.mode === 'auto' ? 'auto' : 'manual'}. Click to switch.`}
         style={{
-          alignSelf: 'flex-start', margin: '-0.45rem 0 0.55rem 1rem', padding: 0,
+          padding: 0,
           background: 'none', border: 'none', cursor: 'pointer', font: 'inherit',
           fontSize: '0.66rem', color: settings.mode === 'auto' ? t.doneAccent : t.textDim,
           display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
@@ -345,6 +362,12 @@ export default function AssistantPanel({ t, open, onClose, api, settings, onSett
         <span aria-hidden="true" style={{ fontSize: '0.5rem' }}>{settings.mode === 'auto' ? '⚡' : '◆'}</span>
         {settings.mode === 'auto' ? 'auto mode' : 'manual mode'}
       </button>
+      {lastTurnTokens && (
+        <span style={{ color: t.textDim }} title={`Last request: ${fmtTokens(lastTurnTokens.input)} input tokens at full price, ${fmtTokens(lastTurnTokens.cached)} read from the provider's cache, ${fmtTokens(lastTurnTokens.output)} output. Totals in Settings > Assistant.`}>
+          · {fmtTokens(lastTurnTokens.input + lastTurnTokens.cached + lastTurnTokens.output)} tokens{lastTurnTokens.cached > 0 ? ` (${Math.round((lastTurnTokens.cached / Math.max(1, lastTurnTokens.input + lastTurnTokens.cached)) * 100)}% cached)` : ''}
+        </span>
+      )}
+      </div>
     </aside>
   );
 }

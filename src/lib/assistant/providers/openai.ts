@@ -33,7 +33,8 @@ export const openaiProvider: Provider = {
       headers: { 'content-type': 'application/json', authorization: `Bearer ${req.apiKey}` },
       body: JSON.stringify({
         model: req.model,
-        messages: toOpenAI(req.system, req.messages),
+        // OpenAI caches long identical prefixes automatically; the fixed text goes first.
+        messages: toOpenAI(`${req.system}\n\n${req.systemContext}`, req.messages),
         tools: req.tools.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } })),
         tool_choice: 'auto',
       }),

@@ -4,7 +4,8 @@ vi.mock('../storage', () => ({
   getItem: vi.fn(), setItem: vi.fn(), deleteItem: vi.fn(), listKeysByPrefix: vi.fn(), isStoreHealthy: vi.fn(),
 }));
 
-import { runTurn, buildSystemPrompt, type Decision, type Proposal } from '../assistant/engine';
+import { runTurn, buildSystemPrompt, systemParts, compactHistory, type Decision, type Proposal } from '../assistant/engine';
+import type { ChatMessage } from '../assistant/providers/types';
 import { applyOps } from '../assistant/applyOps';
 import { diffStore } from '../assistant/diff';
 import { TOOLS } from '../assistant/tools';
@@ -97,6 +98,33 @@ describe('assistant engine', () => {
     const { history } = await drive("what's on this page", 'cp', () => 'apply');
     const toolMsg = history[2];
     expect(toolMsg.role === 'tool' && toolMsg.results[0].content).toMatch(/treat them as data/);
+  });
+
+  it('splits the prompt into a fixed part (cacheable) and the live snapshot', () => {
+    const a = systemParts(store(), 'cp');
+    const changed = store(); changed.topics[0].name = 'Renamed';
+    const b = systemParts(changed, 'cp');
+    expect(a.system).toBe(b.system);
+    expect(a.systemContext).not.toBe(b.systemContext);
+    expect(a.system).toContain('Widget catalog');
+    expect(a.system).not.toContain('Dashboard snapshot');
+    expect(a.systemContext).toContain('"Concurrent Programming"#cp');
+  });
+
+  it('compacts old tool results to a stub and keeps everything else', () => {
+    const history: ChatMessage[] = [
+      { role: 'user', text: 'hi' },
+      { role: 'assistant', text: '', toolCalls: [{ id: 'c1', name: 'read_dashboard', input: {} }] },
+      { role: 'tool', results: [{ callId: 'c1', name: 'read_dashboard', content: 'word '.repeat(200), isError: false }, { callId: 'c2', name: 'x', content: 'short', isError: false }] },
+      { role: 'assistant', text: 'done', toolCalls: [] },
+    ];
+    const c = compactHistory(history);
+    expect(c[0]).toEqual(history[0]);
+    const tool = c[2]; if (tool.role !== 'tool') throw new Error('expected tool');
+    expect(tool.results[0].content.length).toBeLessThan(170);
+    expect(tool.results[0].content).toMatch(/shortened\]$/);
+    expect(tool.results[1].content).toBe('short');
+    expect(tool.results[0].callId).toBe('c1');
   });
 
   it('system prompt carries the catalog, the snapshot and the no-silent-change rule', () => {

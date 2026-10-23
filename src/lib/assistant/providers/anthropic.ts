@@ -45,15 +45,22 @@ export const anthropicProvider: Provider = {
       body: JSON.stringify({
         model: req.model,
         max_tokens: 4000,
-        system: [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }],
+        // Cache order is tools, then system, then messages. The breakpoint sits
+        // after the fixed system text, so tools + instructions (about 6.5k
+        // tokens) are read from cache on every call; the snapshot, which
+        // changes after each applied op, comes after it and is never cached.
+        system: [
+          { type: 'text', text: req.system, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: req.systemContext },
+        ],
         tools: req.tools.map(t => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
         messages: toAnthropic(req.messages),
       }),
     });
     if (!res.ok) throw await failFromResponse(res, 'Anthropic');
-    const data = await res.json() as { content: Block[]; usage?: { input_tokens: number; output_tokens: number }; stop_reason?: string };
+    const data = await res.json() as { content: Block[]; usage?: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }; stop_reason?: string };
     const text = data.content.filter((b): b is Extract<Block, { type: 'text' }> => b.type === 'text').map(b => b.text).join('\n').trim();
     const toolCalls: ToolCall[] = data.content.filter((b): b is Extract<Block, { type: 'tool_use' }> => b.type === 'tool_use').map(b => ({ id: b.id, name: b.name, input: b.input }));
-    return { text, toolCalls, usage: data.usage ? { input: data.usage.input_tokens, output: data.usage.output_tokens } : undefined };
+    return { text, toolCalls, usage: data.usage ? { input: data.usage.input_tokens, output: data.usage.output_tokens, cacheRead: data.usage.cache_read_input_tokens ?? 0, cacheWrite: data.usage.cache_creation_input_tokens ?? 0 } : undefined };
   },
 };

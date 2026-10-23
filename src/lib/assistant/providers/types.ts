@@ -17,8 +17,20 @@ export type ChatMessage =
   | { role: 'assistant'; text: string; toolCalls: ToolCall[] }
   | { role: 'tool'; results: Array<{ callId: string; name: string; content: string; isError: boolean }> };
 
+export interface Usage {
+  /** Uncached input tokens billed at full price. */
+  input: number;
+  output: number;
+  /** Input tokens served from the provider's prompt cache (Anthropic reports these; roughly a tenth of the price). */
+  cacheRead?: number;
+  cacheWrite?: number;
+}
+
 export interface CompleteRequest {
+  /** Instructions, catalog and worlds: identical on every call, so providers can cache it. */
   system: string;
+  /** The dashboard snapshot: changes between calls, kept out of the cached prefix. */
+  systemContext: string;
   messages: ChatMessage[];
   tools: ToolDef[];
   model: string;
@@ -29,7 +41,7 @@ export interface CompleteRequest {
 export interface CompleteResult {
   text: string;
   toolCalls: ToolCall[];
-  usage?: { input: number; output: number };
+  usage?: Usage;
 }
 
 export interface Provider {

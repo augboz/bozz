@@ -61,7 +61,7 @@ export const geminiProvider: Provider = {
       signal: req.signal,
       headers: { 'content-type': 'application/json', 'x-goog-api-key': req.apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: req.system }] },
+        systemInstruction: { parts: [{ text: req.system }, { text: req.systemContext }] },
         contents: toGemini(req.messages, new Map()),
         tools: [{ functionDeclarations: req.tools.map(t => ({ name: t.name, description: t.description, parameters: toGeminiSchema(t.inputSchema) })) }],
       }),

@@ -2,7 +2,7 @@
 // network. It answers a few recognisable requests with the same tool calls a
 // real model would make, so the whole propose/apply/undo loop can be
 // exercised end to end. Only offered in dev builds.
-import type { Provider, ToolCall } from './types';
+import type { CompleteRequest, CompleteResult, Provider, ToolCall } from './types';
 
 let n = 0;
 const call = (name: string, input: unknown): ToolCall => ({ id: `mock-${++n}`, name, input });
@@ -14,10 +14,17 @@ export const mockProvider: Provider = {
   keyHint: 'no key needed',
   keyUrl: '',
   async complete(req) {
+    // Pretend usage, so the token meter can be exercised without a key.
+    return { ...(await answer(req)), usage: { input: 1800, output: 60, cacheRead: 6400, cacheWrite: 0 } };
+  },
+};
+
+async function answer(req: CompleteRequest): Promise<CompleteResult> {
     await new Promise(r => setTimeout(r, 400));
     const last = [...req.messages].reverse().find(m => m.role === 'user');
     const text = last && last.role === 'user' ? last.text.toLowerCase() : '';
-    const sysPage = /current page: (\S+)/.exec(req.system)?.[1] ?? 'home';
+    const system = `${req.system}\n${req.systemContext}`;
+    const sysPage = /current page: (\S+)/.exec(system)?.[1] ?? 'home';
     const page = sysPage === 'home' ? null : sysPage;
     // How many tool rounds this turn has had so far.
     const lastUserIdx = req.messages.map(m => m.role).lastIndexOf('user');
@@ -34,7 +41,7 @@ export const mockProvider: Provider = {
     }
     if (lastMsg?.role === 'tool') return { text: 'Done. Tell me if you want anything adjusted.', toolCalls: [] };
     if (/prettier|nicer|look better|organi[sz]e/.test(text) && page) {
-      const ids = [...req.system.matchAll(new RegExp(`#${page}[^\\n]*widgets=\\[([^\\]]*)\\]`, 'g'))][0]?.[1]?.split(', ').map(w => /#(\S+?)\(/.exec(w)?.[1]).filter((x): x is string => !!x) ?? [];
+      const ids = [...system.matchAll(new RegExp(`#${page}[^\\n]*widgets=\\[([^\\]]*)\\]`, 'g'))][0]?.[1]?.split(', ').map(w => /#(\S+?)\(/.exec(w)?.[1]).filter((x): x is string => !!x) ?? [];
       return { text: '', toolCalls: [call('apply_changes', { summary: 'Tidy the layout and give the page a backdrop', ops: [
         ...(ids.length > 1 ? [{ op: 'arrange_page', page, rows: [ids.slice(0, 2), ...ids.slice(2).map(id => [id])] }] : []),
         { op: 'set_background', target: page, colors: ['#1b2a41', '#2f6b5f'], worldId: null, dim: 0.35, remove: null },
@@ -72,5 +79,4 @@ export const mockProvider: Provider = {
       return { text: '', toolCalls: [call('read_dashboard', { scope: page ?? 'summary' })] };
     }
     return { text: "I can add or change widgets, pages, themes, notes, tasks and habits. Try: \"set this page up with a timer and a note\" or \"make the text easier to read\".", toolCalls: [] };
-  },
-};
+}

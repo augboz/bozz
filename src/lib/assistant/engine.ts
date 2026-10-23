@@ -6,7 +6,7 @@
 // The transcript is append-only; a decline or an undo is told to the model as
 // a note on the next message, never by rewriting history.
 import { PROVIDERS } from './providers';
-import type { ChatMessage, ToolCall } from './providers/types';
+import type { ChatMessage, ToolCall, Usage } from './providers/types';
 import { TOOLS } from './tools';
 import { parseOps, DESTRUCTIVE_OPS, MAX_OPS_PER_TURN, type Op } from './ops';
 import { applyOps, newOpSeed, OpError } from './applyOps';
@@ -38,6 +38,8 @@ export interface TurnHandlers {
   /** Called at most once per turn, after the model has finished; resolve with the decision. */
   onProposal: (p: Proposal) => Promise<Decision>;
   onStatus: (s: string) => void;
+  /** Token usage of every provider call in this turn, as reported by the provider. */
+  onUsage?: (u: Usage) => void;
 }
 
 export interface TurnContext {
@@ -51,7 +53,24 @@ export interface TurnContext {
 const MAX_STEPS = 8;
 
 export function buildSystemPrompt(store: AssistantStore, currentPageId: string | null): string {
-  return [
+  const p = systemParts(store, currentPageId);
+  return `${p.system}\n${p.systemContext}`;
+}
+
+/** Keep every old tool result to a stub. Each one carried a full snapshot of
+ * the working copy; after the turn it only needs to show that the call
+ * happened. The current turn's results stay intact (they are appended after). */
+export function compactHistory(history: ChatMessage[]): ChatMessage[] {
+  return history.map(m => (m.role === 'tool'
+    ? { ...m, results: m.results.map(r => (r.content.length > 160 ? { ...r, content: `${r.content.slice(0, 120).replace(/\s+\S*$/, '')} … [earlier result shortened]` } : r)) }
+    : m));
+}
+
+/** The prompt in two parts: `system` never changes between calls (providers
+ * cache it); `systemContext` is the live snapshot. */
+export function systemParts(store: AssistantStore, currentPageId: string | null): { system: string; systemContext: string } {
+  const systemContext = ['Dashboard snapshot:', summarizeStore(store, currentPageId)].join('\n');
+  const system = [
     'You are Bozz Assistant, built into Bozz, a personal dashboard app for students. You help the user change their own dashboard: pages, widgets, themes, notes, tasks and habits.',
     'You act only through the apply_changes tool, which the app validates and shows to the user before anything is applied. Never claim to have changed something without calling it. Never describe a change in prose instead of calling it. Put all the changes for one request in one call; call again only if you need the ids of things you just created. Each call is applied to a working copy so you can see the result; the user is shown the final result once, when you finish.',
     'Rules: use ids exactly as they appear in the snapshot. NEVER remove a widget or delete a page, habit or task unless the user\'s own message explicitly asks to remove or delete that specific thing. "Tidy", "clean up", "simplify", "make it nicer", "reorganise" and similar never mean remove: rearrange or resize instead. If you think something should go, say so and ask; do not remove it. Keep answers to one or two short sentences; the app shows the change list itself. If a request cannot be done with the available ops (for example sync, accounts, email, calendar connections), say so plainly and suggest where in the app it lives.',
@@ -72,8 +91,8 @@ export function buildSystemPrompt(store: AssistantStore, currentPageId: string |
     `Today is ${new Date().toISOString().slice(0, 10)}.`,
     '', 'Widget catalog:', catalogForPrompt(),
     '', 'Worlds (themes and templates):', worldsForPrompt(),
-    '', 'Dashboard snapshot:', summarizeStore(store, currentPageId),
   ].join('\n');
+  return { system, systemContext };
 }
 
 interface Draft {
@@ -88,7 +107,7 @@ interface Draft {
 
 export async function runTurn(ctx: TurnContext, history: ChatMessage[], userText: string, h: TurnHandlers): Promise<ChatMessage[]> {
   const provider = PROVIDERS[ctx.settings.provider];
-  const messages: ChatMessage[] = [...history, { role: 'user', text: userText }];
+  const messages: ChatMessage[] = [...compactHistory(history), { role: 'user', text: userText }];
   const real = ctx.getStore();
   const draft: Draft = { real, store: real, seed: newOpSeed(), ops: [], summaries: [], firstCallId: null, invalidRetries: 0 };
   let finalText = '';
@@ -96,9 +115,10 @@ export async function runTurn(ctx: TurnContext, history: ChatMessage[], userText
   for (let step = 0; step < MAX_STEPS; step++) {
     h.onStatus(step === 0 ? 'Thinking' : 'Working');
     const res = await provider.complete({
-      system: buildSystemPrompt(draft.store, ctx.currentPageId),
+      ...systemParts(draft.store, ctx.currentPageId),
       messages, tools: TOOLS, model: ctx.settings.model, apiKey: ctx.apiKey, signal: ctx.signal,
     });
+    if (res.usage) h.onUsage?.(res.usage);
     messages.push({ role: 'assistant', text: res.text, toolCalls: res.toolCalls });
     if (!res.toolCalls.length) { finalText = res.text; break; }
     // Text alongside tool calls is progress narration; show it as it comes.

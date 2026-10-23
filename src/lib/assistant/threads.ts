@@ -10,9 +10,9 @@ const KEY = 'assistantThreads';
 const VERSION = 1;
 
 /** Keep at most this many transcript messages per page... */
-const MAX_HISTORY_MESSAGES = 40;
+const MAX_HISTORY_MESSAGES = 24;
 /** ...and at most this much text, since tool results carry page descriptions. */
-const MAX_HISTORY_CHARS = 60_000;
+const MAX_HISTORY_CHARS = 24_000;
 /** Cards kept per page. Older ones scroll out of the saved thread. */
 const MAX_ITEMS = 60;
 

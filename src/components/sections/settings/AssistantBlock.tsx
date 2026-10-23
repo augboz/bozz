@@ -10,6 +10,7 @@ import type { ProviderId } from '../../../lib/assistant/providers/types';
 import { getApiKey, setApiKey, clearApiKey } from '../../../lib/assistant/keys';
 import { saveAssistantSettings, type AssistantSettings } from '../../../lib/assistant/settings';
 import { TOOLS } from '../../../lib/assistant/tools';
+import { EMPTY_USAGE, fmtTokens, loadUsage, saveUsage, totalInput, type UsageTotals } from '../../../lib/assistant/usage';
 
 export default function AssistantBlock({ t, settings, onChange }: { t: Theme; settings: AssistantSettings; onChange: (s: AssistantSettings) => void }) {
   const [hasKey, setHasKey] = useState(false);
@@ -40,7 +41,7 @@ export default function AssistantBlock({ t, settings, onChange }: { t: Theme; se
     try {
       const apiKey = await getApiKey(settings.provider);
       if (!apiKey) throw new Error('no key saved');
-      const res = await provider.complete({ system: 'Reply with the single word OK.', messages: [{ role: 'user', text: 'ping' }], tools: [], model: settings.model, apiKey });
+      const res = await provider.complete({ system: 'Reply with the single word OK.', systemContext: '', messages: [{ role: 'user', text: 'ping' }], tools: [], model: settings.model, apiKey });
       setTest({ state: 'ok', text: `Connected. ${settings.model} replied "${(res.text || '(tool call)').slice(0, 40)}".` });
     } catch (e) {
       setTest({ state: 'error', text: e instanceof Error ? e.message : String(e) });
@@ -106,6 +107,8 @@ export default function AssistantBlock({ t, settings, onChange }: { t: Theme; se
         </div>
       </div>
 
+      <UsageRow t={t} row={row} label={label} button={button} />
+
       <div style={{ padding: '0.4rem 0 0.2rem' }}>
         <button onClick={() => setShowSent(s => !s)} style={{ ...button, fontSize: '0.74rem' }}>{showSent ? 'Hide' : 'Show'} what gets sent</button>
         {showSent && (
@@ -116,6 +119,24 @@ export default function AssistantBlock({ t, settings, onChange }: { t: Theme; se
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function UsageRow({ t, row, label, button }: { t: Theme; row: React.CSSProperties; label: (title: string, hint?: string) => React.ReactNode; button: React.CSSProperties }) {
+  const [usage, setUsage] = useState<UsageTotals | null>(null);
+  useEffect(() => { void loadUsage().then(setUsage); }, []);
+  if (!usage) return null;
+  const since = new Date(usage.since).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const inAll = totalInput(usage);
+  const cachedPct = inAll ? Math.round((usage.cacheRead / inAll) * 100) : 0;
+  const reset = () => { const next = { ...EMPTY_USAGE, since: Date.now() }; setUsage(next); void saveUsage(next); };
+  return (
+    <div style={row}>
+      {label('Tokens used', usage.calls
+        ? `Since ${since}: ${fmtTokens(inAll)} in (${cachedPct}% from cache, cheaper) · ${fmtTokens(usage.output)} out · ${usage.turns} request${usage.turns === 1 ? '' : 's'}, ${usage.calls} API calls on this device. Billing is on your provider's account.`
+        : 'Nothing yet on this device. Counts come from your provider with each reply.')}
+      <button onClick={reset} disabled={!usage.calls} style={{ ...button, fontSize: '0.74rem', color: t.textMuted }}>Reset</button>
     </div>
   );
 }
