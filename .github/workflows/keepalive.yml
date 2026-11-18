@@ -28,11 +28,14 @@ jobs:
           SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
         run: |
           set -e
-          # A row-level-secured table returns [] to the anon key, but the
-          # request still counts as activity.
-          rest=$(curl -s -o /dev/null -w '%{http_code}' \
+          # An anon SELECT that RLS answers with [] did NOT count: Supabase
+          # still sent idle warnings on 2026-09-24 and 2026-10-07 with this job
+          # green every day. So make a real write instead: keepalive_ping()
+          # bumps one heartbeat row (see SUPABASE_KEEPALIVE.sql, gitignored).
+          rest=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
             -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" \
-            "$SUPABASE_URL/rest/v1/user_data?select=user_id&limit=1")
+            -H "Content-Type: application/json" -d '{}' \
+            "$SUPABASE_URL/rest/v1/rpc/keepalive_ping")
           auth=$(curl -s -o /dev/null -w '%{http_code}' \
             -H "apikey: $SUPABASE_KEY" "$SUPABASE_URL/auth/v1/health")
           echo "REST: $rest  AUTH: $auth"
